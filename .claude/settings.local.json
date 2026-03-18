@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__laravel-boost__application-info",
+      "Bash(php artisan migrate --no-interaction)",
+      "Bash(php artisan tinker --execute \"echo \\\\App\\\\Models\\\\User::count\\(\\);\")",
+      "Bash(php artisan make:controller AuthController --no-interaction)",
+      "Bash(php artisan make:controller UserController --resource --no-interaction)",
+      "Bash(php artisan make:request StoreUserRequest --no-interaction)",
+      "Bash(php artisan make:request UpdateUserRequest --no-interaction)",
+      "Bash(php artisan make:request LoginRequest --no-interaction)",
+      "Bash(vendor/bin/pint --dirty --format agent)",
+      "Bash(php artisan route:list)",
+      "Bash(php artisan tinker --execute \"App\\\\Models\\\\User::create\\([''name'' => ''Administrador'', ''email'' => ''admin@macae.gov.br'', ''password'' => bcrypt\\(''password''\\)]\\); echo ''Usuário criado!'';\")",
+      "Bash(npm run build)",
+      "Bash(npm install)",
+      "mcp__laravel-boost__get-absolute-url",
+      "mcp__laravel-boost__last-error",
+      "Bash(php artisan config:cache)",
+      "Bash(php artisan route:cache)",
+      "Bash(php artisan view:cache)",
+      "mcp__laravel-boost__search-docs",
+      "Bash(php artisan view:clear)",
+      "Bash(php artisan make:migration add_status_to_users_table --no-interaction)",
+      "Bash(php artisan make:class app/Enums/UserStatus --no-interaction)",
+      "Bash(php artisan tinker --execute \"App\\\\Models\\\\User::first\\(\\)->update\\([''status'' => ''active'']\\); echo ''ok'';\")",
+      "Bash(php artisan route:clear)"
+    ]
+  }
+}
