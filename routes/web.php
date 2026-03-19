@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ControlTowerController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,4 +19,8 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 Route::middleware('auth')->group(function () {
     Route::resource('users', UserController::class)->except(['show']);
     Route::get('users-export', [UserController::class, 'export'])->name('users.export');
+
+    // Torre de Controle
+    Route::get('torre-de-controle', [ControlTowerController::class, 'index'])->name('control-tower.index');
+    Route::get('torre-de-controle/dados', [ControlTowerController::class, 'dados'])->name('control-tower.dados');
 });
