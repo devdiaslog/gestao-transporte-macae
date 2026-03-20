@@ -115,24 +115,62 @@
          class="grid grid-cols-1 gap-3 transition-opacity duration-300
                 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 
+        {{--
+            Safelist de cores para badges de status — não remova estas classes:
+            bg-amber-500/10   text-amber-600   ring-amber-400/30   dark:text-amber-400   dark:ring-amber-500/30   bg-amber-400
+            bg-orange-500/10  text-orange-600  ring-orange-400/30  dark:text-orange-400  dark:ring-orange-500/30  bg-orange-400
+            bg-yellow-500/10  text-yellow-600  ring-yellow-400/30  dark:text-yellow-400  dark:ring-yellow-500/30  bg-yellow-400
+            bg-lime-500/10    text-lime-600    ring-lime-400/30    dark:text-lime-400    dark:ring-lime-500/30    bg-lime-400
+            bg-emerald-500/10 text-emerald-600 ring-emerald-400/30 dark:text-emerald-400 dark:ring-emerald-500/30 bg-emerald-400
+            bg-teal-500/10    text-teal-600    ring-teal-400/30    dark:text-teal-400    dark:ring-teal-500/30    bg-teal-400
+            bg-cyan-500/10    text-cyan-600    ring-cyan-400/30    dark:text-cyan-400    dark:ring-cyan-500/30    bg-cyan-400
+            bg-blue-500/10    text-blue-600    ring-blue-400/30    dark:text-blue-400    dark:ring-blue-500/30    bg-blue-400
+            bg-indigo-500/10  text-indigo-600  ring-indigo-400/30  dark:text-indigo-400  dark:ring-indigo-500/30  bg-indigo-400
+            bg-violet-500/10  text-violet-600  ring-violet-400/30  dark:text-violet-400  dark:ring-violet-500/30  bg-violet-400
+            bg-purple-500/10  text-purple-600  ring-purple-400/30  dark:text-purple-400  dark:ring-purple-500/30  bg-purple-400
+            bg-rose-500/10    text-rose-600    ring-rose-400/30    dark:text-rose-400    dark:ring-rose-500/30    bg-rose-400
+            bg-zinc-500/10    text-zinc-600    ring-zinc-400/30    dark:text-zinc-400    dark:ring-zinc-500/30    bg-zinc-400
+        --}}
+        @php
+            $badgeCls = [
+                'amber'   => 'bg-amber-500/10 text-amber-600 ring-amber-400/30 dark:text-amber-400 dark:ring-amber-500/30',
+                'orange'  => 'bg-orange-500/10 text-orange-600 ring-orange-400/30 dark:text-orange-400 dark:ring-orange-500/30',
+                'yellow'  => 'bg-yellow-500/10 text-yellow-600 ring-yellow-400/30 dark:text-yellow-400 dark:ring-yellow-500/30',
+                'lime'    => 'bg-lime-500/10 text-lime-600 ring-lime-400/30 dark:text-lime-400 dark:ring-lime-500/30',
+                'emerald' => 'bg-emerald-500/10 text-emerald-600 ring-emerald-400/30 dark:text-emerald-400 dark:ring-emerald-500/30',
+                'teal'    => 'bg-teal-500/10 text-teal-600 ring-teal-400/30 dark:text-teal-400 dark:ring-teal-500/30',
+                'cyan'    => 'bg-cyan-500/10 text-cyan-600 ring-cyan-400/30 dark:text-cyan-400 dark:ring-cyan-500/30',
+                'blue'    => 'bg-blue-500/10 text-blue-600 ring-blue-400/30 dark:text-blue-400 dark:ring-blue-500/30',
+                'indigo'  => 'bg-indigo-500/10 text-indigo-600 ring-indigo-400/30 dark:text-indigo-400 dark:ring-indigo-500/30',
+                'violet'  => 'bg-violet-500/10 text-violet-600 ring-violet-400/30 dark:text-violet-400 dark:ring-violet-500/30',
+                'purple'  => 'bg-purple-500/10 text-purple-600 ring-purple-400/30 dark:text-purple-400 dark:ring-purple-500/30',
+                'rose'    => 'bg-rose-500/10 text-rose-600 ring-rose-400/30 dark:text-rose-400 dark:ring-rose-500/30',
+                'zinc'    => 'bg-zinc-500/10 text-zinc-600 ring-zinc-400/30 dark:text-zinc-400 dark:ring-zinc-500/30',
+            ];
+            $dotCls = [
+                'amber' => 'bg-amber-400',   'orange' => 'bg-orange-400',
+                'yellow' => 'bg-yellow-400', 'lime'   => 'bg-lime-400',
+                'emerald' => 'bg-emerald-400', 'teal' => 'bg-teal-400',
+                'cyan'    => 'bg-cyan-400',  'blue'   => 'bg-blue-400',
+                'indigo'  => 'bg-indigo-400','violet' => 'bg-violet-400',
+                'purple'  => 'bg-purple-400','rose'   => 'bg-rose-400',
+                'zinc'    => 'bg-zinc-400',
+            ];
+        @endphp
+
         @forelse($vehicles as $v)
             @php
-                $placa    = $v['Placa']    ?? '—';
-                $cm       = $v['CM']       ?? '—';
-                $status   = $v['Status']   ?? '—';
-                $cerca1   = $v['Cerca 1']  ?? '';
+                $placa    = $v['Placa']   ?? '—';
+                $cm       = $v['CM']      ?? '—';
+                $status   = $v['Status']  ?? '—';
+                $cerca1   = $v['Cerca 1'] ?? '';
                 $locFull  = ($cerca1 !== '' && $cerca1 !== null) ? $cerca1 : ($v['Local'] ?? '—');
                 $condutor = $v['Condutor'] ?? '—';
 
-                $isWaiting = str_starts_with((string) $status, 'Ag-');
-
-                $statusColor = match(true) {
-                    $isWaiting                                                         => 'amber',
-                    (bool) preg_match('/carregado|carregando/i', (string) $status)    => 'emerald',
-                    (bool) preg_match('/trans[ií]t|viagem|em tr/i', (string) $status) => 'blue',
-                    (bool) preg_match('/descarreg/i', (string) $status)               => 'violet',
-                    default                                                            => 'zinc',
-                };
+                $isWaiting  = str_starts_with((string) $status, 'Ag-');
+                $colorToken = $statusColorMap[(string) $status] ?? 'zinc';
+                $badgeClass = $badgeCls[$colorToken] ?? $badgeCls['zinc'];
+                $dotClass   = $dotCls[$colorToken]   ?? $dotCls['zinc'];
             @endphp
 
             <div class="vehicle-card group cursor-pointer rounded-xl border p-4
@@ -158,28 +196,15 @@
                         </p>
                     </div>
 
-                    {{-- Badge de status --}}
-                    <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1
-                        @if($statusColor === 'amber')   bg-amber-500/10   text-amber-600   ring-amber-400/30   dark:text-amber-400   dark:ring-amber-500/30   @endif
-                        @if($statusColor === 'emerald') bg-emerald-500/10 text-emerald-600 ring-emerald-400/30 dark:text-emerald-400 dark:ring-emerald-500/30 @endif
-                        @if($statusColor === 'blue')    bg-blue-500/10    text-blue-600    ring-blue-400/30    dark:text-blue-400    dark:ring-blue-500/30    @endif
-                        @if($statusColor === 'violet')  bg-violet-500/10  text-violet-600  ring-violet-400/30  dark:text-violet-400  dark:ring-violet-500/30  @endif
-                        @if($statusColor === 'zinc')    bg-zinc-500/10    text-zinc-600    ring-zinc-400/30    dark:text-zinc-400    dark:ring-zinc-500/30    @endif">
-
+                    {{-- Badge de status (cor fixa por token) --}}
+                    <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 {{ $badgeClass }}">
                         @if($isWaiting)
-                            {{-- Ícone relógio para estados de espera --}}
                             <svg class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                             </svg>
                         @else
-                            <span class="h-1.5 w-1.5 rounded-full
-                                @if($statusColor === 'amber')   bg-amber-400   @endif
-                                @if($statusColor === 'emerald') bg-emerald-400 @endif
-                                @if($statusColor === 'blue')    bg-blue-400    @endif
-                                @if($statusColor === 'violet')  bg-violet-400  @endif
-                                @if($statusColor === 'zinc')    bg-zinc-400    @endif"></span>
+                            <span class="h-1.5 w-1.5 rounded-full {{ $dotClass }}"></span>
                         @endif
-
                         {{ $status }}
                     </span>
                 </div>
@@ -382,29 +407,36 @@
         }
 
         // ── Helpers de status ────────────────────────────────────────────────
+        // Mapa status → token de cor (gerado pelo controller, idêntico ao PHP)
+        var STATUS_COLOR_MAP = @json($statusColorMap);
+
         function statusColor(s) {
-            if (/^Ag-/i.test(s))                            { return 'amber'; }
-            if (/carregado|carregando/i.test(s))             { return 'emerald'; }
-            if (/trans[ií]t|viagem|em\str/i.test(s))        { return 'blue'; }
-            if (/descarreg/i.test(s))                        { return 'violet'; }
-            return 'zinc';
+            return STATUS_COLOR_MAP[s] || 'zinc';
         }
 
         var COLOR_CLASSES = {
-            amber:   { bg: 'bg-amber-500/10',   text: 'text-amber-400',   ring: 'ring-amber-500/30'   },
-            emerald: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', ring: 'ring-emerald-500/30' },
-            blue:    { bg: 'bg-blue-500/10',    text: 'text-blue-400',    ring: 'ring-blue-500/30'    },
-            violet:  { bg: 'bg-violet-500/10',  text: 'text-violet-400',  ring: 'ring-violet-500/30'  },
-            zinc:    { bg: 'bg-zinc-500/10',    text: 'text-zinc-400',    ring: 'ring-zinc-500/30'    },
+            amber:   { bg: 'bg-amber-500/10',   text: 'text-amber-400',   ring: 'ring-amber-500/30',   dot: 'bg-amber-400'   },
+            orange:  { bg: 'bg-orange-500/10',  text: 'text-orange-400',  ring: 'ring-orange-500/30',  dot: 'bg-orange-400'  },
+            yellow:  { bg: 'bg-yellow-500/10',  text: 'text-yellow-400',  ring: 'ring-yellow-500/30',  dot: 'bg-yellow-400'  },
+            lime:    { bg: 'bg-lime-500/10',    text: 'text-lime-400',    ring: 'ring-lime-500/30',    dot: 'bg-lime-400'    },
+            emerald: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', ring: 'ring-emerald-500/30', dot: 'bg-emerald-400' },
+            teal:    { bg: 'bg-teal-500/10',    text: 'text-teal-400',    ring: 'ring-teal-500/30',    dot: 'bg-teal-400'    },
+            cyan:    { bg: 'bg-cyan-500/10',    text: 'text-cyan-400',    ring: 'ring-cyan-500/30',    dot: 'bg-cyan-400'    },
+            blue:    { bg: 'bg-blue-500/10',    text: 'text-blue-400',    ring: 'ring-blue-500/30',    dot: 'bg-blue-400'    },
+            indigo:  { bg: 'bg-indigo-500/10',  text: 'text-indigo-400',  ring: 'ring-indigo-500/30',  dot: 'bg-indigo-400'  },
+            violet:  { bg: 'bg-violet-500/10',  text: 'text-violet-400',  ring: 'ring-violet-500/30',  dot: 'bg-violet-400'  },
+            purple:  { bg: 'bg-purple-500/10',  text: 'text-purple-400',  ring: 'ring-purple-500/30',  dot: 'bg-purple-400'  },
+            rose:    { bg: 'bg-rose-500/10',    text: 'text-rose-400',    ring: 'ring-rose-500/30',    dot: 'bg-rose-400'    },
+            zinc:    { bg: 'bg-zinc-500/10',    text: 'text-zinc-400',    ring: 'ring-zinc-500/30',    dot: 'bg-zinc-400'    },
         };
 
         function badgeHtml(status) {
             var c       = statusColor(status);
-            var cls     = COLOR_CLASSES[c];
+            var cls     = COLOR_CLASSES[c] || COLOR_CLASSES.zinc;
             var waiting = /^Ag-/i.test(status);
             var icon    = waiting
                 ? '<svg class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>'
-                : '<span class="h-1.5 w-1.5 rounded-full ' + cls.text.replace('text-', 'bg-') + '"></span>';
+                : '<span class="h-1.5 w-1.5 rounded-full ' + cls.dot + '"></span>';
             return '<span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 '
                 + cls.bg + ' ' + cls.text + ' ' + cls.ring + '">'
                 + icon + escHtml(status) + '</span>';
@@ -501,8 +533,9 @@
                         document.getElementById('vehicle-count').innerHTML =
                             '<span id="count-visible">' + total + '</span> / ' + total;
 
-                        if (data.divisions) { renderDivisionPills(data.divisions); }
-                        if (data.statuses)  { renderStatusPills(data.statuses); }
+                        if (data.statusColorMap) { STATUS_COLOR_MAP = data.statusColorMap; }
+                        if (data.divisions)      { renderDivisionPills(data.divisions); }
+                        if (data.statuses)       { renderStatusPills(data.statuses); }
                     }
                 })
                 .catch(function () { /* mantém grid atual */ })
@@ -614,8 +647,6 @@
             divisionsBar.classList.toggle('hidden', divisions.length < 2);
         }
 
-        var STATUS_DOT = { amber: 'bg-amber-400', emerald: 'bg-emerald-400', blue: 'bg-blue-400', violet: 'bg-violet-400', zinc: 'bg-zinc-400' };
-
         function renderStatusPills(statuses) {
             if (! statusesBar) { return; }
             var html = '<span class="shrink-0 pr-1 text-[10px] font-semibold uppercase tracking-wider'
@@ -625,8 +656,8 @@
                 var label  = st === '' ? 'Indefinido' : st;
                 var active = activeStatuses.has(st);
                 var state  = active ? ' bg-blue-600 border-blue-600 text-white' : ' border-zinc-500/50 text-zinc-500';
-                var color  = STATUS_DOT[statusColor(st)] || STATUS_DOT.zinc;
-                var dot    = '<span class="h-1.5 w-1.5 rounded-full ' + color + '"></span>';
+                var cls    = COLOR_CLASSES[statusColor(st)] || COLOR_CLASSES.zinc;
+                var dot    = '<span class="h-1.5 w-1.5 rounded-full ' + cls.dot + '"></span>';
                 html += '<button class="status-pill inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1'
                     + ' text-[11px] font-medium transition-colors duration-150' + state + '"'
                     + ' data-status="' + escHtml(st) + '">' + dot + escHtml(label) + '</button>';

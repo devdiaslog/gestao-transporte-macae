@@ -14,13 +14,45 @@ class ControlTowerController extends Controller
 
     private const CACHE_TTL = 300; // 5 minutos
 
+    /**
+     * Mapa curado: status conhecido → token de cor fixo.
+     * Novos status não listados recebem cor via hash CRC32.
+     *
+     * @var array<string, string>
+     */
+    private const STATUS_COLOR_MAP = [
+        'Ag-Carregamento' => 'amber',
+        'Ag-Descarregamento' => 'orange',
+        'Ag-Motorista' => 'yellow',
+        'Carregado' => 'emerald',
+        'Carregando' => 'teal',
+        'Descarregando' => 'violet',
+        'Descarregado' => 'purple',
+        'Em Trânsito' => 'blue',
+        'Em Viagem' => 'indigo',
+        'Disponível' => 'lime',
+        'Manutenção' => 'rose',
+        'Parado' => 'zinc',
+    ];
+
+    /**
+     * Paleta de cores para status desconhecidos (fallback por hash CRC32).
+     *
+     * @var array<int, string>
+     */
+    private const STATUS_COLOR_PALETTE = [
+        'amber', 'orange', 'yellow', 'lime', 'emerald',
+        'teal', 'cyan', 'blue', 'indigo', 'violet', 'purple', 'rose',
+    ];
+
     public function index(): View
     {
         $vehicles = $this->fetchVehicles();
         $divisions = $this->extractDivisions($vehicles);
         $statuses = $this->extractStatuses($vehicles);
+        $statusColorMap = $this->buildStatusColorMap($statuses);
 
-        return view('control-tower.index', compact('vehicles', 'divisions', 'statuses'));
+        return view('control-tower.index', compact('vehicles', 'divisions', 'statuses', 'statusColorMap'));
     }
 
     /**
@@ -34,6 +66,7 @@ class ControlTowerController extends Controller
         $vehicles = $this->fetchVehicles();
         $divisions = $this->extractDivisions($vehicles);
         $statuses = $this->extractStatuses($vehicles);
+        $statusColorMap = $this->buildStatusColorMap($statuses);
 
         return response()->json([
             'success' => true,
@@ -41,6 +74,7 @@ class ControlTowerController extends Controller
             'total' => count($vehicles),
             'divisions' => $divisions,
             'statuses' => $statuses,
+            'statusColorMap' => $statusColorMap,
         ]);
     }
 
@@ -283,5 +317,42 @@ class ControlTowerController extends Controller
             (bool) preg_match('/descarreg/i', $status) => 4,
             default => 5,
         };
+    }
+
+    /**
+     * Retorna o token de cor fixo para um status operacional.
+     * Usa o mapa curado para status conhecidos; para os demais aplica
+     * hash CRC32 sobre a string para garantir cor estável e determinística.
+     */
+    private function statusColorToken(string $status): string
+    {
+        if ($status === '') {
+            return 'zinc';
+        }
+
+        if (isset(self::STATUS_COLOR_MAP[$status])) {
+            return self::STATUS_COLOR_MAP[$status];
+        }
+
+        $index = abs(crc32($status)) % count(self::STATUS_COLOR_PALETTE);
+
+        return self::STATUS_COLOR_PALETTE[$index];
+    }
+
+    /**
+     * Constrói o mapa status → token de cor para os statuses presentes nos dados.
+     *
+     * @param  array<int, string>  $statuses
+     * @return array<string, string>
+     */
+    private function buildStatusColorMap(array $statuses): array
+    {
+        $map = [];
+
+        foreach ($statuses as $s) {
+            $map[$s] = $this->statusColorToken($s);
+        }
+
+        return $map;
     }
 }
