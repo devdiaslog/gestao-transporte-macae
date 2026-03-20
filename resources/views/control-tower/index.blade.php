@@ -1,5 +1,32 @@
 <x-layouts.app title="Torre de Controle">
 
+    @php
+        $badgeCls = [
+            'amber'   => 'bg-amber-500/10 text-amber-600 ring-amber-400/30 dark:text-amber-400 dark:ring-amber-500/30',
+            'orange'  => 'bg-orange-500/10 text-orange-600 ring-orange-400/30 dark:text-orange-400 dark:ring-orange-500/30',
+            'yellow'  => 'bg-yellow-500/10 text-yellow-600 ring-yellow-400/30 dark:text-yellow-400 dark:ring-yellow-500/30',
+            'lime'    => 'bg-lime-500/10 text-lime-600 ring-lime-400/30 dark:text-lime-400 dark:ring-lime-500/30',
+            'emerald' => 'bg-emerald-500/10 text-emerald-600 ring-emerald-400/30 dark:text-emerald-400 dark:ring-emerald-500/30',
+            'teal'    => 'bg-teal-500/10 text-teal-600 ring-teal-400/30 dark:text-teal-400 dark:ring-teal-500/30',
+            'cyan'    => 'bg-cyan-500/10 text-cyan-600 ring-cyan-400/30 dark:text-cyan-400 dark:ring-cyan-500/30',
+            'blue'    => 'bg-blue-500/10 text-blue-600 ring-blue-400/30 dark:text-blue-400 dark:ring-blue-500/30',
+            'indigo'  => 'bg-indigo-500/10 text-indigo-600 ring-indigo-400/30 dark:text-indigo-400 dark:ring-indigo-500/30',
+            'violet'  => 'bg-violet-500/10 text-violet-600 ring-violet-400/30 dark:text-violet-400 dark:ring-violet-500/30',
+            'purple'  => 'bg-purple-500/10 text-purple-600 ring-purple-400/30 dark:text-purple-400 dark:ring-purple-500/30',
+            'rose'    => 'bg-rose-500/10 text-rose-600 ring-rose-400/30 dark:text-rose-400 dark:ring-rose-500/30',
+            'zinc'    => 'bg-zinc-500/10 text-zinc-600 ring-zinc-400/30 dark:text-zinc-400 dark:ring-zinc-500/30',
+        ];
+        $dotCls = [
+            'amber'   => 'bg-amber-400',  'orange' => 'bg-orange-400',
+            'yellow'  => 'bg-yellow-400', 'lime'   => 'bg-lime-400',
+            'emerald' => 'bg-emerald-400', 'teal'  => 'bg-teal-400',
+            'cyan'    => 'bg-cyan-400',   'blue'   => 'bg-blue-400',
+            'indigo'  => 'bg-indigo-400', 'violet' => 'bg-violet-400',
+            'purple'  => 'bg-purple-400', 'rose'   => 'bg-rose-400',
+            'zinc'    => 'bg-zinc-400',
+        ];
+    @endphp
+
     {{-- ─── Sticky toolbar ─────────────────────────────────────────────────────── --}}
     <div class="sticky top-16 z-20 -mx-4 mb-6 border-b px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8
                 border-slate-200 bg-white/90 backdrop-blur-md
@@ -53,59 +80,56 @@
         {{-- Filtro por Divisão (visível apenas quando há 2+ divisões) --}}
         @if(count($divisions) > 1)
         <div id="divisions-bar"
-             class="mt-2.5 flex items-center gap-1.5 overflow-x-auto border-t pt-2.5
+             class="mt-2.5 flex items-center gap-2 border-t pt-2.5
                     border-slate-100 dark:border-zinc-800/60">
-            <span class="shrink-0 pr-1 text-[10px] font-semibold uppercase tracking-wider
+            <span class="shrink-0 text-[10px] font-semibold uppercase tracking-wider
                          text-zinc-400 dark:text-zinc-600">Divisão</span>
+            <div class="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div class="division-pills-wrap flex items-center gap-1.5">
+                    <button class="division-pill shrink-0 rounded-full border px-3 py-1
+                                   text-[11px] font-medium transition-colors duration-150
+                                   bg-blue-600 border-blue-600 text-white"
+                            data-div="__all__">Todos</button>
 
-            <button class="division-pill shrink-0 rounded-full border px-3 py-1
-                           text-[11px] font-medium transition-colors duration-150
-                           bg-blue-600 border-blue-600 text-white"
-                    data-div="__all__">Todos</button>
-
-            @foreach($divisions as $div)
-                <button class="division-pill shrink-0 rounded-full border px-3 py-1
-                               text-[11px] font-medium transition-colors duration-150
-                               border-zinc-500/50 text-zinc-500"
-                        data-div="{{ $div }}">
-                    {{ $div === '' ? 'Sem divisão' : $div }}
-                </button>
-            @endforeach
+                    @foreach($divisions as $div)
+                        <button class="division-pill shrink-0 rounded-full border px-3 py-1
+                                       text-[11px] font-medium transition-colors duration-150
+                                       border-zinc-500/50 text-zinc-500"
+                                data-div="{{ $div }}">
+                            {{ $div === '' ? 'Sem divisão' : $div }}
+                        </button>
+                    @endforeach
+                </div>
+            </div>
         </div>
         @endif
 
         {{-- Filtro por Status Operacional (visível apenas quando há 2+ status) --}}
         @if(count($statuses) > 1)
         <div id="statuses-bar"
-             class="mt-2.5 flex items-center gap-1.5 overflow-x-auto border-t pt-2.5
+             class="mt-2.5 flex items-center gap-2 border-t pt-2.5
                     border-slate-100 dark:border-zinc-800/60">
-            <span class="shrink-0 pr-1 text-[10px] font-semibold uppercase tracking-wider
+            <span class="shrink-0 text-[10px] font-semibold uppercase tracking-wider
                          text-zinc-400 dark:text-zinc-600">Status</span>
+            <div class="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div class="status-pills-wrap flex items-center gap-1.5">
+                    <button class="status-pill shrink-0 rounded-full border px-3 py-1
+                                   text-[11px] font-medium transition-colors duration-150
+                                   bg-blue-600 border-blue-600 text-white"
+                            data-status="__all__">Todos</button>
 
-            <button class="status-pill shrink-0 rounded-full border px-3 py-1
-                           text-[11px] font-medium transition-colors duration-150
-                           bg-blue-600 border-blue-600 text-white"
-                    data-status="__all__">Todos</button>
-
-            @foreach($statuses as $s)
-                @php
-                    $dotColor = match(true) {
-                        $s === ''                                                          => 'bg-zinc-400',
-                        str_starts_with($s, 'Ag-')                                        => 'bg-amber-400',
-                        (bool) preg_match('/carregado|carregando/i', $s)                  => 'bg-emerald-400',
-                        (bool) preg_match('/trans[ií]t|viagem|em tr/i', $s)              => 'bg-blue-400',
-                        (bool) preg_match('/descarreg/i', $s)                             => 'bg-violet-400',
-                        default                                                            => 'bg-zinc-400',
-                    };
-                @endphp
-                <button class="status-pill inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1
-                               text-[11px] font-medium transition-colors duration-150
-                               border-zinc-500/50 text-zinc-500"
-                        data-status="{{ $s }}">
-                    <span class="h-1.5 w-1.5 rounded-full {{ $dotColor }}"></span>
-                    {{ $s === '' ? 'Indefinido' : $s }}
-                </button>
-            @endforeach
+                    @foreach($statuses as $s)
+                        @php $dotColor = $dotCls[$statusColorMap[$s] ?? 'zinc'] ?? $dotCls['zinc']; @endphp
+                        <button class="status-pill inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1
+                                       text-[11px] font-medium transition-colors duration-150
+                                       border-zinc-500/50 text-zinc-500"
+                                data-status="{{ $s }}">
+                            <span class="h-1.5 w-1.5 rounded-full {{ $dotColor }}"></span>
+                            {{ $s === '' ? 'Indefinido' : $s }}
+                        </button>
+                    @endforeach
+                </div>
+            </div>
         </div>
         @endif
     </div>
@@ -131,32 +155,6 @@
             bg-rose-500/10    text-rose-600    ring-rose-400/30    dark:text-rose-400    dark:ring-rose-500/30    bg-rose-400
             bg-zinc-500/10    text-zinc-600    ring-zinc-400/30    dark:text-zinc-400    dark:ring-zinc-500/30    bg-zinc-400
         --}}
-        @php
-            $badgeCls = [
-                'amber'   => 'bg-amber-500/10 text-amber-600 ring-amber-400/30 dark:text-amber-400 dark:ring-amber-500/30',
-                'orange'  => 'bg-orange-500/10 text-orange-600 ring-orange-400/30 dark:text-orange-400 dark:ring-orange-500/30',
-                'yellow'  => 'bg-yellow-500/10 text-yellow-600 ring-yellow-400/30 dark:text-yellow-400 dark:ring-yellow-500/30',
-                'lime'    => 'bg-lime-500/10 text-lime-600 ring-lime-400/30 dark:text-lime-400 dark:ring-lime-500/30',
-                'emerald' => 'bg-emerald-500/10 text-emerald-600 ring-emerald-400/30 dark:text-emerald-400 dark:ring-emerald-500/30',
-                'teal'    => 'bg-teal-500/10 text-teal-600 ring-teal-400/30 dark:text-teal-400 dark:ring-teal-500/30',
-                'cyan'    => 'bg-cyan-500/10 text-cyan-600 ring-cyan-400/30 dark:text-cyan-400 dark:ring-cyan-500/30',
-                'blue'    => 'bg-blue-500/10 text-blue-600 ring-blue-400/30 dark:text-blue-400 dark:ring-blue-500/30',
-                'indigo'  => 'bg-indigo-500/10 text-indigo-600 ring-indigo-400/30 dark:text-indigo-400 dark:ring-indigo-500/30',
-                'violet'  => 'bg-violet-500/10 text-violet-600 ring-violet-400/30 dark:text-violet-400 dark:ring-violet-500/30',
-                'purple'  => 'bg-purple-500/10 text-purple-600 ring-purple-400/30 dark:text-purple-400 dark:ring-purple-500/30',
-                'rose'    => 'bg-rose-500/10 text-rose-600 ring-rose-400/30 dark:text-rose-400 dark:ring-rose-500/30',
-                'zinc'    => 'bg-zinc-500/10 text-zinc-600 ring-zinc-400/30 dark:text-zinc-400 dark:ring-zinc-500/30',
-            ];
-            $dotCls = [
-                'amber' => 'bg-amber-400',   'orange' => 'bg-orange-400',
-                'yellow' => 'bg-yellow-400', 'lime'   => 'bg-lime-400',
-                'emerald' => 'bg-emerald-400', 'teal' => 'bg-teal-400',
-                'cyan'    => 'bg-cyan-400',  'blue'   => 'bg-blue-400',
-                'indigo'  => 'bg-indigo-400','violet' => 'bg-violet-400',
-                'purple'  => 'bg-purple-400','rose'   => 'bg-rose-400',
-                'zinc'    => 'bg-zinc-400',
-            ];
-        @endphp
 
         @forelse($vehicles as $v)
             @php
@@ -632,9 +630,9 @@
 
         function renderDivisionPills(divisions) {
             if (! divisionsBar) { return; }
-            var html = '<span class="shrink-0 pr-1 text-[10px] font-semibold uppercase tracking-wider'
-                + ' text-zinc-400 dark:text-zinc-600">Divisão</span>'
-                + buildAllPillHtml('division-pill', 'data-div', 'Todos');
+            var pillsWrap = divisionsBar.querySelector('.division-pills-wrap');
+            if (! pillsWrap) { return; }
+            var html = buildAllPillHtml('division-pill', 'data-div', 'Todos');
             divisions.forEach(function (div) {
                 var label  = div === '' ? 'Sem divisão' : div;
                 var active = activeDivisions.has(div);
@@ -643,15 +641,15 @@
                     + ' text-[11px] font-medium transition-colors duration-150' + state + '"'
                     + ' data-div="' + escHtml(div) + '">' + escHtml(label) + '</button>';
             });
-            divisionsBar.innerHTML = html;
+            pillsWrap.innerHTML = html;
             divisionsBar.classList.toggle('hidden', divisions.length < 2);
         }
 
         function renderStatusPills(statuses) {
             if (! statusesBar) { return; }
-            var html = '<span class="shrink-0 pr-1 text-[10px] font-semibold uppercase tracking-wider'
-                + ' text-zinc-400 dark:text-zinc-600">Status</span>'
-                + buildAllPillHtml('status-pill', 'data-status', 'Todos');
+            var pillsWrap = statusesBar.querySelector('.status-pills-wrap');
+            if (! pillsWrap) { return; }
+            var html = buildAllPillHtml('status-pill', 'data-status', 'Todos');
             statuses.forEach(function (st) {
                 var label  = st === '' ? 'Indefinido' : st;
                 var active = activeStatuses.has(st);
@@ -662,7 +660,7 @@
                     + ' text-[11px] font-medium transition-colors duration-150' + state + '"'
                     + ' data-status="' + escHtml(st) + '">' + dot + escHtml(label) + '</button>';
             });
-            statusesBar.innerHTML = html;
+            pillsWrap.innerHTML = html;
             statusesBar.classList.toggle('hidden', statuses.length < 2);
         }
 
