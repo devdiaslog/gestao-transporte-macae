@@ -48,33 +48,26 @@ class ControlTowerController extends Controller
      * do rastreador (parado/em movimento). O array_combine manteria apenas o último,
      * perdendo o status operacional.
      *
-     * Mapeamento completo (índice → chave):
-     *   [0]  Tipo Veículo            [1]  Terceirizado
+     * Índices extraídos (ignorados: 0,1,9,29-36,47,48,50):
      *   [2]  Condutor                [3]  Placa
      *   [4]  CM                      [5]  SR
      *   [6]  SR Placa                [7]  Operação
-     *   [8]  Divisão                 [9]  CTE
-     *   [10] Rota                    [11] Documento
-     *   [12] Macro                   [13] Macro Data
-     *   [14] Latitude                [15] Longitude
-     *   [16] Local                   [17] Endereço
-     *   [18] Status ← OPERACIONAL    [19] Obs. Vix
-     *   [20] Obs. Petrobras          [21] Cerca 1
-     *   [22] Cerca 1 Entrada         [23] Cerca 1 Tempo Máx.
-     *   [24] Cerca 1 Atividade       [25] Cerca 2
-     *   [26] Cerca 2 Entrada         [27] Cerca 2 Tempo Máx.
-     *   [28] Cerca 2 Atividade       [29] Cerca 3
-     *   [30] Cerca 3 Entrada         [31] Cerca 3 Tempo Máx.
-     *   [32] Cerca 3 Atividade       [33] Cerca 4
-     *   [34] Cerca 4 Entrada         [35] Cerca 4 Tempo Máx.
-     *   [36] Cerca 4 Atividade       [37] Início Jornada
-     *   [38] Disponibilidade         [39] Disponibilidade Data
-     *   [40] Rastreador ← MOVIMENTO  [41] Rastreador Data
-     *   [42] Conexão                 [43] Sinal Data
-     *   [44] Comunicação             [45] Motor
-     *   [46] Velocidade              [47] Litrômetro
-     *   [48] Percentual Tanque       [49] Odômetro
-     *   [50] Rastreador ID
+     *   [8]  Divisão                 [10] Rota
+     *   [11] Documento               [12] Macro
+     *   [13] Macro Data              [14] Latitude
+     *   [15] Longitude               [16] Local
+     *   [17] Endereço                [18] Status ← OPERACIONAL
+     *   [19] Obs. Vix                [20] Obs. Petrobras
+     *   [21] Cerca 1                 [22] Cerca 1 Entrada
+     *   [23] Cerca 1 Tempo Máx.      [24] Cerca 1 Atividade
+     *   [25] Cerca 2                 [26] Cerca 2 Entrada
+     *   [27] Cerca 2 Tempo Máx.      [28] Cerca 2 Atividade
+     *   [37] Início Jornada          [38] Disponibilidade
+     *   [39] Disponibilidade Data    [40] Rastreador ← MOVIMENTO
+     *   [41] Rastreador Data         [42] Conexão
+     *   [43] Sinal Data              [44] Comunicação
+     *   [45] Motor                   [46] Velocidade
+     *   [49] Odômetro
      *
      * @return array<int, array<string, mixed>>
      */
@@ -144,7 +137,7 @@ class ControlTowerController extends Controller
 
     /**
      * Converte um row posicional da API Bigcore em array associativo com chaves únicas.
-     * Resolve o conflito de dois headers "Status" usando nomes distintos.
+     * Apenas os índices relevantes são extraídos — ignorados: 0,1,9,29-36,47,48,50.
      *
      * @param  array<int, mixed>  $row
      * @return array<string, mixed>
@@ -154,8 +147,6 @@ class ControlTowerController extends Controller
         $col = fn (int $i): mixed => $row[$i] ?? null;
 
         return [
-            'Tipo Veículo' => $col(0),
-            'Terceirizado' => $col(1),
             'Condutor' => $col(2),
             'Placa' => $col(3),
             'CM' => $col(4),
@@ -163,7 +154,6 @@ class ControlTowerController extends Controller
             'SR Placa' => $col(6),
             'Operação' => $col(7),
             'Divisão' => $col(8),
-            'CTE' => $col(9),
             'Rota' => $col(10),
             'Documento' => $col(11),
             'Macro' => $col(12),
@@ -183,14 +173,6 @@ class ControlTowerController extends Controller
             'Cerca 2 Entrada' => $col(26),
             'Cerca 2 Tempo Máx.' => $col(27),
             'Cerca 2 Atividade' => $col(28),
-            'Cerca 3' => $col(29),
-            'Cerca 3 Entrada' => $col(30),
-            'Cerca 3 Tempo Máx.' => $col(31),
-            'Cerca 3 Atividade' => $col(32),
-            'Cerca 4' => $col(33),
-            'Cerca 4 Entrada' => $col(34),
-            'Cerca 4 Tempo Máx.' => $col(35),
-            'Cerca 4 Atividade' => $col(36),
             'Início Jornada' => $col(37),
             'Disponibilidade' => $col(38),
             'Disponibilidade Data' => $col(39),
@@ -201,10 +183,7 @@ class ControlTowerController extends Controller
             'Comunicação' => $col(44),
             'Motor' => $col(45),
             'Velocidade' => $col(46),
-            'Litrômetro' => $col(47),
-            'Percentual Tanque' => $col(48),
             'Odômetro' => $col(49),
-            'Rastreador ID' => $col(50),
         ];
     }
 
