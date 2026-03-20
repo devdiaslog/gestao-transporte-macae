@@ -49,6 +49,31 @@
                 <span id="btn-refresh-label">Atualizar</span>
             </button>
         </div>
+
+        {{-- Filtro por Divisão (visível apenas quando há 2+ divisões) --}}
+        @if(count($divisions) > 1)
+        <div id="divisions-bar"
+             class="mt-2.5 flex items-center gap-1.5 overflow-x-auto border-t pt-2.5
+                    border-slate-100 dark:border-zinc-800/60">
+            <span class="shrink-0 pr-1 text-[10px] font-semibold uppercase tracking-wider
+                         text-zinc-400 dark:text-zinc-600">Divisão</span>
+
+            {{-- "Todos" começa ativo --}}
+            <button class="division-pill shrink-0 rounded-full border px-3 py-1
+                           text-[11px] font-medium transition-colors duration-150
+                           bg-blue-600 border-blue-600 text-white"
+                    data-div="__all__">Todos</button>
+
+            @foreach($divisions as $div)
+                <button class="division-pill shrink-0 rounded-full border px-3 py-1
+                               text-[11px] font-medium transition-colors duration-150
+                               border-zinc-500/50 text-zinc-500"
+                        data-div="{{ $div }}">
+                    {{ $div === '' ? 'Sem divisão' : $div }}
+                </button>
+            @endforeach
+        </div>
+        @endif
     </div>
 
     {{-- ─── Grid de Cards ───────────────────────────────────────────────────── --}}
@@ -82,6 +107,7 @@
                         dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
                  data-plate="{{ strtolower($placa) }}"
                  data-cm="{{ strtolower($cm) }}"
+                 data-divisao="{{ $v['Divisão'] ?? '' }}"
                  data-vehicle="{{ json_encode($v, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }}"
                  onclick="openVehicleDetail(this)">
 
@@ -231,26 +257,68 @@
     <script>
     (function () {
 
-        // ── Busca instantânea ────────────────────────────────────────────────
-        var searchInput  = document.getElementById('search-vehicles');
-        var countVisible = document.getElementById('count-visible');
-        var allCards     = [];
+        // ── Estado dos filtros ───────────────────────────────────────────────
+        var searchInput     = document.getElementById('search-vehicles');
+        var countVisible    = document.getElementById('count-visible');
+        var allCards        = [];
+        var activeDivisions = new Set(); // vazio = todos
 
         function rebindCards() {
             allCards = Array.from(document.querySelectorAll('.vehicle-card'));
         }
         rebindCards();
 
-        searchInput.addEventListener('input', function () {
-            var q   = this.value.trim().toLowerCase();
+        // ── Filtro combinado (busca + divisão) ───────────────────────────────
+        function applyFilters() {
+            var q   = searchInput.value.trim().toLowerCase();
             var vis = 0;
             allCards.forEach(function (card) {
-                var match = !q || card.dataset.plate.includes(q) || card.dataset.cm.includes(q);
+                var matchSearch = ! q || card.dataset.plate.includes(q) || card.dataset.cm.includes(q);
+                var matchDiv    = activeDivisions.size === 0 || activeDivisions.has(card.dataset.divisao);
+                var match       = matchSearch && matchDiv;
                 card.style.display = match ? '' : 'none';
                 if (match) { vis++; }
             });
             countVisible.textContent = vis;
-        });
+        }
+
+        searchInput.addEventListener('input', applyFilters);
+
+        // ── Pills de divisão ─────────────────────────────────────────────────
+        function setPillActive(pill, active) {
+            if (! pill) { return; }
+            if (active) {
+                pill.classList.add('bg-blue-600', 'border-blue-600', 'text-white');
+                pill.classList.remove('border-zinc-500/50', 'text-zinc-500');
+            } else {
+                pill.classList.remove('bg-blue-600', 'border-blue-600', 'text-white');
+                pill.classList.add('border-zinc-500/50', 'text-zinc-500');
+            }
+        }
+
+        function syncPillStates() {
+            var allPill  = document.querySelector('.division-pill[data-div="__all__"]');
+            var divPills = document.querySelectorAll('.division-pill:not([data-div="__all__"])');
+            var isAll    = activeDivisions.size === 0;
+            setPillActive(allPill, isAll);
+            divPills.forEach(function (p) { setPillActive(p, activeDivisions.has(p.dataset.div)); });
+        }
+
+        var divisionsBar = document.getElementById('divisions-bar');
+        if (divisionsBar) {
+            divisionsBar.addEventListener('click', function (e) {
+                var pill = e.target.closest('.division-pill');
+                if (! pill) { return; }
+                var div = pill.dataset.div;
+                if (div === '__all__') {
+                    activeDivisions.clear();
+                } else {
+                    activeDivisions.has(div) ? activeDivisions.delete(div) : activeDivisions.add(div);
+                }
+                syncPillStates();
+                applyFilters();
+            });
+        }
 
         // ── Helpers de status ────────────────────────────────────────────────
         function statusColor(s) {
@@ -307,6 +375,7 @@
                 + ' border-slate-200 bg-white hover:border-slate-300 hover:shadow-md'
                 + ' dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"'
                 + ' data-plate="' + placa.toLowerCase() + '" data-cm="' + cm.toLowerCase() + '"'
+                + ' data-divisao="' + escHtml(String(v['Divisão'] || '')) + '"'
                 + ' data-vehicle="' + encoded + '" onclick="openVehicleDetail(this)">'
 
                 + '<div class="flex items-start justify-between gap-2">'
@@ -369,6 +438,11 @@
                         document.getElementById('count-visible').textContent = total;
                         document.getElementById('vehicle-count').innerHTML =
                             '<span id="count-visible">' + total + '</span> / ' + total;
+
+                        // Re-renderiza pills se as divisões mudaram
+                        if (data.divisions && divisionsBar) {
+                            renderPills(data.divisions);
+                        }
                     }
                 })
                 .catch(function () { /* mantém grid atual */ })
@@ -378,7 +452,7 @@
                     label.textContent = 'Atualizar';
                     grid.style.opacity = '';
                     grid.style.pointerEvents = '';
-                    searchInput.dispatchEvent(new Event('input'));
+                    applyFilters();
                 });
         };
 
@@ -452,6 +526,36 @@
             return String(str)
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // ── Re-renderiza pills de divisão (pós-refresh) ──────────────────────
+        function renderPills(divisions) {
+            if (! divisionsBar) { return; }
+            var isAll = activeDivisions.size === 0;
+            var html  = '<span class="shrink-0 pr-1 text-[10px] font-semibold uppercase tracking-wider'
+                + ' text-zinc-400 dark:text-zinc-600">Divisão</span>'
+                + '<button class="division-pill shrink-0 rounded-full border px-3 py-1'
+                + ' text-[11px] font-medium transition-colors duration-150'
+                + (isAll ? ' bg-blue-600 border-blue-600 text-white' : ' border-zinc-500/50 text-zinc-500') + '"'
+                + ' data-div="__all__">Todos</button>';
+
+            divisions.forEach(function (div) {
+                var label   = div === '' ? 'Sem divisão' : div;
+                var active  = activeDivisions.has(div);
+                var classes = active
+                    ? ' bg-blue-600 border-blue-600 text-white'
+                    : ' border-zinc-500/50 text-zinc-500';
+                html += '<button class="division-pill shrink-0 rounded-full border px-3 py-1'
+                    + ' text-[11px] font-medium transition-colors duration-150' + classes + '"'
+                    + ' data-div="' + escHtml(div) + '">' + escHtml(label) + '</button>';
+            });
+
+            divisionsBar.innerHTML = html;
+
+            var wrap = divisionsBar.closest ? divisionsBar : null;
+            if (wrap) {
+                wrap.classList.toggle('hidden', divisions.length < 2);
+            }
         }
 
     })();

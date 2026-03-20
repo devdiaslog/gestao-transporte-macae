@@ -17,8 +17,9 @@ class ControlTowerController extends Controller
     public function index(): View
     {
         $vehicles = $this->fetchVehicles();
+        $divisions = $this->extractDivisions($vehicles);
 
-        return view('control-tower.index', compact('vehicles'));
+        return view('control-tower.index', compact('vehicles', 'divisions'));
     }
 
     /**
@@ -30,12 +31,47 @@ class ControlTowerController extends Controller
         Cache::forget(self::CACHE_KEY);
 
         $vehicles = $this->fetchVehicles();
+        $divisions = $this->extractDivisions($vehicles);
 
         return response()->json([
             'success' => true,
             'vehicles' => $vehicles,
             'total' => count($vehicles),
+            'divisions' => $divisions,
         ]);
+    }
+
+    /**
+     * Extrai valores únicos do campo Divisão, ordenados alfabeticamente.
+     * Registros com Divisão nula/vazia são representados por string vazia
+     * e exibidos como "Sem divisão" na UI.
+     *
+     * @param  array<int, array<string, mixed>>  $vehicles
+     * @return array<int, string>
+     */
+    private function extractDivisions(array $vehicles): array
+    {
+        $map = [];
+        $hasSemDivisao = false;
+
+        foreach ($vehicles as $v) {
+            $div = $v['Divisão'] ?? null;
+
+            if ($div === null || $div === '') {
+                $hasSemDivisao = true;
+            } else {
+                $map[(string) $div] = true;
+            }
+        }
+
+        $result = array_keys($map);
+        sort($result);
+
+        if ($hasSemDivisao) {
+            $result[] = ''; // '' = "Sem divisão" na UI
+        }
+
+        return $result;
     }
 
     /**
