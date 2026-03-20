@@ -18,8 +18,9 @@ class ControlTowerController extends Controller
     {
         $vehicles = $this->fetchVehicles();
         $divisions = $this->extractDivisions($vehicles);
+        $statuses = $this->extractStatuses($vehicles);
 
-        return view('control-tower.index', compact('vehicles', 'divisions'));
+        return view('control-tower.index', compact('vehicles', 'divisions', 'statuses'));
     }
 
     /**
@@ -32,12 +33,14 @@ class ControlTowerController extends Controller
 
         $vehicles = $this->fetchVehicles();
         $divisions = $this->extractDivisions($vehicles);
+        $statuses = $this->extractStatuses($vehicles);
 
         return response()->json([
             'success' => true,
             'vehicles' => $vehicles,
             'total' => count($vehicles),
             'divisions' => $divisions,
+            'statuses' => $statuses,
         ]);
     }
 
@@ -69,6 +72,44 @@ class ControlTowerController extends Controller
 
         if ($hasSemDivisao) {
             $result[] = ''; // '' = "Sem divisão" na UI
+        }
+
+        return $result;
+    }
+
+    /**
+     * Extrai valores únicos do campo Status (operacional), ordenados por prioridade visual.
+     * Null/vazio é representado por string vazia e exibido como "Indefinido" na UI.
+     *
+     * @param  array<int, array<string, mixed>>  $vehicles
+     * @return array<int, string>
+     */
+    private function extractStatuses(array $vehicles): array
+    {
+        $map = [];
+        $hasIndefinido = false;
+
+        foreach ($vehicles as $v) {
+            $status = $v['Status'] ?? null;
+
+            if ($status === null || $status === '') {
+                $hasIndefinido = true;
+            } else {
+                $map[(string) $status] = true;
+            }
+        }
+
+        $result = array_keys($map);
+
+        usort($result, function (string $a, string $b): int {
+            $pa = $this->statusPriority($a);
+            $pb = $this->statusPriority($b);
+
+            return $pa !== $pb ? $pa <=> $pb : strcasecmp($a, $b);
+        });
+
+        if ($hasIndefinido) {
+            $result[] = ''; // '' = "Indefinido" na UI
         }
 
         return $result;
