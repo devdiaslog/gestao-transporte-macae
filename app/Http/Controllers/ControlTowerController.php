@@ -117,6 +117,15 @@ class ControlTowerController extends Controller
 
                 $vehicles = array_map(fn (array $row): array => $this->mapRow($row), $data['rows']);
 
+                usort($vehicles, function (array $a, array $b): int {
+                    $pa = $this->statusPriority((string) ($a['Status'] ?? ''));
+                    $pb = $this->statusPriority((string) ($b['Status'] ?? ''));
+
+                    return $pa !== $pb
+                        ? $pa <=> $pb
+                        : strcasecmp((string) ($a['Status'] ?? ''), (string) ($b['Status'] ?? ''));
+                });
+
                 Log::info('[TMS] Veículos montados', ['total' => count($vehicles)]);
 
                 return $vehicles;
@@ -197,5 +206,26 @@ class ControlTowerController extends Controller
             'Odômetro' => $col(49),
             'Rastreador ID' => $col(50),
         ];
+    }
+
+    /**
+     * Retorna a prioridade de ordenação para um status operacional.
+     * Valores menores aparecem primeiro no grid.
+     *
+     * 1 — Ag-*         (aguardando — âmbar)
+     * 2 — Carregado    (carregado  — emerald)
+     * 3 — Trânsito     (em viagem  — azul)
+     * 4 — Descarreg.   (descarreg. — violeta)
+     * 5 — Outros       (zinc)
+     */
+    private function statusPriority(string $status): int
+    {
+        return match (true) {
+            str_starts_with($status, 'Ag-') => 1,
+            (bool) preg_match('/carregado|carregando/i', $status) => 2,
+            (bool) preg_match('/trans[ií]t|viagem|em tr/i', $status) => 3,
+            (bool) preg_match('/descarreg/i', $status) => 4,
+            default => 5,
+        };
     }
 }
