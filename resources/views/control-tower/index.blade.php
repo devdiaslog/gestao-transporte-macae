@@ -28,9 +28,9 @@
     @endphp
 
     {{-- ─── Sticky toolbar ─────────────────────────────────────────────────────── --}}
-    <div class="sticky top-16 z-20 -mx-4 mb-4 border-b px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8
-                border-slate-200 bg-white/90 backdrop-blur-md
-                dark:border-zinc-800 dark:bg-black/90">
+    <div class="sticky top-0 z-20 -mx-4 -mt-8 border-b px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8
+                border-slate-200 bg-white
+                dark:border-zinc-800 dark:bg-zinc-950">
         <div class="flex flex-wrap items-center gap-2 sm:gap-3">
 
             {{-- Page title (inline) --}}
@@ -158,7 +158,7 @@
 
     {{-- ─── Grid de Cards ───────────────────────────────────────────────────── --}}
     <div id="vehicles-grid"
-         class="grid grid-cols-1 gap-3 pt-8 transition-opacity duration-300
+         class="grid grid-cols-1 gap-3 pt-4 transition-opacity duration-300
                 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 
         {{--

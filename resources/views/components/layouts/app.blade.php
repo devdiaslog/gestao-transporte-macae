@@ -154,12 +154,12 @@
          class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm lg:hidden"></div>
 
     {{-- ─── Main ────────────────────────────────────────────────────────────── --}}
-    <div class="flex min-h-full min-w-0 flex-1 flex-col lg:pl-64">
+    <div class="flex h-full min-w-0 flex-1 flex-col lg:pl-64">
 
         {{-- Header --}}
-        <header class="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-4 px-6
-                       border-b border-slate-200 bg-white/80 backdrop-blur-md
-                       dark:border-zinc-800 dark:bg-black/90">
+        <header class="flex h-16 shrink-0 items-center gap-4 px-6
+                       border-b border-slate-200 bg-white
+                       dark:border-zinc-800 dark:bg-zinc-950">
 
             <button id="sidebar-toggle"
                     class="lg:hidden -ml-1 rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/70">
@@ -193,7 +193,7 @@
         </header>
 
         {{-- Content --}}
-        <main class="flex-1 [overflow-x:clip] px-4 py-8 sm:px-6 lg:px-8">
+        <main class="min-h-0 flex-1 overflow-y-auto [overflow-x:clip] px-4 py-8 sm:px-6 lg:px-8">
 
             @if(session('success'))
                 <div id="flash-success"
