@@ -77,22 +77,26 @@
             </button>
         </div>
 
-        {{-- Filtro por Divisão (visível apenas quando há 2+ divisões) --}}
-        @if(count($divisions) > 1)
-        <div id="divisions-bar"
-             class="mt-2.5 flex items-center gap-2 border-t pt-2.5
-                    border-slate-100 dark:border-zinc-800/60">
-            <span class="shrink-0 text-[10px] font-semibold uppercase tracking-wider
-                         text-zinc-400 dark:text-zinc-600">Divisão</span>
-            <div class="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <div class="division-pills-wrap flex items-center gap-1.5">
-                    <button class="division-pill shrink-0 rounded-full border px-3 py-1
+        {{-- Wrapper: clips bar overflow → impede scroll horizontal na página --}}
+        <div class="w-full overflow-hidden">
+
+            {{-- Filtro por Divisão (visível apenas quando há 2+ divisões) --}}
+            @if(count($divisions) > 1)
+            <div id="divisions-bar"
+                 class="mt-2.5 w-full overflow-x-auto whitespace-nowrap border-t pt-2.5
+                        [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+                        border-slate-100 dark:border-zinc-800/60">
+                <div class="division-pills-wrap inline-flex items-center gap-1.5">
+                    <span class="pr-1 text-[10px] font-semibold uppercase tracking-wider
+                                 text-zinc-400 dark:text-zinc-600">Divisão</span>
+
+                    <button class="division-pill inline-flex shrink-0 rounded-full border px-3 py-1
                                    text-[11px] font-medium transition-colors duration-150
                                    bg-blue-600 border-blue-600 text-white"
                             data-div="__all__">Todos</button>
 
                     @foreach($divisions as $div)
-                        <button class="division-pill shrink-0 rounded-full border px-3 py-1
+                        <button class="division-pill inline-flex shrink-0 rounded-full border px-3 py-1
                                        text-[11px] font-medium transition-colors duration-150
                                        border-zinc-500/50 text-zinc-500"
                                 data-div="{{ $div }}">
@@ -101,19 +105,19 @@
                     @endforeach
                 </div>
             </div>
-        </div>
-        @endif
+            @endif
 
-        {{-- Filtro por Status Operacional (visível apenas quando há 2+ status) --}}
-        @if(count($statuses) > 1)
-        <div id="statuses-bar"
-             class="mt-2.5 flex items-center gap-2 border-t pt-2.5
-                    border-slate-100 dark:border-zinc-800/60">
-            <span class="shrink-0 text-[10px] font-semibold uppercase tracking-wider
-                         text-zinc-400 dark:text-zinc-600">Status</span>
-            <div class="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <div class="status-pills-wrap flex items-center gap-1.5">
-                    <button class="status-pill shrink-0 rounded-full border px-3 py-1
+            {{-- Filtro por Status Operacional (visível apenas quando há 2+ status) --}}
+            @if(count($statuses) > 1)
+            <div id="statuses-bar"
+                 class="mt-2.5 w-full overflow-x-auto whitespace-nowrap border-t pt-2.5
+                        [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+                        border-slate-100 dark:border-zinc-800/60">
+                <div class="status-pills-wrap inline-flex items-center gap-1.5">
+                    <span class="pr-1 text-[10px] font-semibold uppercase tracking-wider
+                                 text-zinc-400 dark:text-zinc-600">Status</span>
+
+                    <button class="status-pill inline-flex shrink-0 rounded-full border px-3 py-1
                                    text-[11px] font-medium transition-colors duration-150
                                    bg-blue-600 border-blue-600 text-white"
                             data-status="__all__">Todos</button>
@@ -130,8 +134,9 @@
                     @endforeach
                 </div>
             </div>
+            @endif
+
         </div>
-        @endif
     </div>
 
     {{-- ─── Grid de Cards ───────────────────────────────────────────────────── --}}
@@ -623,33 +628,36 @@
         function buildAllPillHtml(cls, dataAttr, label) {
             var active = cls === 'division-pill' ? activeDivisions.size === 0 : activeStatuses.size === 0;
             var state  = active ? ' bg-blue-600 border-blue-600 text-white' : ' border-zinc-500/50 text-zinc-500';
-            return '<button class="' + cls + ' shrink-0 rounded-full border px-3 py-1'
+            return '<button class="' + cls + ' inline-flex shrink-0 rounded-full border px-3 py-1'
                 + ' text-[11px] font-medium transition-colors duration-150' + state + '"'
                 + ' ' + dataAttr + '="__all__">' + label + '</button>';
         }
 
         function renderDivisionPills(divisions) {
             if (! divisionsBar) { return; }
-            var pillsWrap = divisionsBar.querySelector('.division-pills-wrap');
-            if (! pillsWrap) { return; }
-            var html = buildAllPillHtml('division-pill', 'data-div', 'Todos');
+            var html = '<div class="division-pills-wrap inline-flex items-center gap-1.5">'
+                + '<span class="pr-1 text-[10px] font-semibold uppercase tracking-wider'
+                + ' text-zinc-400 dark:text-zinc-600">Divisão</span>'
+                + buildAllPillHtml('division-pill', 'data-div', 'Todos');
             divisions.forEach(function (div) {
                 var label  = div === '' ? 'Sem divisão' : div;
                 var active = activeDivisions.has(div);
                 var state  = active ? ' bg-blue-600 border-blue-600 text-white' : ' border-zinc-500/50 text-zinc-500';
-                html += '<button class="division-pill shrink-0 rounded-full border px-3 py-1'
+                html += '<button class="division-pill inline-flex shrink-0 rounded-full border px-3 py-1'
                     + ' text-[11px] font-medium transition-colors duration-150' + state + '"'
                     + ' data-div="' + escHtml(div) + '">' + escHtml(label) + '</button>';
             });
-            pillsWrap.innerHTML = html;
+            html += '</div>';
+            divisionsBar.innerHTML = html;
             divisionsBar.classList.toggle('hidden', divisions.length < 2);
         }
 
         function renderStatusPills(statuses) {
             if (! statusesBar) { return; }
-            var pillsWrap = statusesBar.querySelector('.status-pills-wrap');
-            if (! pillsWrap) { return; }
-            var html = buildAllPillHtml('status-pill', 'data-status', 'Todos');
+            var html = '<div class="status-pills-wrap inline-flex items-center gap-1.5">'
+                + '<span class="pr-1 text-[10px] font-semibold uppercase tracking-wider'
+                + ' text-zinc-400 dark:text-zinc-600">Status</span>'
+                + buildAllPillHtml('status-pill', 'data-status', 'Todos');
             statuses.forEach(function (st) {
                 var label  = st === '' ? 'Indefinido' : st;
                 var active = activeStatuses.has(st);
@@ -660,7 +668,8 @@
                     + ' text-[11px] font-medium transition-colors duration-150' + state + '"'
                     + ' data-status="' + escHtml(st) + '">' + dot + escHtml(label) + '</button>';
             });
-            pillsWrap.innerHTML = html;
+            html += '</div>';
+            statusesBar.innerHTML = html;
             statusesBar.classList.toggle('hidden', statuses.length < 2);
         }
 
