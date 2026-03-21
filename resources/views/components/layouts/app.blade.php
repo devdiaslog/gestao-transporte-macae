@@ -38,19 +38,21 @@
 
     {{-- ─── Sidebar ─────────────────────────────────────────────────────────── --}}
     <aside id="sidebar"
-           class="fixed inset-y-0 left-0 z-50 flex w-64 flex-col
+           class="fixed inset-y-0 left-0 z-50 flex w-16 flex-col
                   border-r border-slate-200 bg-white
                   dark:border-zinc-800 dark:bg-zinc-950
-                  -translate-x-full transition-transform duration-300 ease-in-out lg:translate-x-0">
+                  -translate-x-full transition-all duration-300 ease-in-out lg:translate-x-0">
 
         {{-- Logo --}}
-        <div class="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 px-5 dark:border-zinc-800">
+        <div id="sidebar-logo"
+             class="flex h-16 shrink-0 items-center justify-center border-b border-slate-200 px-2
+                    transition-all duration-300 dark:border-zinc-800">
             <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-900 dark:bg-white">
                 <svg class="h-4 w-4 text-white dark:text-zinc-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
                 </svg>
             </div>
-            <div class="min-w-0">
+            <div class="sidebar-label-group hidden min-w-0">
                 <p class="truncate text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
                     Gestão de Transporte
                 </p>
@@ -59,13 +61,14 @@
         </div>
 
         {{-- Navigation --}}
-        <nav class="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-            <p class="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600">
+        <nav class="flex-1 space-y-0.5 overflow-y-auto px-2 py-4">
+            <p class="nav-label mb-2 hidden px-3 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600">
                 Principal
             </p>
 
             <a href="{{ route('users.index') }}"
-               class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium
+               title="Usuários"
+               class="nav-link flex items-center justify-center rounded-lg py-2.5 text-sm font-medium
                       transition-all duration-200
                       {{ request()->routeIs('users.*')
                           ? 'bg-zinc-900 text-white dark:bg-zinc-800 dark:text-zinc-100'
@@ -73,11 +76,12 @@
                 <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/>
                 </svg>
-                Usuários
+                <span class="nav-label hidden whitespace-nowrap">Usuários</span>
             </a>
 
             <a href="{{ route('control-tower.index') }}"
-               class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium
+               title="Torre de Controle"
+               class="nav-link flex items-center justify-center rounded-lg py-2.5 text-sm font-medium
                       transition-all duration-200
                       {{ request()->routeIs('control-tower.*')
                           ? 'bg-zinc-900 text-white dark:bg-zinc-800 dark:text-zinc-100'
@@ -85,15 +89,15 @@
                 <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.348 14.652a3.75 3.75 0 0 1 0-5.304m5.304 0a3.75 3.75 0 0 1 0 5.304m-7.425 2.121a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.807-3.808-9.98 0-13.788m13.788 0c3.808 3.807 3.808 9.98 0 13.788M12 12h.008v.008H12V12Z"/>
                 </svg>
-                Torre de Controle
+                <span class="nav-label hidden whitespace-nowrap">Torre de Controle</span>
             </a>
         </nav>
 
         {{-- User footer --}}
-        <div class="shrink-0 border-t border-slate-200 p-3 dark:border-zinc-800">
+        <div class="shrink-0 border-t border-slate-200 p-2 dark:border-zinc-800">
             <div class="relative" id="profile-wrapper">
                 <button id="profile-btn" aria-expanded="false" aria-haspopup="true"
-                        class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm
+                        class="flex w-full items-center justify-center rounded-lg py-2.5 text-sm
                                transition-colors duration-200
                                hover:bg-zinc-100 dark:hover:bg-zinc-800/70">
                     <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full
@@ -103,7 +107,7 @@
                             {{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 2)) }}
                         </span>
                     </div>
-                    <div class="min-w-0 flex-1 text-left">
+                    <div class="sidebar-label-group hidden min-w-0 flex-1 text-left">
                         <p class="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                             {{ auth()->user()->name ?? 'Usuário' }}
                         </p>
@@ -112,7 +116,7 @@
                         </p>
                     </div>
                     <svg id="profile-chevron"
-                         class="h-3.5 w-3.5 shrink-0 text-zinc-400 transition-transform duration-200 dark:text-zinc-600"
+                         class="sidebar-label-group hidden h-3.5 w-3.5 shrink-0 text-zinc-400 transition-transform duration-200 dark:text-zinc-600"
                          fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
                     </svg>
@@ -154,7 +158,7 @@
          class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm lg:hidden"></div>
 
     {{-- ─── Main ────────────────────────────────────────────────────────────── --}}
-    <div class="flex h-full min-w-0 flex-1 flex-col lg:pl-64">
+    <div id="main-wrapper" class="flex h-full min-w-0 flex-1 flex-col transition-all duration-300 lg:pl-16">
 
         {{-- Header --}}
         <header class="flex h-16 shrink-0 items-center gap-4 px-6
@@ -162,7 +166,7 @@
                        dark:border-zinc-800 dark:bg-zinc-950">
 
             <button id="sidebar-toggle"
-                    class="lg:hidden -ml-1 rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/70">
+                    class="-ml-1 rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/70">
                 <span class="sr-only">Abrir menu</span>
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
@@ -285,28 +289,151 @@
 
 <script>
 (function () {
-    // ── Sidebar mobile ──────────────────────────────────────────────────────
-    var sidebar  = document.getElementById('sidebar');
-    var overlay  = document.getElementById('sidebar-overlay');
-    var toggler  = document.getElementById('sidebar-toggle');
+    // ── Sidebar collapse (desktop) ───────────────────────────────────────────
+    var COLLAPSED_KEY = 'sidebar-collapsed';
+    var sidebar     = document.getElementById('sidebar');
+    var mainWrapper = document.getElementById('main-wrapper');
+    var overlay     = document.getElementById('sidebar-overlay');
+    var logoEl      = document.getElementById('sidebar-logo');
+    var profileBtn  = document.getElementById('profile-btn');
 
-    function openSidebar()  { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
-    function closeSidebar() { sidebar.classList.add('-translate-x-full');    overlay.classList.add('hidden');    document.body.style.overflow = ''; }
+    function isDesktop() { return window.innerWidth >= 1024; }
 
-    toggler?.addEventListener('click', function () {
-        sidebar.classList.contains('-translate-x-full') ? openSidebar() : closeSidebar();
+    function isCollapsed() {
+        var val = localStorage.getItem(COLLAPSED_KEY);
+        return val === null ? true : val === 'true';
+    }
+
+    function applySidebarState(collapsed) {
+        if (collapsed) {
+            sidebar.classList.remove('w-64');
+            sidebar.classList.add('w-16');
+            mainWrapper.classList.remove('lg:pl-64');
+            mainWrapper.classList.add('lg:pl-16');
+
+            document.querySelectorAll('.nav-label, .sidebar-label-group').forEach(function (el) {
+                el.classList.add('hidden');
+            });
+
+            document.querySelectorAll('.nav-link').forEach(function (el) {
+                el.classList.add('justify-center');
+                el.classList.remove('gap-3', 'px-3');
+            });
+
+            if (logoEl) {
+                logoEl.classList.add('justify-center');
+                logoEl.classList.remove('gap-3', 'px-5');
+                logoEl.classList.add('px-2');
+            }
+
+            if (profileBtn) {
+                profileBtn.classList.add('justify-center');
+                profileBtn.classList.remove('gap-3', 'px-3');
+            }
+        } else {
+            sidebar.classList.add('w-64');
+            sidebar.classList.remove('w-16');
+            mainWrapper.classList.add('lg:pl-64');
+            mainWrapper.classList.remove('lg:pl-16');
+
+            document.querySelectorAll('.nav-label, .sidebar-label-group').forEach(function (el) {
+                el.classList.remove('hidden');
+            });
+
+            document.querySelectorAll('.nav-link').forEach(function (el) {
+                el.classList.remove('justify-center');
+                el.classList.add('gap-3', 'px-3');
+            });
+
+            if (logoEl) {
+                logoEl.classList.remove('justify-center', 'px-2');
+                logoEl.classList.add('gap-3', 'px-5');
+            }
+
+            if (profileBtn) {
+                profileBtn.classList.remove('justify-center');
+                profileBtn.classList.add('gap-3', 'px-3');
+            }
+        }
+    }
+
+    function toggleSidebar() {
+        var collapsed = !isCollapsed();
+        localStorage.setItem(COLLAPSED_KEY, String(collapsed));
+        applySidebarState(collapsed);
+    }
+
+    // ── Mobile off-canvas ────────────────────────────────────────────────────
+    function openMobileSidebar() {
+        // Ensure full sidebar on mobile
+        sidebar.classList.add('w-64');
+        sidebar.classList.remove('w-16');
+        document.querySelectorAll('.nav-label, .sidebar-label-group').forEach(function (el) {
+            el.classList.remove('hidden');
+        });
+        document.querySelectorAll('.nav-link').forEach(function (el) {
+            el.classList.remove('justify-center');
+            el.classList.add('gap-3', 'px-3');
+        });
+        if (logoEl) {
+            logoEl.classList.remove('justify-center', 'px-2');
+            logoEl.classList.add('gap-3', 'px-5');
+        }
+        if (profileBtn) {
+            profileBtn.classList.remove('justify-center');
+            profileBtn.classList.add('gap-3', 'px-3');
+        }
+
+        sidebar.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeMobileSidebar() {
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+        document.body.style.overflow = '';
+
+        // Restore desktop collapsed state after slide-out
+        setTimeout(function () {
+            if (isDesktop()) { applySidebarState(isCollapsed()); }
+        }, 300);
+    }
+
+    // Apply saved state on load without animation
+    if (isDesktop()) {
+        sidebar.style.transition = 'none';
+        mainWrapper.style.transition = 'none';
+        applySidebarState(isCollapsed());
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                sidebar.style.transition = '';
+                mainWrapper.style.transition = '';
+            });
+        });
+    }
+
+    // Toggle button: desktop ↔ collapse/expand | mobile ↔ off-canvas
+    document.getElementById('sidebar-toggle')?.addEventListener('click', function () {
+        if (isDesktop()) {
+            toggleSidebar();
+        } else {
+            sidebar.classList.contains('-translate-x-full') ? openMobileSidebar() : closeMobileSidebar();
+        }
     });
-    overlay?.addEventListener('click', closeSidebar);
+
+    overlay?.addEventListener('click', closeMobileSidebar);
 
     // ── Profile dropdown ────────────────────────────────────────────────────
-    var profileBtn      = document.getElementById('profile-btn');
     var profileDropdown = document.getElementById('profile-dropdown');
     var profileChevron  = document.getElementById('profile-chevron');
 
     function setProfile(open) {
         profileDropdown.classList.toggle('hidden', !open);
         profileBtn.setAttribute('aria-expanded', String(open));
-        profileChevron.style.transform = open ? 'rotate(180deg)' : '';
+        if (profileChevron) {
+            profileChevron.style.transform = open ? 'rotate(180deg)' : '';
+        }
     }
 
     profileBtn?.addEventListener('click', function (e) {
@@ -336,7 +463,6 @@
         mMessage.textContent = 'Deseja remover ' + userName + '? Esta ação não pode ser desfeita.';
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
-        // Trigger transition on next frame
         requestAnimationFrame(function () {
             mOverlay.classList.add('opacity-100');
             mPanel.classList.remove('opacity-0', 'scale-95');
@@ -358,22 +484,17 @@
     mCancel?.addEventListener('click', closeModal);
 
     mOk?.addEventListener('click', function () {
-        if (pendingForm) {
-            pendingForm.submit();
-        }
+        if (pendingForm) { pendingForm.submit(); }
     });
 
-    // Close on overlay click
     modal?.addEventListener('click', function (e) {
         if (e.target === modal || e.target === mOverlay) { closeModal(); }
     });
 
-    // Close on Escape
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && !modal.classList.contains('hidden')) { closeModal(); }
     });
 
-    // Intercept all delete forms
     document.querySelectorAll('form[data-confirm]').forEach(function (form) {
         form.addEventListener('submit', function (e) {
             e.preventDefault();
