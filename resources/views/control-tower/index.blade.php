@@ -28,7 +28,7 @@
     @endphp
 
     {{-- ─── Sticky toolbar ─────────────────────────────────────────────────────── --}}
-    <div class="sticky top-16 z-20 -mx-4 mb-6 border-b px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8
+    <div class="sticky top-16 z-20 -mx-4 mb-6 overflow-x-hidden border-b px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8
                 border-slate-200 bg-white/90 backdrop-blur-md
                 dark:border-zinc-800 dark:bg-black/90">
         <div class="flex flex-wrap items-center gap-3">
@@ -77,66 +77,61 @@
             </button>
         </div>
 
-        {{-- Wrapper: clips bar overflow → impede scroll horizontal na página --}}
-        <div class="w-full overflow-hidden">
+        {{-- Filtro por Divisão (visível apenas quando há 2+ divisões) --}}
+        @if(count($divisions) > 1)
+        <div id="divisions-bar"
+             class="mt-2.5 overflow-x-auto whitespace-nowrap border-t pt-2.5
+                    [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+                    border-slate-100 dark:border-zinc-800/60">
+            <div class="division-pills-wrap inline-flex items-center gap-1.5">
+                <span class="pr-1 text-[10px] font-semibold uppercase tracking-wider
+                             text-zinc-400 dark:text-zinc-600">Divisão</span>
 
-            {{-- Filtro por Divisão (visível apenas quando há 2+ divisões) --}}
-            @if(count($divisions) > 1)
-            <div id="divisions-bar"
-                 class="mt-2.5 w-full overflow-x-auto whitespace-nowrap border-t pt-2.5
-                        [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
-                        border-slate-100 dark:border-zinc-800/60">
-                <div class="division-pills-wrap inline-flex items-center gap-1.5">
-                    <span class="pr-1 text-[10px] font-semibold uppercase tracking-wider
-                                 text-zinc-400 dark:text-zinc-600">Divisão</span>
+                <button class="division-pill inline-flex shrink-0 rounded-full border px-3 py-1
+                               text-[11px] font-medium transition-colors duration-150
+                               bg-blue-600 border-blue-600 text-white"
+                        data-div="__all__">Todos</button>
 
+                @foreach($divisions as $div)
                     <button class="division-pill inline-flex shrink-0 rounded-full border px-3 py-1
                                    text-[11px] font-medium transition-colors duration-150
-                                   bg-blue-600 border-blue-600 text-white"
-                            data-div="__all__">Todos</button>
-
-                    @foreach($divisions as $div)
-                        <button class="division-pill inline-flex shrink-0 rounded-full border px-3 py-1
-                                       text-[11px] font-medium transition-colors duration-150
-                                       border-zinc-500/50 text-zinc-500"
-                                data-div="{{ $div }}">
-                            {{ $div === '' ? 'Sem divisão' : $div }}
-                        </button>
-                    @endforeach
-                </div>
+                                   border-zinc-500/50 text-zinc-500"
+                            data-div="{{ $div }}">
+                        {{ $div === '' ? 'Sem divisão' : $div }}
+                    </button>
+                @endforeach
             </div>
-            @endif
-
-            {{-- Filtro por Status Operacional (visível apenas quando há 2+ status) --}}
-            @if(count($statuses) > 1)
-            <div id="statuses-bar"
-                 class="mt-2.5 w-full overflow-x-auto whitespace-nowrap border-t pt-2.5
-                        [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
-                        border-slate-100 dark:border-zinc-800/60">
-                <div class="status-pills-wrap inline-flex items-center gap-1.5">
-                    <span class="pr-1 text-[10px] font-semibold uppercase tracking-wider
-                                 text-zinc-400 dark:text-zinc-600">Status</span>
-
-                    <button class="status-pill inline-flex shrink-0 rounded-full border px-3 py-1
-                                   text-[11px] font-medium transition-colors duration-150
-                                   bg-blue-600 border-blue-600 text-white"
-                            data-status="__all__">Todos</button>
-
-                    @foreach($statuses as $s)
-                        @php $dotColor = $dotCls[$statusColorMap[$s] ?? 'zinc'] ?? $dotCls['zinc']; @endphp
-                        <button class="status-pill inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1
-                                       text-[11px] font-medium transition-colors duration-150
-                                       border-zinc-500/50 text-zinc-500"
-                                data-status="{{ $s }}">
-                            <span class="h-1.5 w-1.5 rounded-full {{ $dotColor }}"></span>
-                            {{ $s === '' ? 'Indefinido' : $s }}
-                        </button>
-                    @endforeach
-                </div>
-            </div>
-            @endif
-
         </div>
+        @endif
+
+        {{-- Filtro por Status Operacional (visível apenas quando há 2+ status) --}}
+        @if(count($statuses) > 1)
+        <div id="statuses-bar"
+             class="mt-2.5 overflow-x-auto whitespace-nowrap border-t pt-2.5
+                    [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+                    border-slate-100 dark:border-zinc-800/60">
+            <div class="status-pills-wrap inline-flex items-center gap-1.5">
+                <span class="pr-1 text-[10px] font-semibold uppercase tracking-wider
+                             text-zinc-400 dark:text-zinc-600">Status</span>
+
+                <button class="status-pill inline-flex shrink-0 rounded-full border px-3 py-1
+                               text-[11px] font-medium transition-colors duration-150
+                               bg-blue-600 border-blue-600 text-white"
+                        data-status="__all__">Todos</button>
+
+                @foreach($statuses as $s)
+                    @php $dotColor = $dotCls[$statusColorMap[$s] ?? 'zinc'] ?? $dotCls['zinc']; @endphp
+                    <button class="status-pill inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1
+                                   text-[11px] font-medium transition-colors duration-150
+                                   border-zinc-500/50 text-zinc-500"
+                            data-status="{{ $s }}">
+                        <span class="h-1.5 w-1.5 rounded-full {{ $dotColor }}"></span>
+                        {{ $s === '' ? 'Indefinido' : $s }}
+                    </button>
+                @endforeach
+            </div>
+        </div>
+        @endif
     </div>
 
     {{-- ─── Grid de Cards ───────────────────────────────────────────────────── --}}
