@@ -124,7 +124,7 @@
 
                 {{-- Profile dropdown --}}
                 <div id="profile-dropdown" role="menu"
-                     class="absolute bottom-full left-0 right-0 mb-2 hidden rounded-xl border bg-white shadow-xl
+                     class="absolute bottom-full left-0 mb-2 hidden w-56 rounded-xl border bg-white shadow-xl
                             border-slate-200 dark:border-zinc-800 dark:bg-zinc-900">
                     <div class="p-1">
                         <div class="border-b border-slate-100 px-3 py-2.5 dark:border-zinc-800">
@@ -197,7 +197,7 @@
         </header>
 
         {{-- Content --}}
-        <main class="min-h-0 flex-1 overflow-y-auto [overflow-x:clip] px-4 py-8 sm:px-6 lg:px-8">
+        <main class="min-h-0 flex-1 overflow-y-auto [overflow-x:clip] px-4 sm:px-6 lg:px-8">
 
             @if(session('success'))
                 <div id="flash-success"

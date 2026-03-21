@@ -24,7 +24,21 @@
       "Bash(php artisan make:migration add_status_to_users_table --no-interaction)",
       "Bash(php artisan make:class app/Enums/UserStatus --no-interaction)",
       "Bash(php artisan tinker --execute \"App\\\\Models\\\\User::first\\(\\)->update\\([''status'' => ''active'']\\); echo ''ok'';\")",
-      "Bash(php artisan route:clear)"
+      "Bash(php artisan route:clear)",
+      "Bash(git push origin dev-master)",
+      "Bash(php artisan make:controller ControlTowerController --no-interaction)",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Projects\\\\projetosweb\\\\gestao-transporte-macae\\\\resources\\\\views\\\\control-tower\")",
+      "Bash(php artisan route:list --name=control-tower)",
+      "Bash(php artisan cache:clear)",
+      "Bash(php artisan config:clear)",
+      "mcp__laravel-boost__read-log-entries",
+      "Bash(git add app/Http/Controllers/ControlTowerController.php config/tms.php resources/views/control-tower/ resources/views/components/layouts/app.blade.php routes/web.php)",
+      "Bash(git commit:*)",
+      "Bash(git add resources/views/components/layouts/app.blade.php resources/views/control-tower/index.blade.php)",
+      "Bash(git push -u origin dev-master)",
+      "Bash(where gh)",
+      "Bash(git push)",
+      "Bash(vendor/bin/pint resources/views/components/layouts/app.blade.php --format agent)"
     ]
   }
 }

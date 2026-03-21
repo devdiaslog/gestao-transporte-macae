@@ -158,7 +158,7 @@
 
     {{-- ─── Grid de Cards ───────────────────────────────────────────────────── --}}
     <div id="vehicles-grid"
-         class="grid grid-cols-1 gap-3 pt-4 transition-opacity duration-300
+         class="mt-8 grid grid-cols-1 gap-3 pt-4 transition-opacity duration-300
                 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 
         {{--
@@ -260,7 +260,7 @@
             </div>
 
         @empty
-            <div class="col-span-full flex flex-col items-center justify-center rounded-xl border
+            <div class="mt-8 col-span-full flex flex-col items-center justify-center rounded-xl border
                         px-6 py-20 text-center
                         border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/50">
                 <div class="flex h-16 w-16 items-center justify-center rounded-2xl
