@@ -28,19 +28,97 @@
     @endphp
 
     {{-- ─── Sticky toolbar ─────────────────────────────────────────────────────── --}}
-    <div class="sticky top-16 z-20 -mx-4 mb-6 overflow-x-hidden border-b px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8
+    <div class="sticky top-16 z-20 -mx-4 mb-4 border-b px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8
                 border-slate-200 bg-white/90 backdrop-blur-md
                 dark:border-zinc-800 dark:bg-black/90">
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
 
             {{-- Page title (inline) --}}
-            <div class="mr-auto">
+            <div class="w-full sm:w-auto sm:mr-auto">
                 <h2 class="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Torre de Controle</h2>
                 <p class="text-xs text-zinc-500 dark:text-zinc-500">Monitoramento em tempo real da frota</p>
             </div>
 
+            {{-- Filtro por Divisão --}}
+            @if(count($divisions) > 1)
+            <div class="relative" id="division-filter-wrap">
+                <button id="division-filter-btn"
+                        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium
+                               transition-all duration-150
+                               border-slate-300 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50
+                               dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800">
+                    Divisão
+                    <span id="division-filter-count"
+                          class="hidden rounded-full bg-zinc-900 px-1.5 py-0.5 text-[10px] font-bold text-white
+                                 dark:bg-white dark:text-zinc-900"></span>
+                    <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                    </svg>
+                </button>
+                <div id="division-filter-menu"
+                     class="absolute left-0 top-full z-40 mt-1.5 hidden
+                            w-[calc(100vw-2rem)] max-w-xs sm:w-auto sm:min-w-48
+                            rounded-xl border shadow-lg
+                            border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+                    <div class="max-h-64 overflow-y-auto p-1.5">
+                        @foreach($divisions as $div)
+                        <label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2
+                                      text-sm text-zinc-700 hover:bg-zinc-50
+                                      dark:text-zinc-300 dark:hover:bg-zinc-800/60">
+                            <input type="checkbox"
+                                   class="division-checkbox h-4 w-4 rounded border-slate-300 accent-zinc-900
+                                          dark:border-zinc-600 dark:accent-white"
+                                   value="{{ $div }}">
+                            {{ $div === '' ? 'Sem divisão' : $div }}
+                        </label>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            {{-- Filtro por Status Operacional --}}
+            @if(count($statuses) > 1)
+            <div class="relative" id="status-filter-wrap">
+                <button id="status-filter-btn"
+                        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium
+                               transition-all duration-150
+                               border-slate-300 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50
+                               dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800">
+                    Status
+                    <span id="status-filter-count"
+                          class="hidden rounded-full bg-zinc-900 px-1.5 py-0.5 text-[10px] font-bold text-white
+                                 dark:bg-white dark:text-zinc-900"></span>
+                    <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                    </svg>
+                </button>
+                <div id="status-filter-menu"
+                     class="absolute left-0 top-full z-40 mt-1.5 hidden
+                            w-[calc(100vw-2rem)] max-w-xs sm:w-auto sm:min-w-52
+                            rounded-xl border shadow-lg
+                            border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+                    <div class="max-h-64 overflow-y-auto p-1.5">
+                        @foreach($statuses as $s)
+                        @php $dotColor = $dotCls[$statusColorMap[$s] ?? 'zinc'] ?? $dotCls['zinc']; @endphp
+                        <label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2
+                                      text-sm text-zinc-700 hover:bg-zinc-50
+                                      dark:text-zinc-300 dark:hover:bg-zinc-800/60">
+                            <input type="checkbox"
+                                   class="status-checkbox h-4 w-4 rounded border-slate-300 accent-zinc-900
+                                          dark:border-zinc-600 dark:accent-white"
+                                   value="{{ $s }}">
+                            <span class="h-2 w-2 shrink-0 rounded-full {{ $dotColor }}"></span>
+                            {{ $s === '' ? 'Indefinido' : $s }}
+                        </label>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+            @endif
+
             {{-- Busca --}}
-            <div class="flex min-w-48 overflow-hidden rounded-lg border shadow-xs
+            <div class="flex w-full sm:w-auto sm:min-w-48 overflow-hidden rounded-lg border shadow-xs
                         border-slate-300 bg-white
                         focus-within:border-zinc-900 focus-within:ring-2 focus-within:ring-zinc-900/10
                         dark:border-zinc-800 dark:bg-zinc-950
@@ -58,7 +136,7 @@
             </div>
 
             {{-- Contagem --}}
-            <p id="vehicle-count" class="hidden text-xs text-zinc-500 dark:text-zinc-500 sm:block">
+            <p id="vehicle-count" class="hidden text-xs text-zinc-500 dark:text-zinc-500">
                 <span id="count-visible">{{ count($vehicles) }}</span> / {{ count($vehicles) }}
             </p>
 
@@ -73,70 +151,14 @@
                      fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
                 </svg>
-                <span id="btn-refresh-label">Atualizar</span>
+                <span id="btn-refresh-label" class="hidden sm:inline">Atualizar</span>
             </button>
         </div>
-
-        {{-- Filtro por Divisão (visível apenas quando há 2+ divisões) --}}
-        @if(count($divisions) > 1)
-        <div id="divisions-bar"
-             class="mt-2.5 overflow-x-auto whitespace-nowrap border-t pt-2.5
-                    [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
-                    border-slate-100 dark:border-zinc-800/60">
-            <div class="division-pills-wrap inline-flex items-center gap-1.5">
-                <span class="pr-1 text-[10px] font-semibold uppercase tracking-wider
-                             text-zinc-400 dark:text-zinc-600">Divisão</span>
-
-                <button class="division-pill inline-flex shrink-0 rounded-full border px-3 py-1
-                               text-[11px] font-medium transition-colors duration-150
-                               bg-blue-600 border-blue-600 text-white"
-                        data-div="__all__">Todos</button>
-
-                @foreach($divisions as $div)
-                    <button class="division-pill inline-flex shrink-0 rounded-full border px-3 py-1
-                                   text-[11px] font-medium transition-colors duration-150
-                                   border-zinc-500/50 text-zinc-500"
-                            data-div="{{ $div }}">
-                        {{ $div === '' ? 'Sem divisão' : $div }}
-                    </button>
-                @endforeach
-            </div>
-        </div>
-        @endif
-
-        {{-- Filtro por Status Operacional (visível apenas quando há 2+ status) --}}
-        @if(count($statuses) > 1)
-        <div id="statuses-bar"
-             class="mt-2.5 overflow-x-auto whitespace-nowrap border-t pt-2.5
-                    [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
-                    border-slate-100 dark:border-zinc-800/60">
-            <div class="status-pills-wrap inline-flex items-center gap-1.5">
-                <span class="pr-1 text-[10px] font-semibold uppercase tracking-wider
-                             text-zinc-400 dark:text-zinc-600">Status</span>
-
-                <button class="status-pill inline-flex shrink-0 rounded-full border px-3 py-1
-                               text-[11px] font-medium transition-colors duration-150
-                               bg-blue-600 border-blue-600 text-white"
-                        data-status="__all__">Todos</button>
-
-                @foreach($statuses as $s)
-                    @php $dotColor = $dotCls[$statusColorMap[$s] ?? 'zinc'] ?? $dotCls['zinc']; @endphp
-                    <button class="status-pill inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1
-                                   text-[11px] font-medium transition-colors duration-150
-                                   border-zinc-500/50 text-zinc-500"
-                            data-status="{{ $s }}">
-                        <span class="h-1.5 w-1.5 rounded-full {{ $dotColor }}"></span>
-                        {{ $s === '' ? 'Indefinido' : $s }}
-                    </button>
-                @endforeach
-            </div>
-        </div>
-        @endif
     </div>
 
     {{-- ─── Grid de Cards ───────────────────────────────────────────────────── --}}
     <div id="vehicles-grid"
-         class="grid grid-cols-1 gap-3 transition-opacity duration-300
+         class="grid grid-cols-1 gap-3 pt-8 transition-opacity duration-300
                 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 
         {{--
@@ -344,62 +366,69 @@
 
         searchInput.addEventListener('input', applyFilters);
 
-        // ── Helpers de pill ──────────────────────────────────────────────────
-        function setPillActive(pill, active) {
-            if (! pill) { return; }
-            if (active) {
-                pill.classList.add('bg-blue-600', 'border-blue-600', 'text-white');
-                pill.classList.remove('border-zinc-500/50', 'text-zinc-500');
-            } else {
-                pill.classList.remove('bg-blue-600', 'border-blue-600', 'text-white');
-                pill.classList.add('border-zinc-500/50', 'text-zinc-500');
-            }
+        // ── Dropdowns de filtro ──────────────────────────────────────────────
+        var divFilterBtn   = document.getElementById('division-filter-btn');
+        var divFilterMenu  = document.getElementById('division-filter-menu');
+        var divCountBadge  = document.getElementById('division-filter-count');
+        var stFilterBtn    = document.getElementById('status-filter-btn');
+        var stFilterMenu   = document.getElementById('status-filter-menu');
+        var stCountBadge   = document.getElementById('status-filter-count');
+
+        function closeAllDropdowns() {
+            if (divFilterMenu) { divFilterMenu.classList.add('hidden'); }
+            if (stFilterMenu)  { stFilterMenu.classList.add('hidden'); }
         }
 
-        // ── Pills de divisão ─────────────────────────────────────────────────
-        function syncDivisionPills() {
-            var allPill  = document.querySelector('.division-pill[data-div="__all__"]');
-            var divPills = document.querySelectorAll('.division-pill:not([data-div="__all__"])');
-            setPillActive(allPill, activeDivisions.size === 0);
-            divPills.forEach(function (p) { setPillActive(p, activeDivisions.has(p.dataset.div)); });
+        document.addEventListener('click', closeAllDropdowns);
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { closeAllDropdowns(); }
+        });
+
+        function updateDivisionCount() {
+            if (! divCountBadge) { return; }
+            var n = activeDivisions.size;
+            divCountBadge.textContent = n;
+            divCountBadge.classList.toggle('hidden', n === 0);
         }
 
-        var divisionsBar = document.getElementById('divisions-bar');
-        if (divisionsBar) {
-            divisionsBar.addEventListener('click', function (e) {
-                var pill = e.target.closest('.division-pill');
-                if (! pill) { return; }
-                var div = pill.dataset.div;
-                if (div === '__all__') {
-                    activeDivisions.clear();
-                } else {
-                    activeDivisions.has(div) ? activeDivisions.delete(div) : activeDivisions.add(div);
-                }
-                syncDivisionPills();
+        function updateStatusCount() {
+            if (! stCountBadge) { return; }
+            var n = activeStatuses.size;
+            stCountBadge.textContent = n;
+            stCountBadge.classList.toggle('hidden', n === 0);
+        }
+
+        if (divFilterBtn && divFilterMenu) {
+            divFilterBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var isOpen = ! divFilterMenu.classList.contains('hidden');
+                closeAllDropdowns();
+                if (! isOpen) { divFilterMenu.classList.remove('hidden'); }
+            });
+            divFilterMenu.addEventListener('click', function (e) { e.stopPropagation(); });
+            divFilterMenu.addEventListener('change', function (e) {
+                var cb = e.target;
+                if (! cb.classList.contains('division-checkbox')) { return; }
+                cb.checked ? activeDivisions.add(cb.value) : activeDivisions.delete(cb.value);
+                updateDivisionCount();
                 applyFilters();
             });
         }
 
-        // ── Pills de status operacional ──────────────────────────────────────
-        function syncStatusPills() {
-            var allPill     = document.querySelector('.status-pill[data-status="__all__"]');
-            var statusPills = document.querySelectorAll('.status-pill:not([data-status="__all__"])');
-            setPillActive(allPill, activeStatuses.size === 0);
-            statusPills.forEach(function (p) { setPillActive(p, activeStatuses.has(p.dataset.status)); });
-        }
-
-        var statusesBar = document.getElementById('statuses-bar');
-        if (statusesBar) {
-            statusesBar.addEventListener('click', function (e) {
-                var pill = e.target.closest('.status-pill');
-                if (! pill) { return; }
-                var st = pill.dataset.status;
-                if (st === '__all__') {
-                    activeStatuses.clear();
-                } else {
-                    activeStatuses.has(st) ? activeStatuses.delete(st) : activeStatuses.add(st);
-                }
-                syncStatusPills();
+        if (stFilterBtn && stFilterMenu) {
+            stFilterBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var isOpen = ! stFilterMenu.classList.contains('hidden');
+                closeAllDropdowns();
+                if (! isOpen) { stFilterMenu.classList.remove('hidden'); }
+            });
+            stFilterMenu.addEventListener('click', function (e) { e.stopPropagation(); });
+            stFilterMenu.addEventListener('change', function (e) {
+                var cb = e.target;
+                if (! cb.classList.contains('status-checkbox')) { return; }
+                cb.checked ? activeStatuses.add(cb.value) : activeStatuses.delete(cb.value);
+                updateStatusCount();
                 applyFilters();
             });
         }
@@ -532,8 +561,8 @@
                             '<span id="count-visible">' + total + '</span> / ' + total;
 
                         if (data.statusColorMap) { STATUS_COLOR_MAP = data.statusColorMap; }
-                        if (data.divisions)      { renderDivisionPills(data.divisions); }
-                        if (data.statuses)       { renderStatusPills(data.statuses); }
+                        if (data.divisions)      { renderDivisionDropdown(data.divisions); }
+                        if (data.statuses)       { renderStatusDropdown(data.statuses); }
                     }
                 })
                 .catch(function () { /* mantém grid atual */ })
@@ -619,53 +648,43 @@
                 .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
-        // ── Re-renderiza pills após refresh ──────────────────────────────────
-        function buildAllPillHtml(cls, dataAttr, label) {
-            var active = cls === 'division-pill' ? activeDivisions.size === 0 : activeStatuses.size === 0;
-            var state  = active ? ' bg-blue-600 border-blue-600 text-white' : ' border-zinc-500/50 text-zinc-500';
-            return '<button class="' + cls + ' inline-flex shrink-0 rounded-full border px-3 py-1'
-                + ' text-[11px] font-medium transition-colors duration-150' + state + '"'
-                + ' ' + dataAttr + '="__all__">' + label + '</button>';
+        // ── Re-renderiza dropdowns após refresh ──────────────────────────────
+        function renderDivisionDropdown(divisions) {
+            var wrap = document.getElementById('division-filter-wrap');
+            if (wrap) { wrap.classList.toggle('hidden', divisions.length < 2); }
+            var container = divFilterMenu ? divFilterMenu.querySelector('.overflow-y-auto') : null;
+            if (! container) { return; }
+            container.innerHTML = divisions.map(function (div) {
+                var label   = div === '' ? 'Sem divisão' : div;
+                var checked = activeDivisions.has(div) ? ' checked' : '';
+                return '<label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2'
+                    + ' text-sm text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60">'
+                    + '<input type="checkbox" class="division-checkbox h-4 w-4 rounded border-slate-300'
+                    + ' accent-zinc-900 dark:border-zinc-600 dark:accent-white"'
+                    + ' value="' + escHtml(div) + '"' + checked + '>'
+                    + escHtml(label) + '</label>';
+            }).join('');
+            updateDivisionCount();
         }
 
-        function renderDivisionPills(divisions) {
-            if (! divisionsBar) { return; }
-            var html = '<div class="division-pills-wrap inline-flex items-center gap-1.5">'
-                + '<span class="pr-1 text-[10px] font-semibold uppercase tracking-wider'
-                + ' text-zinc-400 dark:text-zinc-600">Divisão</span>'
-                + buildAllPillHtml('division-pill', 'data-div', 'Todos');
-            divisions.forEach(function (div) {
-                var label  = div === '' ? 'Sem divisão' : div;
-                var active = activeDivisions.has(div);
-                var state  = active ? ' bg-blue-600 border-blue-600 text-white' : ' border-zinc-500/50 text-zinc-500';
-                html += '<button class="division-pill inline-flex shrink-0 rounded-full border px-3 py-1'
-                    + ' text-[11px] font-medium transition-colors duration-150' + state + '"'
-                    + ' data-div="' + escHtml(div) + '">' + escHtml(label) + '</button>';
-            });
-            html += '</div>';
-            divisionsBar.innerHTML = html;
-            divisionsBar.classList.toggle('hidden', divisions.length < 2);
-        }
-
-        function renderStatusPills(statuses) {
-            if (! statusesBar) { return; }
-            var html = '<div class="status-pills-wrap inline-flex items-center gap-1.5">'
-                + '<span class="pr-1 text-[10px] font-semibold uppercase tracking-wider'
-                + ' text-zinc-400 dark:text-zinc-600">Status</span>'
-                + buildAllPillHtml('status-pill', 'data-status', 'Todos');
-            statuses.forEach(function (st) {
-                var label  = st === '' ? 'Indefinido' : st;
-                var active = activeStatuses.has(st);
-                var state  = active ? ' bg-blue-600 border-blue-600 text-white' : ' border-zinc-500/50 text-zinc-500';
-                var cls    = COLOR_CLASSES[statusColor(st)] || COLOR_CLASSES.zinc;
-                var dot    = '<span class="h-1.5 w-1.5 rounded-full ' + cls.dot + '"></span>';
-                html += '<button class="status-pill inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1'
-                    + ' text-[11px] font-medium transition-colors duration-150' + state + '"'
-                    + ' data-status="' + escHtml(st) + '">' + dot + escHtml(label) + '</button>';
-            });
-            html += '</div>';
-            statusesBar.innerHTML = html;
-            statusesBar.classList.toggle('hidden', statuses.length < 2);
+        function renderStatusDropdown(statuses) {
+            var wrap = document.getElementById('status-filter-wrap');
+            if (wrap) { wrap.classList.toggle('hidden', statuses.length < 2); }
+            var container = stFilterMenu ? stFilterMenu.querySelector('.overflow-y-auto') : null;
+            if (! container) { return; }
+            container.innerHTML = statuses.map(function (st) {
+                var label   = st === '' ? 'Indefinido' : st;
+                var checked = activeStatuses.has(st) ? ' checked' : '';
+                var cls     = COLOR_CLASSES[statusColor(st)] || COLOR_CLASSES.zinc;
+                return '<label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2'
+                    + ' text-sm text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60">'
+                    + '<input type="checkbox" class="status-checkbox h-4 w-4 rounded border-slate-300'
+                    + ' accent-zinc-900 dark:border-zinc-600 dark:accent-white"'
+                    + ' value="' + escHtml(st) + '"' + checked + '>'
+                    + '<span class="h-2 w-2 shrink-0 rounded-full ' + cls.dot + '"></span>'
+                    + escHtml(label) + '</label>';
+            }).join('');
+            updateStatusCount();
         }
 
     })();

@@ -32,9 +32,9 @@
     text-2    → dark:text-zinc-400
     text-3    → dark:text-zinc-600
 --}}
-<body class="h-full bg-slate-50 text-zinc-900 antialiased dark:bg-black dark:text-zinc-100">
+<body class="h-full overflow-x-hidden bg-slate-50 text-zinc-900 antialiased dark:bg-black dark:text-zinc-100">
 
-<div class="flex h-full">
+<div class="flex h-full w-full overflow-x-hidden">
 
     {{-- ─── Sidebar ─────────────────────────────────────────────────────────── --}}
     <aside id="sidebar"
@@ -154,7 +154,7 @@
          class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm lg:hidden"></div>
 
     {{-- ─── Main ────────────────────────────────────────────────────────────── --}}
-    <div class="flex min-h-full flex-1 flex-col lg:pl-64">
+    <div class="flex min-h-full min-w-0 flex-1 flex-col lg:pl-64">
 
         {{-- Header --}}
         <header class="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-4 px-6
@@ -193,7 +193,7 @@
         </header>
 
         {{-- Content --}}
-        <main class="flex-1 px-4 py-8 sm:px-6 lg:px-8">
+        <main class="flex-1 [overflow-x:clip] px-4 py-8 sm:px-6 lg:px-8">
 
             @if(session('success'))
                 <div id="flash-success"
