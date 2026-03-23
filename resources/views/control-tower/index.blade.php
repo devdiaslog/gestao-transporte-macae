@@ -25,6 +25,12 @@
             'purple'  => 'bg-purple-400', 'rose'   => 'bg-rose-400',
             'zinc'    => 'bg-zinc-400',
         ];
+
+        $statusCounts = [];
+        foreach ($vehicles as $v) {
+            $s = (string) ($v['Status'] ?? '');
+            $statusCounts[$s] = ($statusCounts[$s] ?? 0) + 1;
+        }
     @endphp
 
     {{-- ─── Wrapper de altura total (toolbar + scroll) ────────────────────────── --}}
@@ -156,6 +162,42 @@
                 </svg>
                 <span id="btn-refresh-label" class="hidden sm:inline">Atualizar</span>
             </button>
+        </div>
+    </div>
+
+    {{-- ─── Resumo por Status ─────────────────────────────────────────────────── --}}
+    <div class="shrink-0 overflow-x-auto border-b px-4 py-3 sm:px-6 lg:px-8
+                border-slate-200 dark:border-zinc-800">
+        <div id="status-summary" class="flex min-w-max items-center gap-2">
+
+            {{-- Total geral --}}
+            <div class="flex min-w-[68px] flex-col items-center rounded-xl border px-3 py-2 text-center
+                        border-slate-200 bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900">
+                <span class="summary-total-count text-2xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ count($vehicles) }}</span>
+                <span class="mt-0.5 text-[10px] font-medium leading-tight text-zinc-400 dark:text-zinc-500">Total</span>
+            </div>
+
+            @if(count($statuses) > 0)
+            <div class="mx-0.5 h-8 w-px shrink-0 bg-slate-200 dark:bg-zinc-700"></div>
+            @endif
+
+            @foreach($statuses as $s)
+            @php
+                $sToken = $statusColorMap[$s] ?? 'zinc';
+                $sCount = $statusCounts[$s] ?? 0;
+                $sLabel = $s === '' ? 'Indefinido' : $s;
+                $sBadge = $badgeCls[$sToken] ?? $badgeCls['zinc'];
+                $sDot   = $dotCls[$sToken]   ?? $dotCls['zinc'];
+            @endphp
+            <div class="flex min-w-[80px] flex-col items-center rounded-xl px-3 py-2 text-center ring-1 {{ $sBadge }}">
+                <span class="summary-status-count text-2xl font-bold tabular-nums" data-status="{{ $s }}">{{ $sCount }}</span>
+                <span class="mt-0.5 flex items-center gap-1 text-[10px] font-medium leading-tight opacity-80">
+                    <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ $sDot }}"></span>
+                    {{ $sLabel }}
+                </span>
+            </div>
+            @endforeach
+
         </div>
     </div>
 
@@ -416,17 +458,33 @@
 
         // ── Filtro combinado (busca + divisão + status) ──────────────────────
         function applyFilters() {
-            var q   = searchInput.value.trim().toLowerCase();
-            var vis = 0;
+            var q            = searchInput.value.trim().toLowerCase();
+            var vis          = 0;
+            var statusCounts = {};
             allCards.forEach(function (card) {
                 var matchSearch = ! q || card.dataset.plate.includes(q) || card.dataset.cm.includes(q);
                 var matchDiv    = activeDivisions.size === 0 || activeDivisions.has(card.dataset.divisao);
                 var matchStatus = activeStatuses.size === 0  || activeStatuses.has(card.dataset.status);
                 var match       = matchSearch && matchDiv && matchStatus;
                 card.style.display = match ? '' : 'none';
-                if (match) { vis++; }
+                if (match) {
+                    vis++;
+                    var s = card.dataset.status || '';
+                    statusCounts[s] = (statusCounts[s] || 0) + 1;
+                }
             });
             countVisible.textContent = vis;
+            updateSummaryCount(vis, statusCounts);
+        }
+
+        function updateSummaryCount(total, statusCounts) {
+            var summary = document.getElementById('status-summary');
+            if (! summary) { return; }
+            var totalEl = summary.querySelector('.summary-total-count');
+            if (totalEl) { totalEl.textContent = total; }
+            summary.querySelectorAll('.summary-status-count').forEach(function (el) {
+                el.textContent = statusCounts[el.dataset.status] || 0;
+            });
         }
 
         searchInput.addEventListener('input', applyFilters);
@@ -654,6 +712,54 @@
                 + '<p class="mt-1.5 max-w-xs text-sm text-zinc-500 dark:text-zinc-400">Nenhum veículo retornado. Clique em Atualizar.</p></div>';
         }
 
+        // ── Resumo por Status ────────────────────────────────────────────────
+        function renderStatusSummary(vehicles, colorMap) {
+            var summary = document.getElementById('status-summary');
+            if (! summary) { return; }
+
+            var counts = {};
+            vehicles.forEach(function (v) {
+                var s = String(v['Status'] || '');
+                counts[s] = (counts[s] || 0) + 1;
+            });
+
+            var order = [];
+            var seen  = {};
+            vehicles.forEach(function (v) {
+                var s = String(v['Status'] || '');
+                if (! seen[s]) { seen[s] = true; order.push(s); }
+            });
+
+            var map   = colorMap || STATUS_COLOR_MAP;
+            var total = vehicles.length;
+
+            var html = '<div class="flex min-w-[68px] flex-col items-center rounded-xl border px-3 py-2 text-center'
+                + ' border-slate-200 bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900">'
+                + '<span class="summary-total-count text-2xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">' + total + '</span>'
+                + '<span class="mt-0.5 text-[10px] font-medium leading-tight text-zinc-400 dark:text-zinc-500">Total</span>'
+                + '</div>';
+
+            if (order.length) {
+                html += '<div class="mx-0.5 h-8 w-px shrink-0 bg-slate-200 dark:bg-zinc-700"></div>';
+            }
+
+            order.forEach(function (s) {
+                var c     = map[s] || 'zinc';
+                var cls   = COLOR_CLASSES[c] || COLOR_CLASSES.zinc;
+                var label = s === '' ? 'Indefinido' : s;
+                var count = counts[s] || 0;
+                html += '<div class="flex min-w-[80px] flex-col items-center rounded-xl px-3 py-2 text-center ring-1 '
+                    + cls.bg + ' ' + cls.text + ' ' + cls.ring + '">'
+                    + '<span class="summary-status-count text-2xl font-bold tabular-nums" data-status="' + escHtml(s) + '">' + count + '</span>'
+                    + '<span class="mt-0.5 flex items-center gap-1 text-[10px] font-medium leading-tight opacity-80">'
+                    + '<span class="h-1.5 w-1.5 shrink-0 rounded-full ' + cls.dot + '"></span>'
+                    + escHtml(label) + '</span>'
+                    + '</div>';
+            });
+
+            summary.innerHTML = html;
+        }
+
         // ── Atualizar via fetch ──────────────────────────────────────────────
         var refreshEndpoint = '{{ route('control-tower.dados') }}';
 
@@ -687,6 +793,7 @@
                         if (data.statusColorMap) { STATUS_COLOR_MAP = data.statusColorMap; }
                         if (data.divisions)      { renderDivisionDropdown(data.divisions); }
                         if (data.statuses)       { renderStatusDropdown(data.statuses); }
+                        renderStatusSummary(vehicles, data.statusColorMap);
                     }
                 })
                 .catch(function () { /* mantém grid atual */ })
