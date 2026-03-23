@@ -155,30 +155,33 @@ class ControlTowerController extends Controller
      * A API Bigcore retorna o formato {headers: [...], rows: [...], styles: [...]}.
      * O mapeamento é feito por POSIÇÃO (não por array_combine) porque a API retorna
      * dois headers com o mesmo nome "Status": o índice 18 é o status operacional
-     * (Ag-Carregamento, Ag-Motorista, Carregado, etc.) e o índice 40 é o status
-     * do rastreador (parado/em movimento). O array_combine manteria apenas o último,
-     * perdendo o status operacional.
+     * (Ag-Carregamento, Ag-Motorista, Carregado, etc.) e o índice 36 é o status
+     * do rastreador. O array_combine manteria apenas o último, perdendo o status operacional.
      *
-     * Índices extraídos (ignorados: 0,1,9,29-36,47,48,50):
+     * Índices extraídos (verificados contra headers reais da API):
      *   [2]  Condutor                [3]  Placa
-     *   [4]  CM                      [5]  SR
-     *   [6]  SR Placa                [7]  Operação
+     *   [4]  CM                      [5]  Sr
+     *   [6]  Sr Placa                [7]  Operação
      *   [8]  Divisão                 [10] Rota
      *   [11] Documento               [12] Macro
      *   [13] Macro Data              [14] Latitude
      *   [15] Longitude               [16] Local
      *   [17] Endereço                [18] Status ← OPERACIONAL
      *   [19] Obs. Vix                [20] Obs. Petrobras
-     *   [21] Cerca 1                 [22] Cerca 1 Entrada
-     *   [23] Cerca 1 Tempo Máx.      [24] Cerca 1 Atividade
-     *   [25] Cerca 2                 [26] Cerca 2 Entrada
-     *   [27] Cerca 2 Tempo Máx.      [28] Cerca 2 Atividade
-     *   [37] Início Jornada          [38] Disponibilidade
-     *   [39] Disponibilidade Data    [40] Rastreador ← MOVIMENTO
-     *   [41] Rastreador Data         [42] Conexão
-     *   [43] Sinal Data              [44] Comunicação
-     *   [45] Motor                   [46] Velocidade
-     *   [49] Odômetro
+     *   [21] Cerca 1                 [22] Cerca 1 Data Entrada
+     *   [23] Cerca 1 Tempo Máximo    [24] Cerca 1 Atividade
+     *   [25] Cerca 2                 [26] Cerca 2 Data Entrada
+     *   [27] Cerca 2 Tempo Máximo    [28] Cerca 2 Atividade
+     *   [29] Cerca 3                 [30] Cerca 3 Data Entrada
+     *   [31] Cerca 3 Tempo Máximo    [32] Cerca 3 Atividade
+     *   [33] Início Jornada Operacional
+     *   [34] Disponibilidade         [35] Disponibilidade Data
+     *   [36] Status ← RASTREADOR     [37] Status Data
+     *   [38] Conexão                 [39] Sinal
+     *   [40] Comunicação             [41] Motor ← "Ligado"/"Desligado"
+     *   [42] Velocidade (km/h)       [43] Litrômetro
+     *   [44] % Tanque                [45] Odômetro (metros)
+     *   [46] Rastreador (marca)
      *
      * @return array<int, array<string, mixed>>
      */
@@ -284,17 +287,23 @@ class ControlTowerController extends Controller
             'Cerca 2 Entrada' => $col(26),
             'Cerca 2 Tempo Máx.' => $col(27),
             'Cerca 2 Atividade' => $col(28),
-            'Início Jornada' => $col(37),
-            'Disponibilidade' => $col(38),
-            'Disponibilidade Data' => $col(39),
-            'Rastreador' => $col(40), // Status de movimento (parado/em movimento)
-            'Rastreador Data' => $col(41),
-            'Conexão' => $col(42),
-            'Sinal Data' => $col(43),
-            'Comunicação' => $col(44),
-            'Motor' => $col(45),
-            'Velocidade' => $col(46),
-            'Odômetro' => $col(49),
+            'Cerca 3' => $col(29),
+            'Cerca 3 Entrada' => $col(30),
+            'Cerca 3 Tempo Máx.' => $col(31),
+            'Cerca 3 Atividade' => $col(32),
+            'Início Jornada' => $col(33),
+            'Disponibilidade' => $col(34),
+            'Disponibilidade Data' => $col(35),
+            'Status Rastreador' => $col(36),
+            'Status Data' => $col(37),
+            'Conexão' => $col(38),
+            'Sinal' => $col(39),
+            'Comunicação' => $col(40),
+            'Motor' => $col(41), // "Ligado" / "Desligado"
+            'Velocidade' => $col(42), // km/h
+            'Litrômetro' => $col(43),
+            'Odômetro' => $col(45), // metros
+            'Rastreador' => $col(46), // marca do rastreador
         ];
     }
 

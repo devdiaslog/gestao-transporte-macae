@@ -1,7 +1,7 @@
 <x-layouts.app title="Usuários">
 
     {{-- ─── Page header ──────────────────────────────────────────────────────── --}}
-    <div class="flex flex-wrap items-start justify-between gap-4">
+    <div class="flex flex-wrap items-start justify-between gap-4 mt-4">
         <div>
             <h2 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Usuários</h2>
             <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Gerencie os usuários do sistema.</p>
@@ -120,7 +120,7 @@
 
     {{-- ─── Table card ──────────────────────────────────────────────────────── --}}
     <div id="table-wrapper"
-         class="mt-4 overflow-hidden rounded-xl border shadow-sm transition-opacity duration-200
+         class="mt-8 overflow-hidden rounded-xl border shadow-sm transition-opacity duration-200
                 border-slate-200 bg-white
                 dark:border-zinc-800 dark:bg-zinc-900/50">
 

@@ -27,8 +27,11 @@
         ];
     @endphp
 
-    {{-- ─── Sticky toolbar ─────────────────────────────────────────────────────── --}}
-    <div class="sticky top-0 z-20 -mx-4 -mt-8 border-b px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8
+    {{-- ─── Wrapper de altura total (toolbar + scroll) ────────────────────────── --}}
+    <div class="-mx-4 sm:-mx-6 lg:-mx-8 flex h-full flex-col overflow-hidden">
+
+    {{-- ─── Toolbar ────────────────────────────────────────────────────────────── --}}
+    <div class="shrink-0 border-b px-4 py-3 sm:px-6 lg:px-8
                 border-slate-200 bg-white
                 dark:border-zinc-800 dark:bg-zinc-950">
         <div class="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -156,9 +159,10 @@
         </div>
     </div>
 
-    {{-- ─── Grid de Cards ───────────────────────────────────────────────────── --}}
+    {{-- ─── Grid de Cards (área com scroll próprio) ──────────────────────────── --}}
+    <div class="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 lg:px-8">
     <div id="vehicles-grid"
-         class="mt-8 grid grid-cols-1 gap-3 pt-4 transition-opacity duration-300
+         class="grid grid-cols-1 gap-3 transition-opacity duration-300
                 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 
         {{--
@@ -191,6 +195,24 @@
                 $colorToken = $statusColorMap[(string) $status] ?? 'zinc';
                 $badgeClass = $badgeCls[$colorToken] ?? $badgeCls['zinc'];
                 $dotClass   = $dotCls[$colorToken]   ?? $dotCls['zinc'];
+
+                $documento     = (string) ($v['Documento'] ?? '');
+                $rota          = (string) ($v['Rota'] ?? '');
+                $motor         = (string) ($v['Motor'] ?? '');
+                $cerca1Entrada = (string) ($v['Cerca 1 Entrada'] ?? '');
+                $motorLigado   = $motor !== '' && strtolower($motor) !== 'desligado' && $motor !== '0';
+
+                $tempoCerca = '';
+                if ($cerca1 !== '' && $cerca1Entrada !== '') {
+                    try {
+                        $diff = now()->diff(\Carbon\Carbon::parse($cerca1Entrada));
+                        if ($diff->days > 0) { $tempoCerca .= $diff->days . 'd '; }
+                        if ($diff->h > 0) { $tempoCerca .= $diff->h . 'h '; }
+                        $tempoCerca .= $diff->i . 'min';
+                    } catch (\Throwable) {
+                        $tempoCerca = '';
+                    }
+                }
             @endphp
 
             <div class="vehicle-card group cursor-pointer rounded-xl border p-4
@@ -229,6 +251,37 @@
                     </span>
                 </div>
 
+                {{-- Documento --}}
+                @if($documento !== '')
+                <div class="mt-2 flex items-center gap-1.5">
+                    <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                    </svg>
+                    <p class="truncate text-xs text-zinc-600 dark:text-zinc-400">{{ $documento }}</p>
+                </div>
+                @endif
+
+                {{-- Rota --}}
+                @if($rota !== '')
+                <div class="mt-1 flex items-center gap-1.5">
+                    <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"/>
+                    </svg>
+                    <p class="truncate text-xs text-zinc-600 dark:text-zinc-400">{{ $rota }}</p>
+                </div>
+                @endif
+
+                {{-- Motor --}}
+                @if($motor !== '')
+                <div class="mt-1.5">
+                    <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium
+                        {{ $motorLigado ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-zinc-500/10 text-zinc-500 dark:text-zinc-500' }}">
+                        <span class="h-1.5 w-1.5 rounded-full {{ $motorLigado ? 'bg-emerald-400' : 'bg-zinc-400' }}"></span>
+                        Motor {{ $motorLigado ? 'Ligado' : 'Desligado' }}
+                    </span>
+                </div>
+                @endif
+
                 {{-- Localização --}}
                 <div class="mt-3 flex items-start gap-1.5">
                     <svg class="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600"
@@ -240,6 +293,16 @@
                         {{ $locFull ?: '—' }}
                     </p>
                 </div>
+
+                {{-- Tempo na Cerca --}}
+                @if($tempoCerca !== '')
+                <div class="mt-1.5 flex items-center gap-1.5">
+                    <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                    </svg>
+                    <p class="text-xs text-zinc-500 dark:text-zinc-500">{{ trim($tempoCerca) }} na cerca</p>
+                </div>
+                @endif
 
                 {{-- Condutor --}}
                 @if($condutor !== '—' && $condutor !== '')
@@ -279,6 +342,8 @@
             </div>
         @endforelse
     </div>
+    </div>{{-- /scroll wrapper --}}
+    </div>{{-- /outer wrapper --}}
 
     {{-- ─── Modal de Detalhes ───────────────────────────────────────────────── --}}
     <div id="vehicle-modal"
@@ -475,6 +540,26 @@
             return (val !== undefined && val !== null && val !== '') ? val : '—';
         }
 
+        function calcTempoCerca(entrada) {
+            if (!entrada || entrada === '—') { return ''; }
+            var date = new Date(entrada);
+            if (isNaN(date.getTime())) {
+                // Tenta formato dd/mm/yyyy HH:MM:SS
+                var m = String(entrada).match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+                if (m) { date = new Date(m[3], m[2]-1, m[1], m[4], m[5], m[6] || 0); }
+            }
+            if (isNaN(date.getTime())) { return ''; }
+            var diff = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+            var days  = Math.floor(diff / 1440);
+            var hours = Math.floor((diff % 1440) / 60);
+            var mins  = diff % 60;
+            var parts = [];
+            if (days > 0)  { parts.push(days + 'd'); }
+            if (hours > 0) { parts.push(hours + 'h'); }
+            parts.push(mins + 'min');
+            return parts.join(' ');
+        }
+
         function cardHtml(v) {
             var cm      = getF(v, 'CM');
             var placa   = getF(v, 'Placa');
@@ -483,7 +568,41 @@
             var local   = getF(v, 'Local');
             var loc     = (cerca1 !== '—') ? cerca1 : local;
             var cond    = getF(v, 'Condutor');
+            var doc     = getF(v, 'Documento');
+            var rota    = getF(v, 'Rota');
+            var motor   = getF(v, 'Motor');
+            var entrada = getF(v, 'Cerca 1 Entrada');
             var encoded = encodeForAttr(v);
+
+            var docHtml = (doc !== '—')
+                ? '<div class="mt-2 flex items-center gap-1.5">'
+                    + '<svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>'
+                    + '<p class="truncate text-xs text-zinc-600 dark:text-zinc-400">' + escHtml(doc) + '</p></div>'
+                : '';
+
+            var rotaHtml = (rota !== '—')
+                ? '<div class="mt-1 flex items-center gap-1.5">'
+                    + '<svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"/></svg>'
+                    + '<p class="truncate text-xs text-zinc-600 dark:text-zinc-400">' + escHtml(rota) + '</p></div>'
+                : '';
+
+            var motorHtml = (motor !== '—') ? (function () {
+                var ligado = motor !== '' && motor.toLowerCase() !== 'desligado' && motor !== '0';
+                var cls = ligado ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-zinc-500/10 text-zinc-500 dark:text-zinc-500';
+                var dot = ligado ? 'bg-emerald-400' : 'bg-zinc-400';
+                return '<div class="mt-1.5"><span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ' + cls + '">'
+                    + '<span class="h-1.5 w-1.5 rounded-full ' + dot + '"></span>'
+                    + 'Motor ' + (ligado ? 'Ligado' : 'Desligado') + '</span></div>';
+            })() : '';
+
+            var tempoCercaHtml = (cerca1 !== '—') ? (function () {
+                var tempo = calcTempoCerca(entrada);
+                return tempo
+                    ? '<div class="mt-1.5 flex items-center gap-1.5">'
+                        + '<svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>'
+                        + '<p class="text-xs text-zinc-500 dark:text-zinc-500">' + escHtml(tempo) + ' na cerca</p></div>'
+                    : '';
+            })() : '';
 
             var condHtml = (cond !== '—')
                 ? '<div class="mt-2 flex items-center gap-1.5">'
@@ -507,11 +626,16 @@
                     + badgeHtml(status)
                 + '</div>'
 
+                + docHtml
+                + rotaHtml
+                + motorHtml
+
                 + '<div class="mt-3 flex items-start gap-1.5">'
                     + '<svg class="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>'
                     + '<p class="line-clamp-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">' + escHtml(loc) + '</p>'
                 + '</div>'
 
+                + tempoCercaHtml
                 + condHtml
 
                 + '<p class="mt-3 text-[10px] text-zinc-400 opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:text-zinc-600">Ver detalhes →</p>'
