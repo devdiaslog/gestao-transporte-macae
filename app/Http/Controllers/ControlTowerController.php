@@ -263,7 +263,29 @@ class ControlTowerController extends Controller
 
     /**
      * Converte um row posicional da API Bigcore em array associativo com chaves únicas.
-     * Apenas os índices relevantes são extraídos — ignorados: 0,1,9,44,47,48,50.
+     * Apenas os índices relevantes são extraídos — ignorados: 0,1,9,47,48,51+.
+     *
+     * Índices verificados contra headers reais da API (23/03/2026):
+     *   [2]  Condutor           [3]  Placa           [4]  CM
+     *   [5]  SR                 [6]  SR Placa         [7]  Operação
+     *   [8]  Divisão            [10] Rota             [11] Documento
+     *   [12] Macro              [13] Macro Data       [14] Latitude
+     *   [15] Longitude          [16] Local            [17] Endereço
+     *   [18] Status ← OPERACIONAL                     [19] Obs. Vix
+     *   [20] Obs. Petrobras     [21] Cerca 1          [22] Cerca 1 Data Entrada
+     *   [23] Cerca 1 Tempo Máx. [24] Cerca 1 Atividade
+     *   [25] Cerca 2            [26] Cerca 2 Data Entrada
+     *   [27] Cerca 2 Tempo Máx. [28] Cerca 2 Atividade
+     *   [29] Cerca 3            [30] Cerca 3 Data Entrada
+     *   [31] Cerca 3 Tempo Máx. [32] Cerca 3 Atividade
+     *   [33] Cerca 4            [34] Cerca 4 Data Entrada
+     *   [35] Cerca 4 Tempo Máx. [36] Cerca 4 Atividade
+     *   [37] Início Jornada Operacional
+     *   [38] Disponibilidade    [39] Disponibilidade Data
+     *   [40] Status ← RASTREADOR [41] Status Data
+     *   [42] Conexão            [43] Sinal           [44] Comunicação
+     *   [45] Motor ← "Ligado"/"Desligado"
+     *   [46] Velocidade (km/h)  [49] Odômetro (metros) [50] Rastreador (marca)
      *
      * @param  array<int, mixed>  $row
      * @return array<string, mixed>
@@ -303,19 +325,22 @@ class ControlTowerController extends Controller
             'Cerca 3 Entrada' => $col(30),
             'Cerca 3 Tempo Máx.' => $col(31),
             'Cerca 3 Atividade' => $col(32),
-            'Início Jornada' => $col(33),
-            'Disponibilidade' => $col(34),
-            'Disponibilidade Data' => $col(35),
-            'Status Rastreador' => $col(36),
-            'Status Data' => $col(37),
-            'Conexão' => $col(38),
-            'Sinal' => $col(39),
-            'Comunicação' => $col(40),
-            'Motor' => $col(41), // "Ligado" / "Desligado"
-            'Velocidade' => $col(42), // km/h
-            'Litrômetro' => $col(43),
-            'Odômetro' => $col(45), // metros
-            'Rastreador' => $col(46), // marca do rastreador
+            'Cerca 4' => $col(33),
+            'Cerca 4 Entrada' => $col(34),
+            'Cerca 4 Tempo Máx.' => $col(35),
+            'Cerca 4 Atividade' => $col(36),
+            'Início Jornada' => $col(37),
+            'Disponibilidade' => $col(38),
+            'Disponibilidade Data' => $col(39),
+            'Status Rastreador' => $col(40),
+            'Status Data' => $col(41),
+            'Conexão' => $col(42),
+            'Sinal' => $col(43),
+            'Comunicação' => $col(44),
+            'Motor' => $col(45), // "Ligado" / "Desligado"
+            'Velocidade' => $col(46), // km/h
+            'Odômetro' => $col(49), // metros
+            'Rastreador' => $col(50), // marca do rastreador
         ];
     }
 
