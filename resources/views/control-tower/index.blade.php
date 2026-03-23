@@ -255,6 +255,37 @@
                         $tempoCerca = '';
                     }
                 }
+
+                $statusRastreador = (string) ($v['Status Rastreador'] ?? '');
+                $statusData       = (string) ($v['Status Data'] ?? '');
+                $tempoParado      = '';
+                $tempoParadoCls   = '';
+                $tempoParadoDot   = '';
+
+                if (strtolower($statusRastreador) === 'parado' && $statusData !== '' && $statusData !== '-') {
+                    try {
+                        $diff  = now()->diff(\Carbon\Carbon::parse($statusData));
+                        $mins  = ($diff->days * 1440) + ($diff->h * 60) + $diff->i;
+                        $parts = [];
+                        if ($diff->days > 0) { $parts[] = $diff->days . 'd'; }
+                        if ($diff->h > 0)    { $parts[] = $diff->h . 'h'; }
+                        $parts[]        = $diff->i . 'min';
+                        $tempoParado    = implode(' ', $parts);
+                        $urgencia       = $mins > 480 ? 'rose' : ($mins > 120 ? 'amber' : 'zinc');
+                        $tempoParadoCls = match ($urgencia) {
+                            'rose'  => 'bg-rose-500/10  text-rose-600  dark:text-rose-400',
+                            'amber' => 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+                            default => 'bg-zinc-500/10  text-zinc-500  dark:text-zinc-500',
+                        };
+                        $tempoParadoDot = match ($urgencia) {
+                            'rose'  => 'bg-rose-400',
+                            'amber' => 'bg-amber-400',
+                            default => 'bg-zinc-400',
+                        };
+                    } catch (\Throwable) {
+                        $tempoParado = '';
+                    }
+                }
             @endphp
 
             <div class="vehicle-card group cursor-pointer rounded-xl border p-4
@@ -320,6 +351,16 @@
                         {{ $motorLigado ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-zinc-500/10 text-zinc-500 dark:text-zinc-500' }}">
                         <span class="h-1.5 w-1.5 rounded-full {{ $motorLigado ? 'bg-emerald-400' : 'bg-zinc-400' }}"></span>
                         Motor {{ $motorLigado ? 'Ligado' : 'Desligado' }}
+                    </span>
+                </div>
+                @endif
+
+                {{-- Tempo Parado --}}
+                @if($tempoParado !== '')
+                <div class="mt-1.5">
+                    <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium {{ $tempoParadoCls }}">
+                        <span class="h-1.5 w-1.5 rounded-full {{ $tempoParadoDot }}"></span>
+                        {{ $tempoParado }} parado
                     </span>
                 </div>
                 @endif
@@ -598,6 +639,27 @@
             return (val !== undefined && val !== null && val !== '') ? val : '—';
         }
 
+        function calcTempoParado(statusRastreador, statusData) {
+            if (! statusRastreador || statusRastreador.toLowerCase() !== 'parado') { return null; }
+            if (! statusData || statusData === '-') { return null; }
+            var date = new Date(statusData);
+            if (isNaN(date.getTime())) {
+                var m = String(statusData).match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+                if (m) { date = new Date(m[3], m[2] - 1, m[1], m[4], m[5], m[6] || 0); }
+            }
+            if (isNaN(date.getTime())) { return null; }
+            var diff  = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+            var days  = Math.floor(diff / 1440);
+            var hours = Math.floor((diff % 1440) / 60);
+            var mins  = diff % 60;
+            var parts = [];
+            if (days > 0)  { parts.push(days + 'd'); }
+            if (hours > 0) { parts.push(hours + 'h'); }
+            parts.push(mins + 'min');
+            var urgencia = diff > 480 ? 'rose' : (diff > 120 ? 'amber' : 'zinc');
+            return { label: parts.join(' '), urgencia: urgencia };
+        }
+
         function calcTempoCerca(entrada) {
             if (!entrada || entrada === '—') { return ''; }
             var date = new Date(entrada);
@@ -644,6 +706,26 @@
                     + '<p class="truncate text-xs text-zinc-600 dark:text-zinc-400">' + escHtml(rota) + '</p></div>'
                 : '';
 
+            var statusRastreador = getF(v, 'Status Rastreador');
+            var statusData       = getF(v, 'Status Data');
+
+            var tempoParadoHtml = (function () {
+                var result = calcTempoParado(
+                    statusRastreador === '—' ? '' : statusRastreador,
+                    statusData       === '—' ? '' : statusData
+                );
+                if (! result) { return ''; }
+                var URGENCIA = {
+                    rose:  { cls: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',   dot: 'bg-rose-400'  },
+                    amber: { cls: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', dot: 'bg-amber-400' },
+                    zinc:  { cls: 'bg-zinc-500/10 text-zinc-500 dark:text-zinc-500',    dot: 'bg-zinc-400'  },
+                };
+                var u = URGENCIA[result.urgencia] || URGENCIA.zinc;
+                return '<div class="mt-1.5"><span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ' + u.cls + '">'
+                    + '<span class="h-1.5 w-1.5 rounded-full ' + u.dot + '"></span>'
+                    + escHtml(result.label) + ' parado</span></div>';
+            })();
+
             var motorHtml = (motor !== '—') ? (function () {
                 var ligado = motor !== '' && motor.toLowerCase() !== 'desligado' && motor !== '0';
                 var cls = ligado ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-zinc-500/10 text-zinc-500 dark:text-zinc-500';
@@ -687,6 +769,7 @@
                 + docHtml
                 + rotaHtml
                 + motorHtml
+                + tempoParadoHtml
 
                 + '<div class="mt-3 flex items-start gap-1.5">'
                     + '<svg class="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>'
