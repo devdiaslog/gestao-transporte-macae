@@ -21,16 +21,28 @@ class ControlTowerController extends Controller
      * @var array<string, string>
      */
     private const STATUS_COLOR_MAP = [
+        // Aguardando
         'Ag-Carregamento' => 'amber',
         'Ag-Descarregamento' => 'orange',
-        'Ag-Motorista' => 'yellow',
+        'Ag-Documentação' => 'yellow',
+        'Ag-Motorista' => 'lime',
+        'Ag-Programação' => 'cyan',
+        // Carregado / carregando
         'Carregado' => 'emerald',
         'Carregando' => 'teal',
-        'Descarregando' => 'violet',
-        'Descarregado' => 'purple',
+        // Em movimento
         'Em Trânsito' => 'blue',
         'Em Viagem' => 'indigo',
+        'Em Operação Interna' => 'violet',
+        // Descarregando / descarregado
+        'Descarregando' => 'purple',
+        'Descarregado' => 'purple',
+        // Disponível / reserva
         'Disponível' => 'lime',
+        'Frota Reserva' => 'zinc',
+        'Reservado' => 'zinc',
+        // Problemas / parado
+        'Recusa' => 'rose',
         'Manutenção' => 'rose',
         'Parado' => 'zinc',
     ];
@@ -251,7 +263,7 @@ class ControlTowerController extends Controller
 
     /**
      * Converte um row posicional da API Bigcore em array associativo com chaves únicas.
-     * Apenas os índices relevantes são extraídos — ignorados: 0,1,9,29-36,47,48,50.
+     * Apenas os índices relevantes são extraídos — ignorados: 0,1,9,44,47,48,50.
      *
      * @param  array<int, mixed>  $row
      * @return array<string, mixed>
@@ -311,18 +323,18 @@ class ControlTowerController extends Controller
      * Retorna a prioridade de ordenação para um status operacional.
      * Valores menores aparecem primeiro no grid.
      *
-     * 1 — Ag-*         (aguardando — âmbar)
-     * 2 — Carregado    (carregado  — emerald)
-     * 3 — Trânsito     (em viagem  — azul)
-     * 4 — Descarreg.   (descarreg. — violeta)
-     * 5 — Outros       (zinc)
+     * 1 — Ag-*                   (aguardando — âmbar/amarelo)
+     * 2 — Carregado / Carregando (carregado  — emerald)
+     * 3 — Em movimento           (trânsito, viagem, operação interna — azul)
+     * 4 — Descarregando / Descarregado (violeta)
+     * 5 — Disponível / Reserva / Recusa / Parado / outros
      */
     private function statusPriority(string $status): int
     {
         return match (true) {
             str_starts_with($status, 'Ag-') => 1,
             (bool) preg_match('/carregado|carregando/i', $status) => 2,
-            (bool) preg_match('/trans[ií]t|viagem|em tr/i', $status) => 3,
+            (bool) preg_match('/trans[ií]t|viagem|opera[cç][aã]o\s+interna/i', $status) => 3,
             (bool) preg_match('/descarreg/i', $status) => 4,
             default => 5,
         };
