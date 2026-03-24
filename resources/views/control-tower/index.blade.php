@@ -247,7 +247,9 @@
                 $tempoCerca = '';
                 if ($cerca1 !== '' && $cerca1Entrada !== '' && $cerca1Entrada !== '-') {
                     try {
-                        $diff = now()->diff(\Carbon\Carbon::createFromFormat('d/m/Y H:i:s', $cerca1Entrada));
+                        // API retorna datas com hífens: "23-03-2026 17:49:09"
+                        $fmt  = str_contains($cerca1Entrada, '/') ? 'd/m/Y H:i:s' : 'd-m-Y H:i:s';
+                        $diff = now()->diff(\Carbon\Carbon::createFromFormat($fmt, $cerca1Entrada));
                         if ($diff->days > 0) { $tempoCerca .= $diff->days . 'd '; }
                         if ($diff->h > 0) { $tempoCerca .= $diff->h . 'h '; }
                         $tempoCerca .= $diff->i . 'min';
@@ -664,8 +666,8 @@
             if (!entrada || entrada === '—') { return ''; }
             var date = new Date(entrada);
             if (isNaN(date.getTime())) {
-                // Tenta formato dd/mm/yyyy HH:MM:SS
-                var m = String(entrada).match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+                // Tenta formatos dd/mm/yyyy e dd-mm-yyyy HH:MM:SS
+                var m = String(entrada).match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
                 if (m) { date = new Date(m[3], m[2]-1, m[1], m[4], m[5], m[6] || 0); }
             }
             if (isNaN(date.getTime())) { return ''; }
