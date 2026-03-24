@@ -235,8 +235,10 @@
         <div id="status-summary" class="flex min-w-max items-center gap-2">
 
             {{-- Total geral --}}
-            <div class="flex min-w-[68px] flex-col items-center rounded-xl border px-3 py-2 text-center
-                        border-slate-200 bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900">
+            <div class="flex min-w-[68px] cursor-pointer select-none flex-col items-center rounded-xl border px-3 py-2 text-center
+                        transition-opacity duration-150
+                        border-slate-200 bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900"
+                 data-filter-status="__total__">
                 <span class="summary-total-count text-2xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ count($vehicles) }}</span>
                 <span class="mt-0.5 text-[10px] font-medium leading-tight text-zinc-400 dark:text-zinc-500">Total</span>
             </div>
@@ -253,7 +255,8 @@
                 $sBadge = $badgeCls[$sToken] ?? $badgeCls['zinc'];
                 $sDot   = $dotCls[$sToken]   ?? $dotCls['zinc'];
             @endphp
-            <div class="flex min-w-[80px] flex-col items-center rounded-xl px-3 py-2 text-center ring-1 {{ $sBadge }}">
+            <div class="flex min-w-[80px] cursor-pointer select-none flex-col items-center rounded-xl px-3 py-2 text-center ring-1 transition-opacity duration-150 {{ $sBadge }}"
+                 data-filter-status="{{ $s }}">
                 <span class="summary-status-count text-2xl font-bold tabular-nums" data-status="{{ $s }}">{{ $sCount }}</span>
                 <span class="mt-0.5 flex items-center gap-1 text-[10px] font-medium leading-tight opacity-80">
                     <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ $sDot }}"></span>
@@ -592,6 +595,26 @@
             countVisible.textContent = vis;
             updateSummaryCount(vis, statusCounts);
             sortCards();
+            updateSummaryActiveState();
+        }
+
+        // ── Estado visual dos cards de resumo ────────────────────────────────
+        function updateSummaryActiveState() {
+            var summary = document.getElementById('status-summary');
+            if (! summary) { return; }
+            var anyActive = activeStatuses.size > 0;
+
+            var totalCard = summary.querySelector('[data-filter-status="__total__"]');
+            if (totalCard) {
+                totalCard.classList.toggle('opacity-40', anyActive);
+            }
+
+            summary.querySelectorAll('[data-filter-status]:not([data-filter-status="__total__"])').forEach(function (card) {
+                var selected = activeStatuses.has(card.dataset.filterStatus);
+                card.classList.toggle('opacity-40', anyActive && ! selected);
+                card.classList.toggle('ring-2',     selected);
+                card.classList.toggle('ring-1',     ! selected);
+            });
         }
 
         // ── Ordenação dos cards ──────────────────────────────────────────────
@@ -689,6 +712,45 @@
                 applyFilters();
             });
         }
+
+        // ── Click nos cards de resumo (filtro rápido por status) ────────────
+        (function () {
+            var summaryEl = document.getElementById('status-summary');
+            if (! summaryEl) { return; }
+
+            summaryEl.addEventListener('click', function (e) {
+                var card = e.target.closest('[data-filter-status]');
+                if (! card) { return; }
+
+                var status = card.dataset.filterStatus;
+
+                if (status === '__total__') {
+                    // Limpa todos os filtros de status
+                    activeStatuses.clear();
+                    if (stFilterMenu) {
+                        stFilterMenu.querySelectorAll('.status-checkbox').forEach(function (cb) {
+                            cb.checked = false;
+                        });
+                    }
+                } else {
+                    // Toggle: adiciona ou remove este status
+                    if (activeStatuses.has(status)) {
+                        activeStatuses.delete(status);
+                    } else {
+                        activeStatuses.add(status);
+                    }
+                    // Sincroniza o checkbox correspondente no dropdown de Status
+                    if (stFilterMenu) {
+                        stFilterMenu.querySelectorAll('.status-checkbox').forEach(function (cb) {
+                            if (cb.value === status) { cb.checked = activeStatuses.has(status); }
+                        });
+                    }
+                }
+
+                updateStatusCount();
+                applyFilters();
+            });
+        })();
 
         // ── Sort dropdown ────────────────────────────────────────────────────
         var SORT_LABELS = { status: 'Status', parado: 'Tempo parado', cerca: 'Tempo na cerca' };
@@ -937,8 +999,10 @@
             var map   = colorMap || STATUS_COLOR_MAP;
             var total = vehicles.length;
 
-            var html = '<div class="flex min-w-[68px] flex-col items-center rounded-xl border px-3 py-2 text-center'
-                + ' border-slate-200 bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900">'
+            var html = '<div class="flex min-w-[68px] cursor-pointer select-none flex-col items-center rounded-xl border px-3 py-2 text-center'
+                + ' transition-opacity duration-150'
+                + ' border-slate-200 bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900"'
+                + ' data-filter-status="__total__">'
                 + '<span class="summary-total-count text-2xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">' + total + '</span>'
                 + '<span class="mt-0.5 text-[10px] font-medium leading-tight text-zinc-400 dark:text-zinc-500">Total</span>'
                 + '</div>';
@@ -952,8 +1016,10 @@
                 var cls   = COLOR_CLASSES[c] || COLOR_CLASSES.zinc;
                 var label = s === '' ? 'Indefinido' : s;
                 var count = counts[s] || 0;
-                html += '<div class="flex min-w-[80px] flex-col items-center rounded-xl px-3 py-2 text-center ring-1 '
-                    + cls.bg + ' ' + cls.text + ' ' + cls.ring + '">'
+                html += '<div class="flex min-w-[80px] cursor-pointer select-none flex-col items-center rounded-xl px-3 py-2 text-center ring-1'
+                    + ' transition-opacity duration-150'
+                    + ' ' + cls.bg + ' ' + cls.text + ' ' + cls.ring + '"'
+                    + ' data-filter-status="' + escHtml(s) + '">'
                     + '<span class="summary-status-count text-2xl font-bold tabular-nums" data-status="' + escHtml(s) + '">' + count + '</span>'
                     + '<span class="mt-0.5 flex items-center gap-1 text-[10px] font-medium leading-tight opacity-80">'
                     + '<span class="h-1.5 w-1.5 shrink-0 rounded-full ' + cls.dot + '"></span>'
