@@ -245,9 +245,9 @@
                 $motorLigado   = $motor !== '' && strtolower($motor) !== 'desligado' && $motor !== '0';
 
                 $tempoCerca = '';
-                if ($cerca1 !== '' && $cerca1Entrada !== '') {
+                if ($cerca1 !== '' && $cerca1Entrada !== '' && $cerca1Entrada !== '-') {
                     try {
-                        $diff = now()->diff(\Carbon\Carbon::parse($cerca1Entrada));
+                        $diff = now()->diff(\Carbon\Carbon::createFromFormat('d/m/Y H:i:s', $cerca1Entrada));
                         if ($diff->days > 0) { $tempoCerca .= $diff->days . 'd '; }
                         if ($diff->h > 0) { $tempoCerca .= $diff->h . 'h '; }
                         $tempoCerca .= $diff->i . 'min';
@@ -264,7 +264,7 @@
 
                 if (strtolower($statusRastreador) === 'parado' && $statusData !== '' && $statusData !== '-') {
                     try {
-                        $diff  = now()->diff(\Carbon\Carbon::parse($statusData));
+                        $diff  = now()->diff(\Carbon\Carbon::createFromFormat('d/m/Y H:i:s', $statusData));
                         $mins  = ($diff->days * 1440) + ($diff->h * 60) + $diff->i;
                         $parts = [];
                         if ($diff->days > 0) { $parts[] = $diff->days . 'd'; }
