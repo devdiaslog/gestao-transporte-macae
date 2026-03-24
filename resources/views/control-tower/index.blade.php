@@ -1038,6 +1038,9 @@
                 if (data.divisions)      { renderDivisionDropdown(data.divisions); }
                 if (data.statuses)       { renderStatusDropdown(data.statuses); }
                 renderStatusSummary(vehicles, data.statusColorMap);
+                // Reaplica filtros e ordenação enquanto o grid ainda está semi-transparente,
+                // para que o usuário veja o estado já filtrado quando a opacidade for restaurada.
+                applyFilters();
             }
 
             function doRefresh() {
@@ -1054,7 +1057,6 @@
                         setLoading(false);
                         if (lastUpdateEl) { lastUpdateEl.textContent = formatTs(new Date()); }
                         resetTimer();
-                        applyFilters();
                     });
             }
 
