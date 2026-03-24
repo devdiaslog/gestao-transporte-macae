@@ -203,8 +203,18 @@
                 <span id="count-visible">{{ count($vehicles) }}</span> / {{ count($vehicles) }}
             </p>
 
+            {{-- Info de atualização --}}
+            <div class="hidden sm:flex flex-col items-end gap-0.5 text-[10px] leading-tight tabular-nums
+                        text-zinc-400 dark:text-zinc-500">
+                <span id="last-update-label">Carregado às {{ now()->format('H:i:s') }}</span>
+                <span>Próxima em
+                    <span id="countdown-display"
+                          class="font-mono font-semibold text-zinc-500 dark:text-zinc-400">10:00</span>
+                </span>
+            </div>
+
             {{-- Atualizar --}}
-            <button id="btn-refresh" onclick="refreshVehicles()"
+            <button id="btn-refresh" onclick="AutoRefresh.manual()"
                     class="inline-flex items-center gap-2 rounded-lg px-4 py-2
                            text-sm font-semibold shadow-xs transition-all duration-200 active:scale-[0.98]
                            bg-zinc-900 text-white hover:bg-zinc-700
@@ -954,52 +964,116 @@
             summary.innerHTML = html;
         }
 
-        // ── Atualizar via fetch ──────────────────────────────────────────────
+        // ── AutoRefresh ──────────────────────────────────────────────────────
         var refreshEndpoint = '{{ route('control-tower.dados') }}';
 
-        window.refreshVehicles = function () {
-            var btn   = document.getElementById('btn-refresh');
-            var icon  = document.getElementById('icon-refresh');
-            var label = document.getElementById('btn-refresh-label');
-            var grid  = document.getElementById('vehicles-grid');
+        window.AutoRefresh = (function () {
+            var INTERVAL_MS  = 600000; // 10 minutos
+            var intervalId   = null;
+            var tickId       = null;
+            var secondsLeft  = 600;
+            var isRefreshing = false;
 
-            btn.disabled = true;
-            icon.classList.add('animate-spin');
-            label.textContent = 'Consultando API…';
-            grid.style.opacity = '0.35';
-            grid.style.pointerEvents = 'none';
+            var btn         = document.getElementById('btn-refresh');
+            var icon        = document.getElementById('icon-refresh');
+            var btnLabel    = document.getElementById('btn-refresh-label');
+            var grid        = document.getElementById('vehicles-grid');
+            var lastUpdateEl = document.getElementById('last-update-label');
+            var countdownEl  = document.getElementById('countdown-display');
+            var errorToast   = document.getElementById('refresh-error-toast');
 
-            fetch(refreshEndpoint, { headers: { 'Accept': 'application/json' } })
-                .then(function (res) { return res.json(); })
-                .then(function (data) {
-                    if (data.success) {
-                        var vehicles = data.vehicles;
-                        var grid     = document.getElementById('vehicles-grid');
-                        grid.innerHTML = vehicles.length
-                            ? vehicles.map(cardHtml).join('')
-                            : emptyState();
-                        rebindCards();
-                        var total = data.total;
-                        document.getElementById('count-visible').textContent = total;
-                        document.getElementById('vehicle-count').innerHTML =
-                            '<span id="count-visible">' + total + '</span> / ' + total;
+            function pad(n) { return String(n).padStart(2, '0'); }
 
-                        if (data.statusColorMap) { STATUS_COLOR_MAP = data.statusColorMap; }
-                        if (data.divisions)      { renderDivisionDropdown(data.divisions); }
-                        if (data.statuses)       { renderStatusDropdown(data.statuses); }
-                        renderStatusSummary(vehicles, data.statusColorMap);
-                    }
-                })
-                .catch(function () { /* mantém grid atual */ })
-                .finally(function () {
-                    btn.disabled = false;
+            function formatTs(d) {
+                return 'Atualizado: ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear()
+                    + ' às ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+            }
+
+            function tickCountdown() {
+                if (secondsLeft > 0) { secondsLeft--; }
+                if (countdownEl) {
+                    countdownEl.textContent = pad(Math.floor(secondsLeft / 60)) + ':' + pad(secondsLeft % 60);
+                }
+            }
+
+            function resetTimer() {
+                secondsLeft = 600;
+                if (tickId) { clearInterval(tickId); }
+                tickId = setInterval(tickCountdown, 1000);
+                tickCountdown();
+            }
+
+            function setLoading(on) {
+                isRefreshing = on;
+                btn.disabled = on;
+                if (on) {
+                    icon.classList.add('animate-spin');
+                    if (btnLabel) { btnLabel.textContent = 'Atualizando…'; }
+                    grid.style.opacity      = '0.35';
+                    grid.style.pointerEvents = 'none';
+                } else {
                     icon.classList.remove('animate-spin');
-                    label.textContent = 'Atualizar';
-                    grid.style.opacity = '';
+                    if (btnLabel) { btnLabel.textContent = 'Atualizar'; }
+                    grid.style.opacity      = '';
                     grid.style.pointerEvents = '';
-                    applyFilters();
-                });
-        };
+                }
+            }
+
+            function showError() {
+                if (! errorToast) { return; }
+                errorToast.classList.remove('hidden');
+                setTimeout(function () { errorToast.classList.add('hidden'); }, 8000);
+            }
+
+            function onSuccess(data) {
+                if (! data.success) { return; }
+                var vehicles = data.vehicles;
+                grid.innerHTML = vehicles.length ? vehicles.map(cardHtml).join('') : emptyState();
+                rebindCards();
+                var total = data.total;
+                document.getElementById('count-visible').textContent = total;
+                document.getElementById('vehicle-count').innerHTML =
+                    '<span id="count-visible">' + total + '</span> / ' + total;
+                if (data.statusColorMap) { STATUS_COLOR_MAP = data.statusColorMap; }
+                if (data.divisions)      { renderDivisionDropdown(data.divisions); }
+                if (data.statuses)       { renderStatusDropdown(data.statuses); }
+                renderStatusSummary(vehicles, data.statusColorMap);
+            }
+
+            function doRefresh() {
+                if (isRefreshing) { return; }
+                setLoading(true);
+                fetch(refreshEndpoint, { headers: { 'Accept': 'application/json' } })
+                    .then(function (res) { return res.json(); })
+                    .then(onSuccess)
+                    .catch(function (err) {
+                        console.error('[AutoRefresh] Erro ao atualizar:', err);
+                        showError();
+                    })
+                    .finally(function () {
+                        setLoading(false);
+                        if (lastUpdateEl) { lastUpdateEl.textContent = formatTs(new Date()); }
+                        resetTimer();
+                        applyFilters();
+                    });
+            }
+
+            function start() {
+                resetTimer();
+                intervalId = setInterval(doRefresh, INTERVAL_MS);
+            }
+
+            function manual() { doRefresh(); }
+
+            window.addEventListener('beforeunload', function () {
+                if (intervalId) { clearInterval(intervalId); }
+                if (tickId)     { clearInterval(tickId); }
+            });
+
+            return { start: start, manual: manual };
+        })();
+
+        AutoRefresh.start();
 
         // ── Modal de detalhes ────────────────────────────────────────────────
         var vModal   = document.getElementById('vehicle-modal');
@@ -1114,5 +1188,16 @@
 
     })();
     </script>
+
+    {{-- ─── Toast de erro do AutoRefresh ────────────────────────────────────── --}}
+    <div id="refresh-error-toast"
+         class="hidden fixed bottom-4 right-4 z-50 flex items-center gap-2.5 rounded-xl border px-4 py-3 shadow-lg
+                border-amber-200 bg-amber-50 text-amber-700
+                dark:border-amber-500/30 dark:bg-zinc-900 dark:text-amber-400">
+        <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+        </svg>
+        <span class="text-xs font-medium">Falha ao atualizar — tentando novamente em 10 min</span>
+    </div>
 
 </x-layouts.app>
