@@ -126,6 +126,60 @@
             </div>
             @endif
 
+            {{-- Ordenação --}}
+            <div class="relative" id="sort-wrap">
+                <button id="sort-btn"
+                        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium
+                               transition-all duration-150
+                               border-slate-300 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50
+                               dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800">
+                    <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"/>
+                    </svg>
+                    <span id="sort-label">Status</span>
+                    <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                    </svg>
+                </button>
+                <div id="sort-menu"
+                     class="absolute left-0 top-full z-40 mt-1.5 hidden
+                            w-48 rounded-xl border shadow-lg
+                            border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+                    <div class="p-1.5">
+                        <button data-sort="status"
+                                class="sort-option flex w-full items-center gap-2.5 rounded-lg px-3 py-2
+                                       text-sm text-zinc-700 hover:bg-zinc-50
+                                       dark:text-zinc-300 dark:hover:bg-zinc-800/60">
+                            <svg class="sort-check h-3.5 w-3.5 shrink-0 text-zinc-900 dark:text-zinc-100"
+                                 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                            </svg>
+                            Status
+                        </button>
+                        <button data-sort="parado"
+                                class="sort-option flex w-full items-center gap-2.5 rounded-lg px-3 py-2
+                                       text-sm text-zinc-700 hover:bg-zinc-50
+                                       dark:text-zinc-300 dark:hover:bg-zinc-800/60">
+                            <svg class="sort-check invisible h-3.5 w-3.5 shrink-0 text-zinc-900 dark:text-zinc-100"
+                                 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                            </svg>
+                            Tempo parado
+                        </button>
+                        <button data-sort="cerca"
+                                class="sort-option flex w-full items-center gap-2.5 rounded-lg px-3 py-2
+                                       text-sm text-zinc-700 hover:bg-zinc-50
+                                       dark:text-zinc-300 dark:hover:bg-zinc-800/60">
+                            <svg class="sort-check invisible h-3.5 w-3.5 shrink-0 text-zinc-900 dark:text-zinc-100"
+                                 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                            </svg>
+                            Tempo na cerca
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             {{-- Busca --}}
             <div class="flex w-full sm:w-auto sm:min-w-48 overflow-hidden rounded-lg border shadow-xs
                         border-slate-300 bg-white
@@ -244,31 +298,36 @@
                 $cerca1Entrada = (string) ($v['Cerca 1 Entrada'] ?? '');
                 $motorLigado   = $motor !== '' && strtolower($motor) !== 'desligado' && $motor !== '0';
 
+                $cercaMins  = 0;
                 $tempoCerca = '';
                 if ($cerca1 !== '' && $cerca1Entrada !== '' && $cerca1Entrada !== '-') {
                     try {
                         // API retorna datas com hífens: "23-03-2026 17:49:09"
-                        $fmt  = str_contains($cerca1Entrada, '/') ? 'd/m/Y H:i:s' : 'd-m-Y H:i:s';
-                        $diff = now()->diff(\Carbon\Carbon::createFromFormat($fmt, $cerca1Entrada));
+                        $fmt       = str_contains($cerca1Entrada, '/') ? 'd/m/Y H:i:s' : 'd-m-Y H:i:s';
+                        $diff      = now()->diff(\Carbon\Carbon::createFromFormat($fmt, $cerca1Entrada));
+                        $cercaMins = ($diff->days * 1440) + ($diff->h * 60) + $diff->i;
                         if ($diff->days > 0) { $tempoCerca .= $diff->days . 'd '; }
                         if ($diff->h > 0) { $tempoCerca .= $diff->h . 'h '; }
                         $tempoCerca .= $diff->i . 'min';
                     } catch (\Throwable) {
                         $tempoCerca = '';
+                        $cercaMins  = 0;
                     }
                 }
 
                 $statusRastreador = (string) ($v['Status Rastreador'] ?? '');
                 $statusData       = (string) ($v['Status Data'] ?? '');
+                $paradoMins       = 0;
                 $tempoParado      = '';
                 $tempoParadoCls   = '';
                 $tempoParadoDot   = '';
 
                 if (strtolower($statusRastreador) === 'parado' && $statusData !== '' && $statusData !== '-') {
                     try {
-                        $diff  = now()->diff(\Carbon\Carbon::createFromFormat('d/m/Y H:i:s', $statusData));
-                        $mins  = ($diff->days * 1440) + ($diff->h * 60) + $diff->i;
-                        $parts = [];
+                        $diff       = now()->diff(\Carbon\Carbon::createFromFormat('d/m/Y H:i:s', $statusData));
+                        $mins       = ($diff->days * 1440) + ($diff->h * 60) + $diff->i;
+                        $paradoMins = $mins;
+                        $parts      = [];
                         if ($diff->days > 0) { $parts[] = $diff->days . 'd'; }
                         if ($diff->h > 0)    { $parts[] = $diff->h . 'h'; }
                         $parts[]        = $diff->i . 'min';
@@ -286,6 +345,7 @@
                         };
                     } catch (\Throwable) {
                         $tempoParado = '';
+                        $paradoMins  = 0;
                     }
                 }
             @endphp
@@ -298,6 +358,8 @@
                  data-cm="{{ strtolower($cm) }}"
                  data-divisao="{{ $v['Divisão'] ?? '' }}"
                  data-status="{{ $v['Status'] ?? '' }}"
+                 data-parado-mins="{{ $paradoMins }}"
+                 data-cerca-mins="{{ $cercaMins }}"
                  data-vehicle="{{ json_encode($v, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }}"
                  onclick="openVehicleDetail(this)">
 
@@ -493,6 +555,7 @@
         var allCards        = [];
         var activeDivisions = new Set(); // vazio = todos
         var activeStatuses  = new Set(); // vazio = todos
+        var currentSort     = 'status';
 
         function rebindCards() {
             allCards = Array.from(document.querySelectorAll('.vehicle-card'));
@@ -518,6 +581,20 @@
             });
             countVisible.textContent = vis;
             updateSummaryCount(vis, statusCounts);
+            sortCards();
+        }
+
+        // ── Ordenação dos cards ──────────────────────────────────────────────
+        function sortCards() {
+            var grid = document.getElementById('vehicles-grid');
+            if (! grid || currentSort === 'status') { return; }
+            var cards = Array.from(grid.querySelectorAll('.vehicle-card'));
+            var key   = currentSort === 'parado' ? 'paradoMins' : 'cercaMins';
+            cards.sort(function (a, b) {
+                return parseInt(b.dataset[key] || 0) - parseInt(a.dataset[key] || 0);
+            });
+            cards.forEach(function (c) { grid.appendChild(c); });
+            rebindCards();
         }
 
         function updateSummaryCount(total, statusCounts) {
@@ -539,10 +616,14 @@
         var stFilterBtn    = document.getElementById('status-filter-btn');
         var stFilterMenu   = document.getElementById('status-filter-menu');
         var stCountBadge   = document.getElementById('status-filter-count');
+        var sortBtn        = document.getElementById('sort-btn');
+        var sortMenu       = document.getElementById('sort-menu');
+        var sortLabelEl    = document.getElementById('sort-label');
 
         function closeAllDropdowns() {
             if (divFilterMenu) { divFilterMenu.classList.add('hidden'); }
             if (stFilterMenu)  { stFilterMenu.classList.add('hidden'); }
+            if (sortMenu)      { sortMenu.classList.add('hidden'); }
         }
 
         document.addEventListener('click', closeAllDropdowns);
@@ -598,6 +679,31 @@
                 applyFilters();
             });
         }
+
+        // ── Sort dropdown ────────────────────────────────────────────────────
+        var SORT_LABELS = { status: 'Status', parado: 'Tempo parado', cerca: 'Tempo na cerca' };
+
+        if (sortBtn && sortMenu) {
+            sortBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var isOpen = ! sortMenu.classList.contains('hidden');
+                closeAllDropdowns();
+                if (! isOpen) { sortMenu.classList.remove('hidden'); }
+            });
+            sortMenu.addEventListener('click', function (e) { e.stopPropagation(); });
+        }
+
+        document.querySelectorAll('.sort-option').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                currentSort = this.dataset.sort;
+                if (sortLabelEl) { sortLabelEl.textContent = SORT_LABELS[currentSort] || 'Status'; }
+                document.querySelectorAll('.sort-option').forEach(function (b) {
+                    b.querySelector('.sort-check').classList.toggle('invisible', b.dataset.sort !== currentSort);
+                });
+                if (sortMenu) { sortMenu.classList.add('hidden'); }
+                sortCards();
+            });
+        });
 
         // ── Helpers de status ────────────────────────────────────────────────
         // Mapa status → token de cor (gerado pelo controller, idêntico ao PHP)
@@ -659,7 +765,7 @@
             if (hours > 0) { parts.push(hours + 'h'); }
             parts.push(mins + 'min');
             var urgencia = diff > 480 ? 'rose' : (diff > 120 ? 'amber' : 'zinc');
-            return { label: parts.join(' '), urgencia: urgencia };
+            return { label: parts.join(' '), urgencia: urgencia, mins: diff };
         }
 
         function calcTempoCerca(entrada) {
@@ -670,7 +776,7 @@
                 var m = String(entrada).match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
                 if (m) { date = new Date(m[3], m[2]-1, m[1], m[4], m[5], m[6] || 0); }
             }
-            if (isNaN(date.getTime())) { return ''; }
+            if (isNaN(date.getTime())) { return null; }
             var diff = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
             var days  = Math.floor(diff / 1440);
             var hours = Math.floor((diff % 1440) / 60);
@@ -679,7 +785,7 @@
             if (days > 0)  { parts.push(days + 'd'); }
             if (hours > 0) { parts.push(hours + 'h'); }
             parts.push(mins + 'min');
-            return parts.join(' ');
+            return { label: parts.join(' '), mins: diff };
         }
 
         function cardHtml(v) {
@@ -710,12 +816,14 @@
 
             var statusRastreador = getF(v, 'Status Rastreador');
             var statusData       = getF(v, 'Status Data');
+            var paradoResult     = calcTempoParado(
+                statusRastreador === '—' ? '' : statusRastreador,
+                statusData       === '—' ? '' : statusData
+            );
+            var paradoMins = paradoResult ? paradoResult.mins : 0;
 
             var tempoParadoHtml = (function () {
-                var result = calcTempoParado(
-                    statusRastreador === '—' ? '' : statusRastreador,
-                    statusData       === '—' ? '' : statusData
-                );
+                var result = paradoResult;
                 if (! result) { return ''; }
                 var URGENCIA = {
                     rose:  { cls: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',   dot: 'bg-rose-400'  },
@@ -737,14 +845,13 @@
                     + 'Motor ' + (ligado ? 'Ligado' : 'Desligado') + '</span></div>';
             })() : '';
 
-            var tempoCercaHtml = (cerca1 !== '—') ? (function () {
-                var tempo = calcTempoCerca(entrada);
-                return tempo
-                    ? '<div class="mt-1.5 flex items-center gap-1.5">'
-                        + '<svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>'
-                        + '<p class="text-xs text-zinc-500 dark:text-zinc-500">' + escHtml(tempo) + ' na cerca</p></div>'
-                    : '';
-            })() : '';
+            var cercaResult    = (cerca1 !== '—') ? calcTempoCerca(entrada) : null;
+            var cercaMins      = cercaResult ? cercaResult.mins : 0;
+            var tempoCercaHtml = cercaResult
+                ? '<div class="mt-1.5 flex items-center gap-1.5">'
+                    + '<svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>'
+                    + '<p class="text-xs text-zinc-500 dark:text-zinc-500">' + escHtml(cercaResult.label) + ' na cerca</p></div>'
+                : '';
 
             var condHtml = (cond !== '—')
                 ? '<div class="mt-2 flex items-center gap-1.5">'
@@ -758,6 +865,8 @@
                 + ' data-plate="' + placa.toLowerCase() + '" data-cm="' + cm.toLowerCase() + '"'
                 + ' data-divisao="' + escHtml(String(v['Divisão'] || '')) + '"'
                 + ' data-status="' + escHtml(String(v['Status'] || '')) + '"'
+                + ' data-parado-mins="' + paradoMins + '"'
+                + ' data-cerca-mins="' + cercaMins + '"'
                 + ' data-vehicle="' + encoded + '" onclick="openVehicleDetail(this)">'
 
                 + '<div class="flex items-start justify-between gap-2">'
