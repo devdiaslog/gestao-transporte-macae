@@ -577,23 +577,27 @@
 
         // ── Filtro combinado (busca + divisão + status) ──────────────────────
         function applyFilters() {
-            var q            = searchInput.value.trim().toLowerCase();
-            var vis          = 0;
-            var statusCounts = {};
+            var q             = searchInput.value.trim().toLowerCase();
+            var vis           = 0;
+            var summaryCounts = {}; // ignora filtro de status → cards do resumo sempre mostram contagem real
+            var summaryTotal  = 0;
+
             allCards.forEach(function (card) {
                 var matchSearch = ! q || card.dataset.plate.includes(q) || card.dataset.cm.includes(q);
                 var matchDiv    = activeDivisions.size === 0 || activeDivisions.has(card.dataset.divisao);
                 var matchStatus = activeStatuses.size === 0  || activeStatuses.has(card.dataset.status);
-                var match       = matchSearch && matchDiv && matchStatus;
-                card.style.display = match ? '' : 'none';
-                if (match) {
-                    vis++;
+                card.style.display = (matchSearch && matchDiv && matchStatus) ? '' : 'none';
+                if (matchSearch && matchDiv && matchStatus) { vis++; }
+                // Conta para o resumo sem considerar o filtro de status
+                if (matchSearch && matchDiv) {
+                    summaryTotal++;
                     var s = card.dataset.status || '';
-                    statusCounts[s] = (statusCounts[s] || 0) + 1;
+                    summaryCounts[s] = (summaryCounts[s] || 0) + 1;
                 }
             });
+
             countVisible.textContent = vis;
-            updateSummaryCount(vis, statusCounts);
+            updateSummaryCount(summaryTotal, summaryCounts);
             sortCards();
             updateSummaryActiveState();
         }
