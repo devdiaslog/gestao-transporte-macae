@@ -176,6 +176,16 @@
                             </svg>
                             Tempo na cerca
                         </button>
+                        <button data-sort="region"
+                                class="sort-option flex w-full items-center gap-2.5 rounded-lg px-3 py-2
+                                       text-sm text-zinc-700 hover:bg-zinc-50
+                                       dark:text-zinc-300 dark:hover:bg-zinc-800/60">
+                            <svg class="sort-check invisible h-3.5 w-3.5 shrink-0 text-zinc-900 dark:text-zinc-100"
+                                 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                            </svg>
+                            Por região
+                        </button>
                     </div>
                 </div>
             </div>
@@ -373,6 +383,8 @@
                  data-status="{{ $v['Status'] ?? '' }}"
                  data-parado-mins="{{ $paradoMins }}"
                  data-cerca-mins="{{ $cercaMins }}"
+                 data-lat="{{ $v['Latitude'] ?? '' }}"
+                 data-lon="{{ $v['Longitude'] ?? '' }}"
                  data-vehicle="{{ json_encode($v, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }}"
                  onclick="openVehicleDetail(this)">
 
@@ -569,6 +581,8 @@
         var activeDivisions = new Set(); // vazio = todos
         var activeStatuses  = new Set(); // vazio = todos
         var currentSort     = 'status';
+        var regionBuilt     = false;
+        var CLUSTER_RADIUS_KM = 3;
 
         function rebindCards() {
             allCards = Array.from(document.querySelectorAll('.vehicle-card'));
@@ -621,10 +635,172 @@
             });
         }
 
+        // ── Clustering geográfico ────────────────────────────────────────────
+        function haversineKm(lat1, lon1, lat2, lon2) {
+            var R    = 6371;
+            var dLat = (lat2 - lat1) * Math.PI / 180;
+            var dLon = (lon2 - lon1) * Math.PI / 180;
+            var a    = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                     + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+                       * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        function greedyCluster(points, radiusKm) {
+            var assigned = new Array(points.length).fill(false);
+            var clusters = [];
+            for (var i = 0; i < points.length; i++) {
+                if (assigned[i]) { continue; }
+                var cluster = [points[i]];
+                assigned[i] = true;
+                for (var j = i + 1; j < points.length; j++) {
+                    if (assigned[j]) { continue; }
+                    for (var k = 0; k < cluster.length; k++) {
+                        if (haversineKm(cluster[k].lat, cluster[k].lon, points[j].lat, points[j].lon) <= radiusKm) {
+                            cluster.push(points[j]);
+                            assigned[j] = true;
+                            break;
+                        }
+                    }
+                }
+                clusters.push(cluster);
+            }
+            return clusters;
+        }
+
+        function clusterSepHtml(label) {
+            return '<div class="flex items-center gap-3">'
+                + '<div class="h-px flex-1 bg-slate-200 dark:bg-zinc-800"></div>'
+                + '<span class="text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap'
+                + ' text-zinc-400 dark:text-zinc-600">' + escHtml(label) + '</span>'
+                + '<div class="h-px flex-1 bg-slate-200 dark:bg-zinc-800"></div>'
+                + '</div>';
+        }
+
+        function buildRegionLayout(grid) {
+            grid.querySelectorAll('.cluster-sep').forEach(function (sep) { sep.remove(); });
+
+            var cards = Array.from(grid.querySelectorAll('.vehicle-card'));
+
+            // Agrupa por status preservando a ordem
+            var statusOrder = [];
+            var byStatus    = {};
+            cards.forEach(function (card) {
+                var s = card.dataset.status || '';
+                if (! byStatus[s]) { byStatus[s] = []; statusOrder.push(s); }
+                byStatus[s].push(card);
+            });
+
+            var sepCount = 0;
+
+            statusOrder.forEach(function (status) {
+                var group   = byStatus[status];
+                var withGps = [];
+                var noGps   = [];
+
+                group.forEach(function (card) {
+                    var lat = parseFloat(card.dataset.lat);
+                    var lon = parseFloat(card.dataset.lon);
+                    if (! isNaN(lat) && ! isNaN(lon) && (lat !== 0 || lon !== 0)) {
+                        withGps.push({ card: card, lat: lat, lon: lon });
+                    } else {
+                        noGps.push(card);
+                    }
+                });
+
+                var clusters = greedyCluster(withGps, CLUSTER_RADIUS_KM);
+                clusters.sort(function (a, b) { return b.length - a.length; });
+
+                var multi  = clusters.filter(function (c) { return c.length > 1; });
+                var single = clusters.filter(function (c) { return c.length === 1; });
+                var ridx   = 0;
+
+                multi.forEach(function (cluster) {
+                    ridx++;
+                    var sepId = 'clu-sep-' + (++sepCount);
+                    var sep   = document.createElement('div');
+                    sep.id        = sepId;
+                    sep.className = 'cluster-sep col-span-full py-1';
+                    sep.innerHTML = clusterSepHtml('Região ' + ridx + ' · ' + cluster.length + ' veículos');
+                    grid.appendChild(sep);
+                    cluster.forEach(function (p) {
+                        p.card.dataset.clusterId = sepId;
+                        grid.appendChild(p.card);
+                    });
+                });
+
+                if (single.length > 0) {
+                    var sepId = 'clu-sep-' + (++sepCount);
+                    var sep   = document.createElement('div');
+                    sep.id        = sepId;
+                    sep.className = 'cluster-sep col-span-full py-1';
+                    var lbl = single.length === 1 ? 'Isolado' : 'Isolados · ' + single.length + ' veículos';
+                    sep.innerHTML = clusterSepHtml(lbl);
+                    grid.appendChild(sep);
+                    single.forEach(function (c) {
+                        c[0].card.dataset.clusterId = sepId;
+                        grid.appendChild(c[0].card);
+                    });
+                }
+
+                if (noGps.length > 0) {
+                    var sepId = 'clu-sep-' + (++sepCount);
+                    var sep   = document.createElement('div');
+                    sep.id        = sepId;
+                    sep.className = 'cluster-sep col-span-full py-1';
+                    var lbl = 'Sem GPS · ' + noGps.length + ' veículo' + (noGps.length > 1 ? 's' : '');
+                    sep.innerHTML = clusterSepHtml(lbl);
+                    grid.appendChild(sep);
+                    noGps.forEach(function (card) {
+                        card.dataset.clusterId = sepId;
+                        grid.appendChild(card);
+                    });
+                }
+            });
+
+            rebindCards();
+        }
+
+        function updateClusterSeparators() {
+            if (currentSort !== 'region') { return; }
+            var grid = document.getElementById('vehicles-grid');
+            if (! grid) { return; }
+            grid.querySelectorAll('.cluster-sep').forEach(function (sep) {
+                var hasVisible = Array.from(
+                    grid.querySelectorAll('[data-cluster-id="' + sep.id + '"]')
+                ).some(function (card) { return card.style.display !== 'none'; });
+                sep.style.display = hasVisible ? '' : 'none';
+            });
+        }
+
         // ── Ordenação dos cards ──────────────────────────────────────────────
         function sortCards() {
             var grid = document.getElementById('vehicles-grid');
-            if (! grid || currentSort === 'status') { return; }
+            if (! grid) { return; }
+
+            if (currentSort === 'status') {
+                if (regionBuilt) {
+                    grid.querySelectorAll('.cluster-sep').forEach(function (s) { s.remove(); });
+                    regionBuilt = false;
+                }
+                return;
+            }
+
+            if (currentSort === 'region') {
+                if (! regionBuilt) {
+                    buildRegionLayout(grid);
+                    regionBuilt = true;
+                }
+                updateClusterSeparators();
+                return;
+            }
+
+            // parado / cerca — limpa separadores de região se houver
+            if (regionBuilt) {
+                grid.querySelectorAll('.cluster-sep').forEach(function (s) { s.remove(); });
+                regionBuilt = false;
+            }
+
             var cards = Array.from(grid.querySelectorAll('.vehicle-card'));
             var key   = currentSort === 'parado' ? 'paradoMins' : 'cercaMins';
             cards.sort(function (a, b) {
@@ -757,7 +933,7 @@
         })();
 
         // ── Sort dropdown ────────────────────────────────────────────────────
-        var SORT_LABELS = { status: 'Status', parado: 'Tempo parado', cerca: 'Tempo na cerca' };
+        var SORT_LABELS = { status: 'Status', parado: 'Tempo parado', cerca: 'Tempo na cerca', region: 'Por região' };
 
         if (sortBtn && sortMenu) {
             sortBtn.addEventListener('click', function (e) {
@@ -943,6 +1119,8 @@
                 + ' data-status="' + escHtml(String(v['Status'] || '')) + '"'
                 + ' data-parado-mins="' + paradoMins + '"'
                 + ' data-cerca-mins="' + cercaMins + '"'
+                + ' data-lat="' + escHtml(String(v['Latitude'] || '')) + '"'
+                + ' data-lon="' + escHtml(String(v['Longitude'] || '')) + '"'
                 + ' data-vehicle="' + encoded + '" onclick="openVehicleDetail(this)">'
 
                 + '<div class="flex items-start justify-between gap-2">'
@@ -1098,6 +1276,7 @@
             function onSuccess(data) {
                 if (! data.success) { return; }
                 var vehicles = data.vehicles;
+                regionBuilt    = false; // força reconstrução do layout de região com novos dados
                 grid.innerHTML = vehicles.length ? vehicles.map(cardHtml).join('') : emptyState();
                 rebindCards();
                 var total = data.total;
