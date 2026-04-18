@@ -1,1338 +1,648 @@
 <x-layouts.app title="Torre de Controle">
 
-    @php
-        $badgeCls = [
-            'amber'   => 'bg-amber-500/10 text-amber-600 ring-amber-400/30 dark:text-amber-400 dark:ring-amber-500/30',
-            'orange'  => 'bg-orange-500/10 text-orange-600 ring-orange-400/30 dark:text-orange-400 dark:ring-orange-500/30',
-            'yellow'  => 'bg-yellow-500/10 text-yellow-600 ring-yellow-400/30 dark:text-yellow-400 dark:ring-yellow-500/30',
-            'lime'    => 'bg-lime-500/10 text-lime-600 ring-lime-400/30 dark:text-lime-400 dark:ring-lime-500/30',
-            'emerald' => 'bg-emerald-500/10 text-emerald-600 ring-emerald-400/30 dark:text-emerald-400 dark:ring-emerald-500/30',
-            'teal'    => 'bg-teal-500/10 text-teal-600 ring-teal-400/30 dark:text-teal-400 dark:ring-teal-500/30',
-            'cyan'    => 'bg-cyan-500/10 text-cyan-600 ring-cyan-400/30 dark:text-cyan-400 dark:ring-cyan-500/30',
-            'blue'    => 'bg-blue-500/10 text-blue-600 ring-blue-400/30 dark:text-blue-400 dark:ring-blue-500/30',
-            'indigo'  => 'bg-indigo-500/10 text-indigo-600 ring-indigo-400/30 dark:text-indigo-400 dark:ring-indigo-500/30',
-            'violet'  => 'bg-violet-500/10 text-violet-600 ring-violet-400/30 dark:text-violet-400 dark:ring-violet-500/30',
-            'purple'  => 'bg-purple-500/10 text-purple-600 ring-purple-400/30 dark:text-purple-400 dark:ring-purple-500/30',
-            'rose'    => 'bg-rose-500/10 text-rose-600 ring-rose-400/30 dark:text-rose-400 dark:ring-rose-500/30',
-            'zinc'    => 'bg-zinc-500/10 text-zinc-600 ring-zinc-400/30 dark:text-zinc-400 dark:ring-zinc-500/30',
-        ];
-        $dotCls = [
-            'amber'   => 'bg-amber-400',  'orange' => 'bg-orange-400',
-            'yellow'  => 'bg-yellow-400', 'lime'   => 'bg-lime-400',
-            'emerald' => 'bg-emerald-400', 'teal'  => 'bg-teal-400',
-            'cyan'    => 'bg-cyan-400',   'blue'   => 'bg-blue-400',
-            'indigo'  => 'bg-indigo-400', 'violet' => 'bg-violet-400',
-            'purple'  => 'bg-purple-400', 'rose'   => 'bg-rose-400',
-            'zinc'    => 'bg-zinc-400',
-        ];
+    {{-- ─── Page header ──────────────────────────────────────────────────────── --}}
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <h2 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Torre de Controle</h2>
+            <p class="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">Equipamentos motorizados ativos.</p>
+        </div>
+        {{-- Live counter --}}
+        <span id="row-counter" class="rounded-full border px-3 py-1 text-xs font-medium
+                                      border-zinc-200 bg-zinc-50 text-zinc-500
+                                      dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"></span>
+    </div>
 
-        $statusCounts = [];
-        foreach ($vehicles as $v) {
-            $s = (string) ($v['Status'] ?? '');
-            $statusCounts[$s] = ($statusCounts[$s] ?? 0) + 1;
-        }
+    {{-- ─── Toolbar ─────────────────────────────────────────────────────────── --}}
+    @php
+        $currentDivisao = request('divisao_id');
+        $currentModelo  = request('modelo_id');
     @endphp
 
-    {{-- ─── Wrapper de altura total (toolbar + scroll) ────────────────────────── --}}
-    <div class="-mx-4 sm:-mx-6 lg:-mx-8 flex h-full flex-col overflow-hidden">
+    <div class="mt-4 flex flex-wrap items-center gap-2">
 
-    {{-- ─── Toolbar ────────────────────────────────────────────────────────────── --}}
-    <div class="shrink-0 border-b px-4 py-3 sm:px-6 lg:px-8
+        {{-- Live search --}}
+        <div class="relative">
+            <svg class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
+                 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.197 5.197a7.5 7.5 0 0 0 10.606 10.606z"/>
+            </svg>
+            <input id="live-search" type="text" placeholder="Buscar placa, prefixo, divisão…"
+                   class="rounded-lg border py-2 pl-8 pr-3 text-sm outline-none transition-all w-56
+                          border-slate-200 bg-white text-zinc-700 placeholder-zinc-400
+                          focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                          dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:placeholder-zinc-600
+                          dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+        </div>
+
+        {{-- Server filters --}}
+        <form id="filter-form" method="GET" action="{{ route('control-tower.index') }}" class="flex items-center gap-2">
+            <select name="divisao_id" onchange="this.form.submit()"
+                    class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
+                           border-slate-200 bg-white text-zinc-700
+                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                           dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
+                           dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                <option value="">Todas as divisões</option>
+                @foreach($divisoes as $divisao)
+                    <option value="{{ $divisao->id }}" @selected($currentDivisao == $divisao->id)>{{ $divisao->nome }}</option>
+                @endforeach
+            </select>
+
+            <select name="modelo_id" onchange="this.form.submit()"
+                    class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
+                           border-slate-200 bg-white text-zinc-700
+                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                           dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
+                           dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                <option value="">Todos os modelos</option>
+                @foreach($modelos as $modelo)
+                    <option value="{{ $modelo->id }}" @selected($currentModelo == $modelo->id)>{{ $modelo->nome }}</option>
+                @endforeach
+            </select>
+
+            @if($currentDivisao || $currentModelo)
+                <a href="{{ route('control-tower.index') }}"
+                   class="flex items-center gap-1 rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors
+                          border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700
+                          dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500 dark:hover:text-zinc-300"
+                   title="Limpar filtros">
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                    </svg>
+                </a>
+            @endif
+        </form>
+
+        {{-- Column toggles --}}
+        <div class="ml-auto flex items-center gap-1.5">
+            <span class="text-xs text-zinc-400 dark:text-zinc-600">Colunas:</span>
+            @foreach([
+                ['col' => 'prefixo',   'label' => 'Prefixo'],
+                ['col' => 'divisao',   'label' => 'Divisão'],
+                ['col' => 'status-op', 'label' => 'Status Op.'],
+                ['col' => 'documento', 'label' => 'Documento'],
+                ['col' => 'obs',       'label' => 'Observação'],
+            ] as $tog)
+                <button type="button"
+                        data-toggle-col="{{ $tog['col'] }}"
+                        onclick="toggleColumn('{{ $tog['col'] }}')"
+                        class="col-toggle rounded-md border px-2 py-1 text-xs font-medium transition-colors
+                               border-zinc-200 bg-white text-zinc-600
+                               dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+                    {{ $tog['label'] }}
+                </button>
+            @endforeach
+        </div>
+    </div>
+
+    {{-- ─── Flash / errors ─────────────────────────────────────────────────── --}}
+    @if(session('success'))
+        <div id="flash-success"
+             class="mt-3 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700
+                    dark:border-emerald-800/50 dark:bg-emerald-950/40 dark:text-emerald-400">
+            <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="mt-3 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700
+                    dark:border-rose-800/50 dark:bg-rose-950/40 dark:text-rose-400">
+            <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+            </svg>
+            {{ $errors->first() }}
+        </div>
+    @endif
+
+    {{-- ─── Table card — fixed height + internal scroll ────────────────────── --}}
+    <div id="table-wrapper"
+         class="mt-3 overflow-hidden rounded-xl border shadow-sm
                 border-slate-200 bg-white
-                dark:border-zinc-800 dark:bg-zinc-950">
-        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                dark:border-zinc-800 dark:bg-zinc-900/50">
 
-            {{-- Page title (inline) --}}
-            <div class="w-full sm:w-auto sm:mr-auto">
-                <h2 class="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Torre de Controle</h2>
-                <p class="text-xs text-zinc-500 dark:text-zinc-500">Monitoramento em tempo real da frota</p>
+        @if($equipamentos->isEmpty())
+            <div class="flex flex-col items-center justify-center px-6 py-16 text-center">
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-800/60">
+                    <svg class="h-7 w-7 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.25">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
+                    </svg>
+                </div>
+                @if($currentDivisao || $currentModelo)
+                    <h3 class="mt-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">Nenhum equipamento encontrado</h3>
+                    <a href="{{ route('control-tower.index') }}"
+                       class="mt-4 inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors
+                              border-zinc-200 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800/60">
+                        Limpar filtros
+                    </a>
+                @else
+                    <h3 class="mt-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">Nenhum equipamento ativo</h3>
+                @endif
             </div>
 
-            {{-- Filtro por Divisão --}}
-            @if(count($divisions) > 1)
-            <div class="relative" id="division-filter-wrap">
-                <button id="division-filter-btn"
-                        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium
-                               transition-all duration-150
-                               border-slate-300 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50
-                               dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800">
-                    Divisão
-                    <span id="division-filter-count"
-                          class="hidden rounded-full bg-zinc-900 px-1.5 py-0.5 text-[10px] font-bold text-white
-                                 dark:bg-white dark:text-zinc-900"></span>
-                    <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-                    </svg>
-                </button>
-                <div id="division-filter-menu"
-                     class="absolute left-0 top-full z-40 mt-1.5 hidden
-                            w-[calc(100vw-2rem)] max-w-xs sm:w-auto sm:min-w-48
-                            rounded-xl border shadow-lg
-                            border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-                    <div class="max-h-64 overflow-y-auto p-1.5">
-                        @foreach($divisions as $div)
-                        <label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2
-                                      text-sm text-zinc-700 hover:bg-zinc-50
-                                      dark:text-zinc-300 dark:hover:bg-zinc-800/60">
-                            <input type="checkbox"
-                                   class="division-checkbox h-4 w-4 rounded border-slate-300 accent-zinc-900
-                                          dark:border-zinc-600 dark:accent-white"
-                                   value="{{ $div }}">
-                            {{ $div === '' ? 'Sem divisão' : $div }}
-                        </label>
+        @else
+            {{-- Scrollable area --}}
+            <div class="overflow-auto" style="max-height: calc(100vh - 260px)">
+                <table id="ct-table" class="w-full text-sm">
+                    <thead class="sticky top-0 z-10">
+                        <tr class="border-b border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+                            <th class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Placa
+                            </th>
+                            <th data-col="prefixo" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Prefixo
+                            </th>
+                            <th class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Modelo / Implemento
+                            </th>
+                            <th data-col="divisao" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Divisão
+                            </th>
+                            <th data-col="status-op" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Status Op.
+                            </th>
+                            <th data-col="documento" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Documento
+                            </th>
+                            <th data-col="obs" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Observação
+                            </th>
+                            <th class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
+                                <span class="sr-only">Ações</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="ct-tbody" class="divide-y divide-slate-100 dark:divide-zinc-800/60">
+                        @foreach($equipamentos as $equipamento)
+                            @php
+                                $impNome = $equipamento->implemento_nome_override
+                                    ?? $equipamento->implemento?->modelo?->nome
+                                    ?? $equipamento->implemento?->placa;
+
+                                $searchText = implode(' ', array_filter([
+                                    $equipamento->placa,
+                                    $equipamento->prefixo,
+                                    $equipamento->modelo?->nome,
+                                    $equipamento->divisao?->nome,
+                                    $equipamento->status_operacional,
+                                    $equipamento->documento_demanda,
+                                    $impNome,
+                                ]));
+                            @endphp
+
+                            {{-- ─── Data row ──────────────────────────────── --}}
+                            <tr id="row-{{ $equipamento->id }}"
+                                data-search="{{ strtolower($searchText) }}"
+                                class="ct-row transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/30">
+
+                                <td class="px-3 py-2 whitespace-nowrap">
+                                    <p class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $equipamento->placa }}</p>
+                                    @if($equipamento->id_elog)
+                                        <p class="text-[11px] text-zinc-400 dark:text-zinc-600">{{ $equipamento->id_elog }}</p>
+                                    @endif
+                                </td>
+
+                                <td data-col="prefixo" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
+                                    {{ $equipamento->prefixo ?? '—' }}
+                                </td>
+
+                                <td class="px-3 py-2">
+                                    <p class="whitespace-nowrap text-zinc-700 dark:text-zinc-300">{{ $equipamento->modelo?->nome ?? '—' }}</p>
+                                    <div class="mt-0.5 flex items-center gap-1">
+                                        @if($impNome)
+                                            <span class="inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-700
+                                                         ring-1 ring-inset ring-amber-600/20
+                                                         dark:bg-amber-950/30 dark:text-amber-400 dark:ring-amber-500/20 whitespace-nowrap">
+                                                <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 1 1.242 7.244"/>
+                                                </svg>
+                                                {{ $impNome }}
+                                            </span>
+                                        @else
+                                            <span class="text-[11px] text-zinc-300 dark:text-zinc-700">sem implemento</span>
+                                        @endif
+                                        <button type="button"
+                                                onclick="openImplementoModal({{ $equipamento->id }}, '{{ addslashes($equipamento->placa) }}', {{ $equipamento->implemento_id ?? 'null' }}, '{{ addslashes($equipamento->implemento_nome_override ?? '') }}')"
+                                                title="Vincular / alterar implemento"
+                                                class="rounded p-0.5 text-zinc-300 transition-colors hover:text-zinc-600
+                                                       dark:text-zinc-700 dark:hover:text-zinc-400">
+                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 1 1.242 7.244"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+
+                                <td data-col="divisao" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
+                                    {{ $equipamento->divisao?->nome ?? '—' }}
+                                </td>
+
+                                <td data-col="status-op" class="px-3 py-2 whitespace-nowrap">
+                                    @if($equipamento->status_operacional)
+                                        <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700
+                                                     dark:bg-blue-950/40 dark:text-blue-400">
+                                            {{ $equipamento->status_operacional }}
+                                        </span>
+                                    @else
+                                        <span class="text-zinc-300 dark:text-zinc-700">—</span>
+                                    @endif
+                                </td>
+
+                                <td data-col="documento" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
+                                    {{ $equipamento->documento_demanda ?? '—' }}
+                                </td>
+
+                                <td data-col="obs" class="px-3 py-2 text-zinc-600 dark:text-zinc-400">
+                                    <span class="line-clamp-1 max-w-[180px] block">{{ $equipamento->observacao_operacional ?? '—' }}</span>
+                                </td>
+
+                                <td class="px-3 py-2 text-right whitespace-nowrap">
+                                    <button type="button"
+                                            onclick="toggleEditRow({{ $equipamento->id }})"
+                                            title="Editar dados operacionais"
+                                            class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
+                                                   border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800
+                                                   dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-zinc-200">
+                                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931zm0 0L19.5 7.125"/>
+                                        </svg>
+                                        Editar
+                                    </button>
+                                </td>
+                            </tr>
+
+                            {{-- ─── Edit row ───────────────────────────────── --}}
+                            <tr id="edit-row-{{ $equipamento->id }}" class="hidden border-t-0 bg-slate-50/80 dark:bg-zinc-800/20">
+                                <td colspan="8" class="px-3 pb-3 pt-2">
+                                    <form method="POST"
+                                          action="{{ route('equipamentos.operacional', $equipamento) }}"
+                                          class="flex flex-wrap items-end gap-2">
+                                        @csrf
+                                        @method('PATCH')
+
+                                        <div class="flex min-w-[150px] flex-1 flex-col gap-1">
+                                            <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Status Operacional</label>
+                                            <input type="text" name="status_operacional"
+                                                   value="{{ old('status_operacional', $equipamento->status_operacional) }}"
+                                                   placeholder="Ex.: Em Trânsito"
+                                                   class="rounded-lg border px-2.5 py-1.5 text-sm outline-none transition-all
+                                                          border-slate-200 bg-white text-zinc-700 placeholder-zinc-300
+                                                          focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:placeholder-zinc-600
+                                                          dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                                        </div>
+
+                                        <div class="flex min-w-[160px] flex-1 flex-col gap-1">
+                                            <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Documento de Demanda</label>
+                                            <input type="text" name="documento_demanda"
+                                                   value="{{ old('documento_demanda', $equipamento->documento_demanda) }}"
+                                                   placeholder="Nº do documento"
+                                                   class="rounded-lg border px-2.5 py-1.5 text-sm outline-none transition-all
+                                                          border-slate-200 bg-white text-zinc-700 placeholder-zinc-300
+                                                          focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:placeholder-zinc-600
+                                                          dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                                        </div>
+
+                                        <div class="flex min-w-[200px] flex-[2] flex-col gap-1">
+                                            <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Observação</label>
+                                            <input type="text" name="observacao_operacional"
+                                                   value="{{ old('observacao_operacional', $equipamento->observacao_operacional) }}"
+                                                   placeholder="Observação operacional"
+                                                   class="rounded-lg border px-2.5 py-1.5 text-sm outline-none transition-all
+                                                          border-slate-200 bg-white text-zinc-700 placeholder-zinc-300
+                                                          focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:placeholder-zinc-600
+                                                          dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                                        </div>
+
+                                        <div class="flex items-center gap-1.5">
+                                            <button type="submit"
+                                                    class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors
+                                                           bg-zinc-900 text-white hover:bg-zinc-700
+                                                           dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300">
+                                                Salvar
+                                            </button>
+                                            <button type="button" onclick="toggleEditRow({{ $equipamento->id }})"
+                                                    class="rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors
+                                                           border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50
+                                                           dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700">
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
                         @endforeach
-                    </div>
-                </div>
+
+                        {{-- Empty search state --}}
+                        <tr id="no-results" class="hidden">
+                            <td colspan="8" class="px-6 py-10 text-center text-sm text-zinc-400 dark:text-zinc-600">
+                                Nenhum resultado para a busca.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
+
+            @if($equipamentos->hasPages())
+                <div class="border-t border-slate-100 px-4 py-3 dark:border-zinc-800">
+                    {{ $equipamentos->links() }}
+                </div>
             @endif
+        @endif
+    </div>
 
-            {{-- Filtro por Status Operacional --}}
-            @if(count($statuses) > 1)
-            <div class="relative" id="status-filter-wrap">
-                <button id="status-filter-btn"
-                        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium
-                               transition-all duration-150
-                               border-slate-300 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50
-                               dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800">
-                    Status
-                    <span id="status-filter-count"
-                          class="hidden rounded-full bg-zinc-900 px-1.5 py-0.5 text-[10px] font-bold text-white
-                                 dark:bg-white dark:text-zinc-900"></span>
-                    <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-                    </svg>
-                </button>
-                <div id="status-filter-menu"
-                     class="absolute left-0 top-full z-40 mt-1.5 hidden
-                            w-[calc(100vw-2rem)] max-w-xs sm:w-auto sm:min-w-52
-                            rounded-xl border shadow-lg
-                            border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-                    <div class="max-h-64 overflow-y-auto p-1.5">
-                        @foreach($statuses as $s)
-                        @php $dotColor = $dotCls[$statusColorMap[$s] ?? 'zinc'] ?? $dotCls['zinc']; @endphp
-                        <label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2
-                                      text-sm text-zinc-700 hover:bg-zinc-50
-                                      dark:text-zinc-300 dark:hover:bg-zinc-800/60">
-                            <input type="checkbox"
-                                   class="status-checkbox h-4 w-4 rounded border-slate-300 accent-zinc-900
-                                          dark:border-zinc-600 dark:accent-white"
-                                   value="{{ $s }}">
-                            <span class="h-2 w-2 shrink-0 rounded-full {{ $dotColor }}"></span>
-                            {{ $s === '' ? 'Indefinido' : $s }}
-                        </label>
-                        @endforeach
-                    </div>
-                </div>
+    @if(!$equipamentos->isEmpty())
+        <p class="mt-2 text-xs text-zinc-400 dark:text-zinc-600">
+            {{ $equipamentos->total() }} {{ $equipamentos->total() === 1 ? 'equipamento' : 'equipamentos' }} no total
+            @if($currentDivisao || $currentModelo) · filtros ativos @endif
+        </p>
+    @endif
+
+    {{-- ═══════════════════════════════════════════════════════════════════════ --}}
+    {{-- ─── Implemento modal ───────────────────────────────────────────────── --}}
+    {{-- ═══════════════════════════════════════════════════════════════════════ --}}
+    <div id="implemento-backdrop"
+         onclick="closeImplementoModal()"
+         class="fixed inset-0 z-40 hidden bg-black/40 backdrop-blur-sm"></div>
+
+    <div id="implemento-modal"
+         class="fixed inset-x-4 top-1/2 z-50 hidden max-h-[88vh] w-full max-w-lg -translate-y-1/2 overflow-hidden
+                rounded-2xl border shadow-2xl
+                border-slate-200 bg-white
+                dark:border-zinc-700 dark:bg-zinc-900
+                sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2">
+
+        <div class="flex items-center justify-between border-b px-5 py-3.5 border-slate-200 dark:border-zinc-800">
+            <div>
+                <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Vincular Implemento</h3>
+                <p id="modal-subtitle" class="text-xs text-zinc-500 dark:text-zinc-400"></p>
             </div>
-            @endif
-
-            {{-- Ordenação --}}
-            <div class="relative" id="sort-wrap">
-                <button id="sort-btn"
-                        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium
-                               transition-all duration-150
-                               border-slate-300 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50
-                               dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800">
-                    <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"/>
-                    </svg>
-                    <span id="sort-label">Status</span>
-                    <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-                    </svg>
-                </button>
-                <div id="sort-menu"
-                     class="absolute left-0 top-full z-40 mt-1.5 hidden
-                            w-48 rounded-xl border shadow-lg
-                            border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-                    <div class="p-1.5">
-                        <button data-sort="status"
-                                class="sort-option flex w-full items-center gap-2.5 rounded-lg px-3 py-2
-                                       text-sm text-zinc-700 hover:bg-zinc-50
-                                       dark:text-zinc-300 dark:hover:bg-zinc-800/60">
-                            <svg class="sort-check h-3.5 w-3.5 shrink-0 text-zinc-900 dark:text-zinc-100"
-                                 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                            </svg>
-                            Status
-                        </button>
-                        <button data-sort="parado"
-                                class="sort-option flex w-full items-center gap-2.5 rounded-lg px-3 py-2
-                                       text-sm text-zinc-700 hover:bg-zinc-50
-                                       dark:text-zinc-300 dark:hover:bg-zinc-800/60">
-                            <svg class="sort-check invisible h-3.5 w-3.5 shrink-0 text-zinc-900 dark:text-zinc-100"
-                                 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                            </svg>
-                            Tempo parado
-                        </button>
-                        <button data-sort="cerca"
-                                class="sort-option flex w-full items-center gap-2.5 rounded-lg px-3 py-2
-                                       text-sm text-zinc-700 hover:bg-zinc-50
-                                       dark:text-zinc-300 dark:hover:bg-zinc-800/60">
-                            <svg class="sort-check invisible h-3.5 w-3.5 shrink-0 text-zinc-900 dark:text-zinc-100"
-                                 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                            </svg>
-                            Tempo na cerca
-                        </button>
-                        <button data-sort="region"
-                                class="sort-option flex w-full items-center gap-2.5 rounded-lg px-3 py-2
-                                       text-sm text-zinc-700 hover:bg-zinc-50
-                                       dark:text-zinc-300 dark:hover:bg-zinc-800/60">
-                            <svg class="sort-check invisible h-3.5 w-3.5 shrink-0 text-zinc-900 dark:text-zinc-100"
-                                 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                            </svg>
-                            Por região
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Busca --}}
-            <div class="flex w-full sm:w-auto sm:min-w-48 overflow-hidden rounded-lg border shadow-xs
-                        border-slate-300 bg-white
-                        focus-within:border-zinc-900 focus-within:ring-2 focus-within:ring-zinc-900/10
-                        dark:border-zinc-800 dark:bg-zinc-950
-                        dark:focus-within:border-blue-500 dark:focus-within:ring-1 dark:focus-within:ring-blue-500/30
-                        transition-all duration-200">
-                <span class="flex items-center pl-3 text-zinc-400 dark:text-zinc-600">
-                    <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
-                    </svg>
-                </span>
-                <input type="text" id="search-vehicles"
-                       placeholder="Placa ou CM…" autocomplete="off"
-                       class="w-full bg-transparent px-2.5 py-2 text-sm text-zinc-900 outline-none
-                              placeholder:text-zinc-400 dark:text-zinc-100 dark:placeholder:text-zinc-600"/>
-            </div>
-
-            {{-- Contagem --}}
-            <p id="vehicle-count" class="hidden text-xs text-zinc-500 dark:text-zinc-500">
-                <span id="count-visible">{{ count($vehicles) }}</span> / {{ count($vehicles) }}
-            </p>
-
-            {{-- Info de atualização --}}
-            <div class="hidden sm:flex flex-col items-end gap-0.5 text-[10px] leading-tight tabular-nums
-                        text-zinc-400 dark:text-zinc-500">
-                <span id="last-update-label">Carregado às {{ now()->format('H:i:s') }}</span>
-                <span>Próxima em
-                    <span id="countdown-display"
-                          class="font-mono font-semibold text-zinc-500 dark:text-zinc-400">10:00</span>
-                </span>
-            </div>
-
-            {{-- Atualizar --}}
-            <button id="btn-refresh" onclick="AutoRefresh.manual()"
-                    class="inline-flex items-center gap-2 rounded-lg px-4 py-2
-                           text-sm font-semibold shadow-xs transition-all duration-200 active:scale-[0.98]
-                           bg-zinc-900 text-white hover:bg-zinc-700
-                           dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200
-                           disabled:cursor-not-allowed disabled:opacity-60">
-                <svg id="icon-refresh" class="h-4 w-4 transition-transform duration-500"
-                     fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+            <button type="button" onclick="closeImplementoModal()"
+                    class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700
+                           dark:hover:bg-zinc-800 dark:hover:text-zinc-300">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
                 </svg>
-                <span id="btn-refresh-label" class="hidden sm:inline">Atualizar</span>
             </button>
         </div>
-    </div>
 
-    {{-- ─── Resumo por Status ─────────────────────────────────────────────────── --}}
-    <div class="shrink-0 overflow-x-auto border-b px-4 py-3 sm:px-6 lg:px-8
-                border-slate-200 dark:border-zinc-800">
-        <div id="status-summary" class="flex min-w-max items-center gap-2">
+        <div class="overflow-y-auto" style="max-height: calc(88vh - 120px)">
+            <form id="implemento-form" method="POST" action="">
+                @csrf
+                @method('PATCH')
 
-            {{-- Total geral --}}
-            <div class="flex min-w-[68px] cursor-pointer select-none flex-col items-center rounded-xl border px-3 py-2 text-center
-                        transition-opacity duration-150
-                        border-slate-200 bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900"
-                 data-filter-status="__total__">
-                <span class="summary-total-count text-2xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ count($vehicles) }}</span>
-                <span class="mt-0.5 text-[10px] font-medium leading-tight text-zinc-400 dark:text-zinc-500">Total</span>
-            </div>
-
-            @if(count($statuses) > 0)
-            <div class="mx-0.5 h-8 w-px shrink-0 bg-slate-200 dark:bg-zinc-700"></div>
-            @endif
-
-            @foreach($statuses as $s)
-            @php
-                $sToken = $statusColorMap[$s] ?? 'zinc';
-                $sCount = $statusCounts[$s] ?? 0;
-                $sLabel = $s === '' ? 'Indefinido' : $s;
-                $sBadge = $badgeCls[$sToken] ?? $badgeCls['zinc'];
-                $sDot   = $dotCls[$sToken]   ?? $dotCls['zinc'];
-            @endphp
-            <div class="flex min-w-[80px] cursor-pointer select-none flex-col items-center rounded-xl px-3 py-2 text-center ring-1 transition-opacity duration-150 {{ $sBadge }}"
-                 data-filter-status="{{ $s }}">
-                <span class="summary-status-count text-2xl font-bold tabular-nums" data-status="{{ $s }}">{{ $sCount }}</span>
-                <span class="mt-0.5 flex items-center gap-1 text-[10px] font-medium leading-tight opacity-80">
-                    <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ $sDot }}"></span>
-                    {{ $sLabel }}
-                </span>
-            </div>
-            @endforeach
-
-        </div>
-    </div>
-
-    {{-- ─── Grid de Cards (área com scroll próprio) ──────────────────────────── --}}
-    <div class="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 lg:px-8">
-    <div id="vehicles-grid"
-         class="grid grid-cols-1 gap-3 transition-opacity duration-300
-                sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-
-        {{--
-            Safelist de cores para badges de status — não remova estas classes:
-            bg-amber-500/10   text-amber-600   ring-amber-400/30   dark:text-amber-400   dark:ring-amber-500/30   bg-amber-400
-            bg-orange-500/10  text-orange-600  ring-orange-400/30  dark:text-orange-400  dark:ring-orange-500/30  bg-orange-400
-            bg-yellow-500/10  text-yellow-600  ring-yellow-400/30  dark:text-yellow-400  dark:ring-yellow-500/30  bg-yellow-400
-            bg-lime-500/10    text-lime-600    ring-lime-400/30    dark:text-lime-400    dark:ring-lime-500/30    bg-lime-400
-            bg-emerald-500/10 text-emerald-600 ring-emerald-400/30 dark:text-emerald-400 dark:ring-emerald-500/30 bg-emerald-400
-            bg-teal-500/10    text-teal-600    ring-teal-400/30    dark:text-teal-400    dark:ring-teal-500/30    bg-teal-400
-            bg-cyan-500/10    text-cyan-600    ring-cyan-400/30    dark:text-cyan-400    dark:ring-cyan-500/30    bg-cyan-400
-            bg-blue-500/10    text-blue-600    ring-blue-400/30    dark:text-blue-400    dark:ring-blue-500/30    bg-blue-400
-            bg-indigo-500/10  text-indigo-600  ring-indigo-400/30  dark:text-indigo-400  dark:ring-indigo-500/30  bg-indigo-400
-            bg-violet-500/10  text-violet-600  ring-violet-400/30  dark:text-violet-400  dark:ring-violet-500/30  bg-violet-400
-            bg-purple-500/10  text-purple-600  ring-purple-400/30  dark:text-purple-400  dark:ring-purple-500/30  bg-purple-400
-            bg-rose-500/10    text-rose-600    ring-rose-400/30    dark:text-rose-400    dark:ring-rose-500/30    bg-rose-400
-            bg-zinc-500/10    text-zinc-600    ring-zinc-400/30    dark:text-zinc-400    dark:ring-zinc-500/30    bg-zinc-400
-        --}}
-
-        @forelse($vehicles as $v)
-            @php
-                $placa    = $v['Placa']   ?? '—';
-                $cm       = $v['CM']      ?? '—';
-                $status   = $v['Status']  ?? '—';
-                $cerca1   = $v['Cerca 1'] ?? '';
-                $locFull  = ($cerca1 !== '' && $cerca1 !== null) ? $cerca1 : ($v['Local'] ?? '—');
-                $condutor = $v['Condutor'] ?? '—';
-
-                $isWaiting  = str_starts_with((string) $status, 'Ag-');
-                $colorToken = $statusColorMap[(string) $status] ?? 'zinc';
-                $badgeClass = $badgeCls[$colorToken] ?? $badgeCls['zinc'];
-                $dotClass   = $dotCls[$colorToken]   ?? $dotCls['zinc'];
-
-                $documento     = (string) ($v['Documento'] ?? '');
-                $rota          = (string) ($v['Rota'] ?? '');
-                $motor         = (string) ($v['Motor'] ?? '');
-                $cerca1Entrada = (string) ($v['Cerca 1 Entrada'] ?? '');
-                $motorLigado   = $motor !== '' && strtolower($motor) !== 'desligado' && $motor !== '0';
-
-                $cercaMins  = 0;
-                $tempoCerca = '';
-                if ($cerca1 !== '' && $cerca1Entrada !== '' && $cerca1Entrada !== '-') {
-                    try {
-                        // API retorna datas com hífens: "23-03-2026 17:49:09"
-                        $fmt       = str_contains($cerca1Entrada, '/') ? 'd/m/Y H:i:s' : 'd-m-Y H:i:s';
-                        $diff      = now()->diff(\Carbon\Carbon::createFromFormat($fmt, $cerca1Entrada));
-                        $cercaMins = ($diff->days * 1440) + ($diff->h * 60) + $diff->i;
-                        if ($diff->days > 0) { $tempoCerca .= $diff->days . 'd '; }
-                        if ($diff->h > 0) { $tempoCerca .= $diff->h . 'h '; }
-                        $tempoCerca .= $diff->i . 'min';
-                    } catch (\Throwable) {
-                        $tempoCerca = '';
-                        $cercaMins  = 0;
-                    }
-                }
-
-                $statusRastreador = (string) ($v['Status Rastreador'] ?? '');
-                $statusData       = (string) ($v['Status Data'] ?? '');
-                $paradoMins       = 0;
-                $tempoParado      = '';
-                $tempoParadoCls   = '';
-                $tempoParadoDot   = '';
-
-                if (strtolower($statusRastreador) === 'parado' && $statusData !== '' && $statusData !== '-') {
-                    try {
-                        $diff       = now()->diff(\Carbon\Carbon::createFromFormat('d/m/Y H:i:s', $statusData));
-                        $mins       = ($diff->days * 1440) + ($diff->h * 60) + $diff->i;
-                        $paradoMins = $mins;
-                        $parts      = [];
-                        if ($diff->days > 0) { $parts[] = $diff->days . 'd'; }
-                        if ($diff->h > 0)    { $parts[] = $diff->h . 'h'; }
-                        $parts[]        = $diff->i . 'min';
-                        $tempoParado    = implode(' ', $parts);
-                        $urgencia       = $mins > 480 ? 'rose' : ($mins > 120 ? 'amber' : 'zinc');
-                        $tempoParadoCls = match ($urgencia) {
-                            'rose'  => 'bg-rose-500/10  text-rose-600  dark:text-rose-400',
-                            'amber' => 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-                            default => 'bg-zinc-500/10  text-zinc-500  dark:text-zinc-500',
-                        };
-                        $tempoParadoDot = match ($urgencia) {
-                            'rose'  => 'bg-rose-400',
-                            'amber' => 'bg-amber-400',
-                            default => 'bg-zinc-400',
-                        };
-                    } catch (\Throwable) {
-                        $tempoParado = '';
-                        $paradoMins  = 0;
-                    }
-                }
-            @endphp
-
-            <div class="vehicle-card group cursor-pointer rounded-xl border p-4
-                        transition-all duration-200
-                        border-slate-200 bg-white hover:border-slate-300 hover:shadow-md
-                        dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
-                 data-plate="{{ strtolower($placa) }}"
-                 data-cm="{{ strtolower($cm) }}"
-                 data-divisao="{{ $v['Divisão'] ?? '' }}"
-                 data-status="{{ $v['Status'] ?? '' }}"
-                 data-parado-mins="{{ $paradoMins }}"
-                 data-cerca-mins="{{ $cercaMins }}"
-                 data-lat="{{ $v['Latitude'] ?? '' }}"
-                 data-lon="{{ $v['Longitude'] ?? '' }}"
-                 data-vehicle="{{ json_encode($v, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }}"
-                 onclick="openVehicleDetail(this)">
-
-                {{-- CM (destaque principal) + Status --}}
-                <div class="flex items-start justify-between gap-2">
-                    <div class="min-w-0">
-                        <p class="text-2xl font-bold tabular-nums tracking-wide text-zinc-900 dark:text-zinc-100">
-                            {{ $cm }}
-                        </p>
-                        <p class="mt-0.5 text-xs font-semibold tracking-widest
-                                  text-zinc-500 dark:text-zinc-500">
-                            {{ strtoupper($placa) }}
-                        </p>
-                    </div>
-
-                    {{-- Badge de status (cor fixa por token) --}}
-                    <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 {{ $badgeClass }}">
-                        @if($isWaiting)
-                            <svg class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                            </svg>
-                        @else
-                            <span class="h-1.5 w-1.5 rounded-full {{ $dotClass }}"></span>
-                        @endif
-                        {{ $status }}
-                    </span>
+                <div class="border-b px-5 py-3.5 border-slate-100 dark:border-zinc-800">
+                    <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
+                        Nome de exibição (opcional)
+                    </label>
+                    <input type="text" id="modal-nome-override" name="implemento_nome_override"
+                           placeholder="Deixe em branco para usar o nome do modelo"
+                           class="mt-1.5 w-full rounded-lg border px-3 py-2 text-sm outline-none transition-all
+                                  border-slate-200 bg-white text-zinc-700 placeholder-zinc-300
+                                  focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:placeholder-zinc-600
+                                  dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                    <p class="mt-1 text-[11px] text-zinc-400 dark:text-zinc-600">Personaliza como o implemento aparece na coluna "Modelo / Implemento".</p>
                 </div>
 
-                {{-- Documento --}}
-                @if($documento !== '')
-                <div class="mt-2 flex items-center gap-1.5">
-                    <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
-                    </svg>
-                    <p class="truncate text-xs text-zinc-600 dark:text-zinc-400">{{ $documento }}</p>
-                </div>
-                @endif
-
-                {{-- Rota --}}
-                @if($rota !== '')
-                <div class="mt-1 flex items-center gap-1.5">
-                    <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"/>
-                    </svg>
-                    <p class="truncate text-xs text-zinc-600 dark:text-zinc-400">{{ $rota }}</p>
-                </div>
-                @endif
-
-                {{-- Motor --}}
-                @if($motor !== '')
-                <div class="mt-1.5">
-                    <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium
-                        {{ $motorLigado ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-zinc-500/10 text-zinc-500 dark:text-zinc-500' }}">
-                        <span class="h-1.5 w-1.5 rounded-full {{ $motorLigado ? 'bg-emerald-400' : 'bg-zinc-400' }}"></span>
-                        Motor {{ $motorLigado ? 'Ligado' : 'Desligado' }}
-                    </span>
-                </div>
-                @endif
-
-                {{-- Tempo Parado --}}
-                @if($tempoParado !== '')
-                <div class="mt-1.5">
-                    <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium {{ $tempoParadoCls }}">
-                        <span class="h-1.5 w-1.5 rounded-full {{ $tempoParadoDot }}"></span>
-                        {{ $tempoParado }} parado
-                    </span>
-                </div>
-                @endif
-
-                {{-- Localização --}}
-                <div class="mt-3 flex items-start gap-1.5">
-                    <svg class="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600"
-                         fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
-                    </svg>
-                    <p class="line-clamp-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-                        {{ $locFull ?: '—' }}
+                <div class="px-5 py-3.5">
+                    <p class="mb-2.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
+                        Selecione o implemento
                     </p>
+                    <div id="modal-list" class="space-y-1.5"></div>
                 </div>
 
-                {{-- Tempo na Cerca --}}
-                @if($tempoCerca !== '')
-                <div class="mt-1.5 flex items-center gap-1.5">
-                    <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                    </svg>
-                    <p class="text-xs text-zinc-500 dark:text-zinc-500">{{ trim($tempoCerca) }} na cerca</p>
-                </div>
-                @endif
+                <input type="hidden" id="modal-implemento-id" name="implemento_id" value="">
 
-                {{-- Condutor --}}
-                @if($condutor !== '—' && $condutor !== '')
-                    <div class="mt-2 flex items-center gap-1.5">
-                        <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600"
-                             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
-                        </svg>
-                        <p class="truncate text-xs text-zinc-600 dark:text-zinc-400">{{ $condutor }}</p>
-                    </div>
-                @endif
-
-                {{-- Hint hover --}}
-                <p class="mt-3 text-[10px] text-zinc-400 opacity-0 transition-opacity duration-200
-                           group-hover:opacity-100 dark:text-zinc-600">
-                    Ver detalhes →
-                </p>
-            </div>
-
-        @empty
-            <div class="mt-8 col-span-full flex flex-col items-center justify-center rounded-xl border
-                        px-6 py-20 text-center
-                        border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/50">
-                <div class="flex h-16 w-16 items-center justify-center rounded-2xl
-                            bg-zinc-100 dark:bg-zinc-800/60">
-                    <svg class="h-8 w-8 text-zinc-400 dark:text-zinc-600" fill="none"
-                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.25">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.348 14.652a3.75 3.75 0 0 1 0-5.304m5.304 0a3.75 3.75 0 0 1 0 5.304m-7.425 2.121a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.807-3.808-9.98 0-13.788m13.788 0c3.808 3.807 3.808 9.98 0 13.788M12 12h.008v.008H12V12Z"/>
-                    </svg>
-                </div>
-                <h3 class="mt-4 text-base font-semibold text-zinc-900 dark:text-zinc-100">
-                    Sem dados da frota
-                </h3>
-                <p class="mt-1.5 max-w-xs text-sm text-zinc-500 dark:text-zinc-400">
-                    Nenhum veículo retornado pela API. Verifique as configurações ou clique em Atualizar.
-                </p>
-            </div>
-        @endforelse
-    </div>
-    </div>{{-- /scroll wrapper --}}
-    </div>{{-- /outer wrapper --}}
-
-    {{-- ─── Modal de Detalhes ───────────────────────────────────────────────── --}}
-    <div id="vehicle-modal"
-         class="fixed inset-0 z-[100] hidden"
-         role="dialog" aria-modal="true" aria-labelledby="vehicle-modal-title">
-
-        <div id="vehicle-modal-overlay"
-             class="absolute inset-0 bg-black/70 backdrop-blur-sm opacity-0 transition-opacity duration-200"></div>
-
-        <div class="relative flex min-h-full items-center justify-center p-4">
-
-            <div id="vehicle-modal-panel"
-                 class="w-full max-w-lg scale-95 rounded-xl border opacity-0 shadow-xl transition-all duration-200
-                        border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-2xl">
-
-                {{-- Header do modal --}}
-                <div class="flex items-start justify-between border-b px-6 py-4
-                            border-slate-100 dark:border-zinc-800">
-                    <div>
-                        <h3 id="vehicle-modal-title"
-                            class="text-xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">—</h3>
-                        <p id="vehicle-modal-plate"
-                           class="mt-0.5 text-xs font-semibold tracking-widest text-zinc-500 dark:text-zinc-500">—</p>
-                    </div>
-                    <button onclick="closeVehicleModal()"
-                            class="rounded-lg p-1.5 transition-colors duration-150
-                                   text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700
-                                   dark:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
-                        </svg>
+                <div class="flex items-center justify-between border-t px-5 py-3.5 border-slate-100 dark:border-zinc-800">
+                    <button type="button" id="modal-btn-desvincular"
+                            onclick="desvinculaImplemento()"
+                            class="hidden text-xs font-medium text-rose-600 transition-colors hover:text-rose-800
+                                   dark:text-rose-400 dark:hover:text-rose-300">
+                        Desvincular implemento
                     </button>
+                    <div class="ml-auto flex items-center gap-2">
+                        <button type="button" onclick="closeImplementoModal()"
+                                class="rounded-lg border px-3.5 py-1.5 text-sm font-medium transition-colors
+                                       border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50
+                                       dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700">
+                            Cancelar
+                        </button>
+                        <button type="submit"
+                                class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors
+                                       bg-zinc-900 text-white hover:bg-zinc-700
+                                       dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300">
+                            Salvar
+                        </button>
+                    </div>
                 </div>
-
-                {{-- Body 2 colunas --}}
-                <div class="max-h-[60vh] overflow-y-auto px-6 py-4">
-                    <dl id="vehicle-detail-list"
-                        class="grid grid-cols-2 gap-x-6 gap-y-3"></dl>
-                </div>
-
-                <div class="flex justify-end border-t px-6 py-4
-                            border-slate-100 dark:border-zinc-800">
-                    <button onclick="closeVehicleModal()"
-                            class="inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium
-                                   transition-all duration-150
-                                   text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900
-                                   dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200">
-                        Fechar
-                    </button>
-                </div>
-            </div>
+            </form>
         </div>
     </div>
 
     {{-- ─── Scripts ─────────────────────────────────────────────────────────── --}}
     <script>
     (function () {
+        // ─── Column visibility (localStorage) ──────────────────────────────
+        var STORE_KEY = 'ct_hidden_cols';
+        var ALL_COLS  = ['prefixo', 'divisao', 'status-op', 'documento', 'obs'];
 
-        // ── Estado dos filtros ───────────────────────────────────────────────
-        var searchInput     = document.getElementById('search-vehicles');
-        var countVisible    = document.getElementById('count-visible');
-        var allCards        = [];
-        var activeDivisions = new Set(); // vazio = todos
-        var activeStatuses  = new Set(); // vazio = todos
-        var currentSort     = 'status';
-
-        function rebindCards() {
-            allCards = Array.from(document.querySelectorAll('.vehicle-card'));
-        }
-        rebindCards();
-
-        // ── Filtro combinado (busca + divisão + status) ──────────────────────
-        function applyFilters() {
-            var q             = searchInput.value.trim().toLowerCase();
-            var vis           = 0;
-            var summaryCounts = {}; // ignora filtro de status → cards do resumo sempre mostram contagem real
-            var summaryTotal  = 0;
-
-            allCards.forEach(function (card) {
-                var matchSearch = ! q || card.dataset.plate.includes(q) || card.dataset.cm.includes(q);
-                var matchDiv    = activeDivisions.size === 0 || activeDivisions.has(card.dataset.divisao);
-                var matchStatus = activeStatuses.size === 0  || activeStatuses.has(card.dataset.status);
-                card.style.display = (matchSearch && matchDiv && matchStatus) ? '' : 'none';
-                if (matchSearch && matchDiv && matchStatus) { vis++; }
-                // Conta para o resumo sem considerar o filtro de status
-                if (matchSearch && matchDiv) {
-                    summaryTotal++;
-                    var s = card.dataset.status || '';
-                    summaryCounts[s] = (summaryCounts[s] || 0) + 1;
-                }
-            });
-
-            countVisible.textContent = vis;
-            updateSummaryCount(summaryTotal, summaryCounts);
-            sortCards();
-            updateSummaryActiveState();
+        function hiddenCols() {
+            try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch (e) { return []; }
         }
 
-        // ── Estado visual dos cards de resumo ────────────────────────────────
-        function updateSummaryActiveState() {
-            var summary = document.getElementById('status-summary');
-            if (! summary) { return; }
-            var anyActive = activeStatuses.size > 0;
-
-            var totalCard = summary.querySelector('[data-filter-status="__total__"]');
-            if (totalCard) {
-                totalCard.classList.toggle('opacity-40', anyActive);
-            }
-
-            summary.querySelectorAll('[data-filter-status]:not([data-filter-status="__total__"])').forEach(function (card) {
-                var selected = activeStatuses.has(card.dataset.filterStatus);
-                card.classList.toggle('opacity-40', anyActive && ! selected);
-                card.classList.toggle('ring-2',     selected);
-                card.classList.toggle('ring-1',     ! selected);
-            });
-        }
-
-        // ── Ordenação por proximidade (nearest-neighbor) ─────────────────────
-        function haversineKm(lat1, lon1, lat2, lon2) {
-            var R    = 6371;
-            var dLat = (lat2 - lat1) * Math.PI / 180;
-            var dLon = (lon2 - lon1) * Math.PI / 180;
-            var a    = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                     + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
-                       * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        }
-
-        // Ordena por vizinho mais próximo: cada ponto vai para o mais próximo ainda não visitado
-        function nearestNeighborSort(points) {
-            if (points.length <= 1) { return points; }
-            var remaining = points.slice();
-            var result    = remaining.splice(0, 1);
-            while (remaining.length > 0) {
-                var last    = result[result.length - 1];
-                var bestIdx = 0;
-                var bestDst = Infinity;
-                for (var i = 0; i < remaining.length; i++) {
-                    var d = haversineKm(last.lat, last.lon, remaining[i].lat, remaining[i].lon);
-                    if (d < bestDst) { bestDst = d; bestIdx = i; }
-                }
-                result.push(remaining.splice(bestIdx, 1)[0]);
-            }
-            return result;
-        }
-
-        // ── Ordenação dos cards ──────────────────────────────────────────────
-        function sortCards() {
-            var grid = document.getElementById('vehicles-grid');
-            if (! grid || currentSort === 'status') { return; }
-
-            var cards = Array.from(grid.querySelectorAll('.vehicle-card'));
-
-            if (currentSort === 'region') {
-                var withGps = [];
-                var noGps   = [];
-                cards.forEach(function (card) {
-                    var lat = parseFloat(card.dataset.lat);
-                    var lon = parseFloat(card.dataset.lon);
-                    if (! isNaN(lat) && ! isNaN(lon) && (lat !== 0 || lon !== 0)) {
-                        withGps.push({ card: card, lat: lat, lon: lon });
-                    } else {
-                        noGps.push(card);
-                    }
+        function applyColVisibility() {
+            var hidden = hiddenCols();
+            ALL_COLS.forEach(function (col) {
+                var isHidden = hidden.indexOf(col) !== -1;
+                document.querySelectorAll('[data-col="' + col + '"]').forEach(function (el) {
+                    el.style.display = isHidden ? 'none' : '';
                 });
-                nearestNeighborSort(withGps).forEach(function (p) { grid.appendChild(p.card); });
-                noGps.forEach(function (card) { grid.appendChild(card); });
-                rebindCards();
-                return;
-            }
-
-            var key = currentSort === 'parado' ? 'paradoMins' : 'cercaMins';
-            cards.sort(function (a, b) {
-                return parseInt(b.dataset[key] || 0) - parseInt(a.dataset[key] || 0);
-            });
-            cards.forEach(function (c) { grid.appendChild(c); });
-            rebindCards();
-        }
-
-        function updateSummaryCount(total, statusCounts) {
-            var summary = document.getElementById('status-summary');
-            if (! summary) { return; }
-            var totalEl = summary.querySelector('.summary-total-count');
-            if (totalEl) { totalEl.textContent = total; }
-            summary.querySelectorAll('.summary-status-count').forEach(function (el) {
-                el.textContent = statusCounts[el.dataset.status] || 0;
-            });
-        }
-
-        searchInput.addEventListener('input', applyFilters);
-
-        // ── Dropdowns de filtro ──────────────────────────────────────────────
-        var divFilterBtn   = document.getElementById('division-filter-btn');
-        var divFilterMenu  = document.getElementById('division-filter-menu');
-        var divCountBadge  = document.getElementById('division-filter-count');
-        var stFilterBtn    = document.getElementById('status-filter-btn');
-        var stFilterMenu   = document.getElementById('status-filter-menu');
-        var stCountBadge   = document.getElementById('status-filter-count');
-        var sortBtn        = document.getElementById('sort-btn');
-        var sortMenu       = document.getElementById('sort-menu');
-        var sortLabelEl    = document.getElementById('sort-label');
-
-        function closeAllDropdowns() {
-            if (divFilterMenu) { divFilterMenu.classList.add('hidden'); }
-            if (stFilterMenu)  { stFilterMenu.classList.add('hidden'); }
-            if (sortMenu)      { sortMenu.classList.add('hidden'); }
-        }
-
-        document.addEventListener('click', closeAllDropdowns);
-
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') { closeAllDropdowns(); }
-        });
-
-        function updateDivisionCount() {
-            if (! divCountBadge) { return; }
-            var n = activeDivisions.size;
-            divCountBadge.textContent = n;
-            divCountBadge.classList.toggle('hidden', n === 0);
-        }
-
-        function updateStatusCount() {
-            if (! stCountBadge) { return; }
-            var n = activeStatuses.size;
-            stCountBadge.textContent = n;
-            stCountBadge.classList.toggle('hidden', n === 0);
-        }
-
-        if (divFilterBtn && divFilterMenu) {
-            divFilterBtn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                var isOpen = ! divFilterMenu.classList.contains('hidden');
-                closeAllDropdowns();
-                if (! isOpen) { divFilterMenu.classList.remove('hidden'); }
-            });
-            divFilterMenu.addEventListener('click', function (e) { e.stopPropagation(); });
-            divFilterMenu.addEventListener('change', function (e) {
-                var cb = e.target;
-                if (! cb.classList.contains('division-checkbox')) { return; }
-                cb.checked ? activeDivisions.add(cb.value) : activeDivisions.delete(cb.value);
-                updateDivisionCount();
-                applyFilters();
-            });
-        }
-
-        if (stFilterBtn && stFilterMenu) {
-            stFilterBtn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                var isOpen = ! stFilterMenu.classList.contains('hidden');
-                closeAllDropdowns();
-                if (! isOpen) { stFilterMenu.classList.remove('hidden'); }
-            });
-            stFilterMenu.addEventListener('click', function (e) { e.stopPropagation(); });
-            stFilterMenu.addEventListener('change', function (e) {
-                var cb = e.target;
-                if (! cb.classList.contains('status-checkbox')) { return; }
-                cb.checked ? activeStatuses.add(cb.value) : activeStatuses.delete(cb.value);
-                updateStatusCount();
-                applyFilters();
-            });
-        }
-
-        // ── Click nos cards de resumo (filtro rápido por status) ────────────
-        (function () {
-            var summaryEl = document.getElementById('status-summary');
-            if (! summaryEl) { return; }
-
-            summaryEl.addEventListener('click', function (e) {
-                var card = e.target.closest('[data-filter-status]');
-                if (! card) { return; }
-
-                var status = card.dataset.filterStatus;
-
-                if (status === '__total__') {
-                    // Limpa todos os filtros de status
-                    activeStatuses.clear();
-                    if (stFilterMenu) {
-                        stFilterMenu.querySelectorAll('.status-checkbox').forEach(function (cb) {
-                            cb.checked = false;
-                        });
-                    }
-                } else {
-                    // Toggle: adiciona ou remove este status
-                    if (activeStatuses.has(status)) {
-                        activeStatuses.delete(status);
+                var btn = document.querySelector('[data-toggle-col="' + col + '"]');
+                if (btn) {
+                    if (isHidden) {
+                        btn.classList.remove('border-zinc-200', 'bg-white', 'text-zinc-600', 'dark:border-zinc-700', 'dark:bg-zinc-900', 'dark:text-zinc-400');
+                        btn.classList.add('border-zinc-400', 'bg-zinc-900', 'text-white', 'dark:border-zinc-500', 'dark:bg-zinc-700', 'dark:text-zinc-200');
                     } else {
-                        activeStatuses.add(status);
-                    }
-                    // Sincroniza o checkbox correspondente no dropdown de Status
-                    if (stFilterMenu) {
-                        stFilterMenu.querySelectorAll('.status-checkbox').forEach(function (cb) {
-                            if (cb.value === status) { cb.checked = activeStatuses.has(status); }
-                        });
+                        btn.classList.add('border-zinc-200', 'bg-white', 'text-zinc-600', 'dark:border-zinc-700', 'dark:bg-zinc-900', 'dark:text-zinc-400');
+                        btn.classList.remove('border-zinc-400', 'bg-zinc-900', 'text-white', 'dark:border-zinc-500', 'dark:bg-zinc-700', 'dark:text-zinc-200');
                     }
                 }
-
-                updateStatusCount();
-                applyFilters();
             });
-        })();
-
-        // ── Sort dropdown ────────────────────────────────────────────────────
-        var SORT_LABELS = { status: 'Status', parado: 'Tempo parado', cerca: 'Tempo na cerca', region: 'Por região' };
-
-        if (sortBtn && sortMenu) {
-            sortBtn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                var isOpen = ! sortMenu.classList.contains('hidden');
-                closeAllDropdowns();
-                if (! isOpen) { sortMenu.classList.remove('hidden'); }
-            });
-            sortMenu.addEventListener('click', function (e) { e.stopPropagation(); });
         }
 
-        document.querySelectorAll('.sort-option').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                currentSort = this.dataset.sort;
-                if (sortLabelEl) { sortLabelEl.textContent = SORT_LABELS[currentSort] || 'Status'; }
-                document.querySelectorAll('.sort-option').forEach(function (b) {
-                    b.querySelector('.sort-check').classList.toggle('invisible', b.dataset.sort !== currentSort);
-                });
-                if (sortMenu) { sortMenu.classList.add('hidden'); }
-                sortCards();
-            });
-        });
-
-        // ── Helpers de status ────────────────────────────────────────────────
-        // Mapa status → token de cor (gerado pelo controller, idêntico ao PHP)
-        var STATUS_COLOR_MAP = @json($statusColorMap);
-
-        function statusColor(s) {
-            return STATUS_COLOR_MAP[s] || 'zinc';
-        }
-
-        var COLOR_CLASSES = {
-            amber:   { bg: 'bg-amber-500/10',   text: 'text-amber-400',   ring: 'ring-amber-500/30',   dot: 'bg-amber-400'   },
-            orange:  { bg: 'bg-orange-500/10',  text: 'text-orange-400',  ring: 'ring-orange-500/30',  dot: 'bg-orange-400'  },
-            yellow:  { bg: 'bg-yellow-500/10',  text: 'text-yellow-400',  ring: 'ring-yellow-500/30',  dot: 'bg-yellow-400'  },
-            lime:    { bg: 'bg-lime-500/10',    text: 'text-lime-400',    ring: 'ring-lime-500/30',    dot: 'bg-lime-400'    },
-            emerald: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', ring: 'ring-emerald-500/30', dot: 'bg-emerald-400' },
-            teal:    { bg: 'bg-teal-500/10',    text: 'text-teal-400',    ring: 'ring-teal-500/30',    dot: 'bg-teal-400'    },
-            cyan:    { bg: 'bg-cyan-500/10',    text: 'text-cyan-400',    ring: 'ring-cyan-500/30',    dot: 'bg-cyan-400'    },
-            blue:    { bg: 'bg-blue-500/10',    text: 'text-blue-400',    ring: 'ring-blue-500/30',    dot: 'bg-blue-400'    },
-            indigo:  { bg: 'bg-indigo-500/10',  text: 'text-indigo-400',  ring: 'ring-indigo-500/30',  dot: 'bg-indigo-400'  },
-            violet:  { bg: 'bg-violet-500/10',  text: 'text-violet-400',  ring: 'ring-violet-500/30',  dot: 'bg-violet-400'  },
-            purple:  { bg: 'bg-purple-500/10',  text: 'text-purple-400',  ring: 'ring-purple-500/30',  dot: 'bg-purple-400'  },
-            rose:    { bg: 'bg-rose-500/10',    text: 'text-rose-400',    ring: 'ring-rose-500/30',    dot: 'bg-rose-400'    },
-            zinc:    { bg: 'bg-zinc-500/10',    text: 'text-zinc-400',    ring: 'ring-zinc-500/30',    dot: 'bg-zinc-400'    },
+        window.toggleColumn = function (col) {
+            var hidden = hiddenCols();
+            var idx = hidden.indexOf(col);
+            if (idx === -1) { hidden.push(col); } else { hidden.splice(idx, 1); }
+            localStorage.setItem(STORE_KEY, JSON.stringify(hidden));
+            applyColVisibility();
         };
 
-        function badgeHtml(status) {
-            var c       = statusColor(status);
-            var cls     = COLOR_CLASSES[c] || COLOR_CLASSES.zinc;
-            var waiting = /^Ag-/i.test(status);
-            var icon    = waiting
-                ? '<svg class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>'
-                : '<span class="h-1.5 w-1.5 rounded-full ' + cls.dot + '"></span>';
-            return '<span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 '
-                + cls.bg + ' ' + cls.text + ' ' + cls.ring + '">'
-                + icon + escHtml(status) + '</span>';
+        applyColVisibility();
+
+        // ─── Live search ────────────────────────────────────────────────────
+        var allRows    = Array.from(document.querySelectorAll('.ct-row'));
+        var noResults  = document.getElementById('no-results');
+        var counter    = document.getElementById('row-counter');
+
+        function updateCounter(visible) {
+            counter.textContent = visible + ' / ' + allRows.length + ' equipamentos';
         }
+        updateCounter(allRows.length);
 
-        // ── Render card HTML (usado pelo refresh) ────────────────────────────
-        function getF(v, key) {
-            var val = v[key];
-            return (val !== undefined && val !== null && val !== '') ? val : '—';
-        }
-
-        function calcTempoParado(statusRastreador, statusData) {
-            if (! statusRastreador || statusRastreador.toLowerCase() !== 'parado') { return null; }
-            if (! statusData || statusData === '-') { return null; }
-            var date = new Date(statusData);
-            if (isNaN(date.getTime())) {
-                var m = String(statusData).match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
-                if (m) { date = new Date(m[3], m[2] - 1, m[1], m[4], m[5], m[6] || 0); }
-            }
-            if (isNaN(date.getTime())) { return null; }
-            var diff  = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
-            var days  = Math.floor(diff / 1440);
-            var hours = Math.floor((diff % 1440) / 60);
-            var mins  = diff % 60;
-            var parts = [];
-            if (days > 0)  { parts.push(days + 'd'); }
-            if (hours > 0) { parts.push(hours + 'h'); }
-            parts.push(mins + 'min');
-            var urgencia = diff > 480 ? 'rose' : (diff > 120 ? 'amber' : 'zinc');
-            return { label: parts.join(' '), urgencia: urgencia, mins: diff };
-        }
-
-        function calcTempoCerca(entrada) {
-            if (!entrada || entrada === '—') { return ''; }
-            var date = new Date(entrada);
-            if (isNaN(date.getTime())) {
-                // Tenta formatos dd/mm/yyyy e dd-mm-yyyy HH:MM:SS
-                var m = String(entrada).match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
-                if (m) { date = new Date(m[3], m[2]-1, m[1], m[4], m[5], m[6] || 0); }
-            }
-            if (isNaN(date.getTime())) { return null; }
-            var diff = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
-            var days  = Math.floor(diff / 1440);
-            var hours = Math.floor((diff % 1440) / 60);
-            var mins  = diff % 60;
-            var parts = [];
-            if (days > 0)  { parts.push(days + 'd'); }
-            if (hours > 0) { parts.push(hours + 'h'); }
-            parts.push(mins + 'min');
-            return { label: parts.join(' '), mins: diff };
-        }
-
-        function cardHtml(v) {
-            var cm      = getF(v, 'CM');
-            var placa   = getF(v, 'Placa');
-            var status  = getF(v, 'Status');
-            var cerca1  = getF(v, 'Cerca 1');
-            var local   = getF(v, 'Local');
-            var loc     = (cerca1 !== '—') ? cerca1 : local;
-            var cond    = getF(v, 'Condutor');
-            var doc     = getF(v, 'Documento');
-            var rota    = getF(v, 'Rota');
-            var motor   = getF(v, 'Motor');
-            var entrada = getF(v, 'Cerca 1 Entrada');
-            var encoded = encodeForAttr(v);
-
-            var docHtml = (doc !== '—')
-                ? '<div class="mt-2 flex items-center gap-1.5">'
-                    + '<svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>'
-                    + '<p class="truncate text-xs text-zinc-600 dark:text-zinc-400">' + escHtml(doc) + '</p></div>'
-                : '';
-
-            var rotaHtml = (rota !== '—')
-                ? '<div class="mt-1 flex items-center gap-1.5">'
-                    + '<svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"/></svg>'
-                    + '<p class="truncate text-xs text-zinc-600 dark:text-zinc-400">' + escHtml(rota) + '</p></div>'
-                : '';
-
-            var statusRastreador = getF(v, 'Status Rastreador');
-            var statusData       = getF(v, 'Status Data');
-            var paradoResult     = calcTempoParado(
-                statusRastreador === '—' ? '' : statusRastreador,
-                statusData       === '—' ? '' : statusData
-            );
-            var paradoMins = paradoResult ? paradoResult.mins : 0;
-
-            var tempoParadoHtml = (function () {
-                var result = paradoResult;
-                if (! result) { return ''; }
-                var URGENCIA = {
-                    rose:  { cls: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',   dot: 'bg-rose-400'  },
-                    amber: { cls: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', dot: 'bg-amber-400' },
-                    zinc:  { cls: 'bg-zinc-500/10 text-zinc-500 dark:text-zinc-500',    dot: 'bg-zinc-400'  },
-                };
-                var u = URGENCIA[result.urgencia] || URGENCIA.zinc;
-                return '<div class="mt-1.5"><span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ' + u.cls + '">'
-                    + '<span class="h-1.5 w-1.5 rounded-full ' + u.dot + '"></span>'
-                    + escHtml(result.label) + ' parado</span></div>';
-            })();
-
-            var motorHtml = (motor !== '—') ? (function () {
-                var ligado = motor !== '' && motor.toLowerCase() !== 'desligado' && motor !== '0';
-                var cls = ligado ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-zinc-500/10 text-zinc-500 dark:text-zinc-500';
-                var dot = ligado ? 'bg-emerald-400' : 'bg-zinc-400';
-                return '<div class="mt-1.5"><span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ' + cls + '">'
-                    + '<span class="h-1.5 w-1.5 rounded-full ' + dot + '"></span>'
-                    + 'Motor ' + (ligado ? 'Ligado' : 'Desligado') + '</span></div>';
-            })() : '';
-
-            var cercaResult    = (cerca1 !== '—') ? calcTempoCerca(entrada) : null;
-            var cercaMins      = cercaResult ? cercaResult.mins : 0;
-            var tempoCercaHtml = cercaResult
-                ? '<div class="mt-1.5 flex items-center gap-1.5">'
-                    + '<svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>'
-                    + '<p class="text-xs text-zinc-500 dark:text-zinc-500">' + escHtml(cercaResult.label) + ' na cerca</p></div>'
-                : '';
-
-            var condHtml = (cond !== '—')
-                ? '<div class="mt-2 flex items-center gap-1.5">'
-                    + '<svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>'
-                    + '<p class="truncate text-xs text-zinc-600 dark:text-zinc-400">' + escHtml(cond) + '</p></div>'
-                : '';
-
-            return '<div class="vehicle-card group cursor-pointer rounded-xl border p-4 transition-all duration-200'
-                + ' border-slate-200 bg-white hover:border-slate-300 hover:shadow-md'
-                + ' dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"'
-                + ' data-plate="' + placa.toLowerCase() + '" data-cm="' + cm.toLowerCase() + '"'
-                + ' data-divisao="' + escHtml(String(v['Divisão'] || '')) + '"'
-                + ' data-status="' + escHtml(String(v['Status'] || '')) + '"'
-                + ' data-parado-mins="' + paradoMins + '"'
-                + ' data-cerca-mins="' + cercaMins + '"'
-                + ' data-lat="' + escHtml(String(v['Latitude'] || '')) + '"'
-                + ' data-lon="' + escHtml(String(v['Longitude'] || '')) + '"'
-                + ' data-vehicle="' + encoded + '" onclick="openVehicleDetail(this)">'
-
-                + '<div class="flex items-start justify-between gap-2">'
-                    + '<div class="min-w-0">'
-                        + '<p class="text-2xl font-bold tabular-nums tracking-wide text-zinc-900 dark:text-zinc-100">' + escHtml(cm) + '</p>'
-                        + '<p class="mt-0.5 text-xs font-semibold tracking-widest text-zinc-500 dark:text-zinc-500">' + escHtml(placa.toUpperCase()) + '</p>'
-                    + '</div>'
-                    + badgeHtml(status)
-                + '</div>'
-
-                + docHtml
-                + rotaHtml
-                + motorHtml
-                + tempoParadoHtml
-
-                + '<div class="mt-3 flex items-start gap-1.5">'
-                    + '<svg class="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>'
-                    + '<p class="line-clamp-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">' + escHtml(loc) + '</p>'
-                + '</div>'
-
-                + tempoCercaHtml
-                + condHtml
-
-                + '<p class="mt-3 text-[10px] text-zinc-400 opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:text-zinc-600">Ver detalhes →</p>'
-                + '</div>';
-        }
-
-        function encodeForAttr(obj) {
-            return JSON.stringify(obj).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-        }
-
-        function emptyState() {
-            return '<div class="col-span-full flex flex-col items-center justify-center rounded-xl border px-6 py-20 text-center border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/50">'
-                + '<div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-800/60">'
-                + '<svg class="h-8 w-8 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.25"><path stroke-linecap="round" stroke-linejoin="round" d="M9.348 14.652a3.75 3.75 0 0 1 0-5.304m5.304 0a3.75 3.75 0 0 1 0 5.304m-7.425 2.121a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.807-3.808-9.98 0-13.788m13.788 0c3.808 3.807 3.808 9.98 0 13.788M12 12h.008v.008H12V12Z"/></svg>'
-                + '</div><h3 class="mt-4 text-base font-semibold text-zinc-900 dark:text-zinc-100">Sem dados da frota</h3>'
-                + '<p class="mt-1.5 max-w-xs text-sm text-zinc-500 dark:text-zinc-400">Nenhum veículo retornado. Clique em Atualizar.</p></div>';
-        }
-
-        // ── Resumo por Status ────────────────────────────────────────────────
-        function renderStatusSummary(vehicles, colorMap) {
-            var summary = document.getElementById('status-summary');
-            if (! summary) { return; }
-
-            var counts = {};
-            vehicles.forEach(function (v) {
-                var s = String(v['Status'] || '');
-                counts[s] = (counts[s] || 0) + 1;
+        document.getElementById('live-search').addEventListener('input', function () {
+            var q = this.value.trim().toLowerCase();
+            var visible = 0;
+            allRows.forEach(function (row) {
+                var match = !q || row.dataset.search.indexOf(q) !== -1;
+                row.style.display = match ? '' : 'none';
+                // Also hide the paired edit row
+                var editRow = document.getElementById('edit-row-' + row.id.replace('row-', ''));
+                if (editRow) { editRow.style.display = match ? '' : 'none'; }
+                if (match) { visible++; }
             });
-
-            var order = [];
-            var seen  = {};
-            vehicles.forEach(function (v) {
-                var s = String(v['Status'] || '');
-                if (! seen[s]) { seen[s] = true; order.push(s); }
-            });
-
-            var map   = colorMap || STATUS_COLOR_MAP;
-            var total = vehicles.length;
-
-            var html = '<div class="flex min-w-[68px] cursor-pointer select-none flex-col items-center rounded-xl border px-3 py-2 text-center'
-                + ' transition-opacity duration-150'
-                + ' border-slate-200 bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900"'
-                + ' data-filter-status="__total__">'
-                + '<span class="summary-total-count text-2xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">' + total + '</span>'
-                + '<span class="mt-0.5 text-[10px] font-medium leading-tight text-zinc-400 dark:text-zinc-500">Total</span>'
-                + '</div>';
-
-            if (order.length) {
-                html += '<div class="mx-0.5 h-8 w-px shrink-0 bg-slate-200 dark:bg-zinc-700"></div>';
-            }
-
-            order.forEach(function (s) {
-                var c     = map[s] || 'zinc';
-                var cls   = COLOR_CLASSES[c] || COLOR_CLASSES.zinc;
-                var label = s === '' ? 'Indefinido' : s;
-                var count = counts[s] || 0;
-                html += '<div class="flex min-w-[80px] cursor-pointer select-none flex-col items-center rounded-xl px-3 py-2 text-center ring-1'
-                    + ' transition-opacity duration-150'
-                    + ' ' + cls.bg + ' ' + cls.text + ' ' + cls.ring + '"'
-                    + ' data-filter-status="' + escHtml(s) + '">'
-                    + '<span class="summary-status-count text-2xl font-bold tabular-nums" data-status="' + escHtml(s) + '">' + count + '</span>'
-                    + '<span class="mt-0.5 flex items-center gap-1 text-[10px] font-medium leading-tight opacity-80">'
-                    + '<span class="h-1.5 w-1.5 shrink-0 rounded-full ' + cls.dot + '"></span>'
-                    + escHtml(label) + '</span>'
-                    + '</div>';
-            });
-
-            summary.innerHTML = html;
-        }
-
-        // ── AutoRefresh ──────────────────────────────────────────────────────
-        var refreshEndpoint = '{{ route('control-tower.dados') }}';
-
-        window.AutoRefresh = (function () {
-            var INTERVAL_MS  = 600000; // 10 minutos
-            var intervalId   = null;
-            var tickId       = null;
-            var secondsLeft  = 600;
-            var isRefreshing = false;
-
-            var btn         = document.getElementById('btn-refresh');
-            var icon        = document.getElementById('icon-refresh');
-            var btnLabel    = document.getElementById('btn-refresh-label');
-            var grid        = document.getElementById('vehicles-grid');
-            var lastUpdateEl = document.getElementById('last-update-label');
-            var countdownEl  = document.getElementById('countdown-display');
-            var errorToast   = document.getElementById('refresh-error-toast');
-
-            function pad(n) { return String(n).padStart(2, '0'); }
-
-            function formatTs(d) {
-                return 'Atualizado: ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear()
-                    + ' às ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
-            }
-
-            function tickCountdown() {
-                if (secondsLeft > 0) { secondsLeft--; }
-                if (countdownEl) {
-                    countdownEl.textContent = pad(Math.floor(secondsLeft / 60)) + ':' + pad(secondsLeft % 60);
-                }
-            }
-
-            function resetTimer() {
-                secondsLeft = 600;
-                if (tickId) { clearInterval(tickId); }
-                tickId = setInterval(tickCountdown, 1000);
-                tickCountdown();
-            }
-
-            function setLoading(on) {
-                isRefreshing = on;
-                btn.disabled = on;
-                if (on) {
-                    icon.classList.add('animate-spin');
-                    if (btnLabel) { btnLabel.textContent = 'Atualizando…'; }
-                    grid.style.opacity      = '0.35';
-                    grid.style.pointerEvents = 'none';
-                } else {
-                    icon.classList.remove('animate-spin');
-                    if (btnLabel) { btnLabel.textContent = 'Atualizar'; }
-                    grid.style.opacity      = '';
-                    grid.style.pointerEvents = '';
-                }
-            }
-
-            function showError() {
-                if (! errorToast) { return; }
-                errorToast.classList.remove('hidden');
-                setTimeout(function () { errorToast.classList.add('hidden'); }, 8000);
-            }
-
-            function onSuccess(data) {
-                if (! data.success) { return; }
-                var vehicles = data.vehicles;
-                grid.innerHTML = vehicles.length ? vehicles.map(cardHtml).join('') : emptyState();
-                rebindCards();
-                var total = data.total;
-                document.getElementById('count-visible').textContent = total;
-                document.getElementById('vehicle-count').innerHTML =
-                    '<span id="count-visible">' + total + '</span> / ' + total;
-                if (data.statusColorMap) { STATUS_COLOR_MAP = data.statusColorMap; }
-                if (data.divisions)      { renderDivisionDropdown(data.divisions); }
-                if (data.statuses)       { renderStatusDropdown(data.statuses); }
-                renderStatusSummary(vehicles, data.statusColorMap);
-                // Reaplica filtros e ordenação enquanto o grid ainda está semi-transparente,
-                // para que o usuário veja o estado já filtrado quando a opacidade for restaurada.
-                applyFilters();
-            }
-
-            function doRefresh() {
-                if (isRefreshing) { return; }
-                setLoading(true);
-                fetch(refreshEndpoint, { headers: { 'Accept': 'application/json' } })
-                    .then(function (res) { return res.json(); })
-                    .then(onSuccess)
-                    .catch(function (err) {
-                        console.error('[AutoRefresh] Erro ao atualizar:', err);
-                        showError();
-                    })
-                    .finally(function () {
-                        setLoading(false);
-                        if (lastUpdateEl) { lastUpdateEl.textContent = formatTs(new Date()); }
-                        resetTimer();
-                    });
-            }
-
-            function start() {
-                resetTimer();
-                intervalId = setInterval(doRefresh, INTERVAL_MS);
-            }
-
-            function manual() { doRefresh(); }
-
-            window.addEventListener('beforeunload', function () {
-                if (intervalId) { clearInterval(intervalId); }
-                if (tickId)     { clearInterval(tickId); }
-            });
-
-            return { start: start, manual: manual };
-        })();
-
-        AutoRefresh.start();
-
-        // ── Modal de detalhes ────────────────────────────────────────────────
-        var vModal   = document.getElementById('vehicle-modal');
-        var vOverlay = document.getElementById('vehicle-modal-overlay');
-        var vPanel   = document.getElementById('vehicle-modal-panel');
-
-        window.openVehicleDetail = function (el) {
-            var raw = el.dataset.vehicle;
-            var v;
-            try {
-                v = JSON.parse(raw.replace(/&quot;/g, '"').replace(/&#39;/g, "'"));
-            } catch (e) { return; }
-
-            var cm    = v['CM']    || '—';
-            var placa = v['Placa'] || '—';
-
-            document.getElementById('vehicle-modal-title').textContent = cm;
-            document.getElementById('vehicle-modal-plate').textContent = placa.toUpperCase();
-
-            var list = document.getElementById('vehicle-detail-list');
-            list.innerHTML = '';
-
-            var skip = { 'CM': true, 'Placa': true };
-
-            Object.entries(v).forEach(function (entry) {
-                var key = entry[0];
-                var val = entry[1];
-                if (skip[key]) { return; }
-                if (val === null || val === '' || val === undefined) { return; }
-
-                var row = document.createElement('div');
-                row.className = 'flex flex-col gap-0.5 py-2 border-b last:border-0 border-slate-100 dark:border-zinc-800/60';
-                row.innerHTML =
-                    '<dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">'
-                    + escHtml(key) + '</dt>'
-                    + '<dd class="text-sm font-medium text-zinc-900 dark:text-zinc-100">'
-                    + escHtml(String(val)) + '</dd>';
-                list.appendChild(row);
-            });
-
-            vModal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-            requestAnimationFrame(function () {
-                vOverlay.classList.add('opacity-100');
-                vPanel.classList.remove('opacity-0', 'scale-95');
-                vPanel.classList.add('opacity-100', 'scale-100');
-            });
-        };
-
-        window.closeVehicleModal = function () {
-            vOverlay.classList.remove('opacity-100');
-            vPanel.classList.add('opacity-0', 'scale-95');
-            vPanel.classList.remove('opacity-100', 'scale-100');
-            setTimeout(function () {
-                vModal.classList.add('hidden');
-                document.body.style.overflow = '';
-            }, 200);
-        };
-
-        vModal.addEventListener('click', function (e) {
-            if (e.target === vModal || e.target === vOverlay) { window.closeVehicleModal(); }
+            noResults.style.display = visible === 0 ? '' : 'none';
+            updateCounter(visible);
         });
 
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && !vModal.classList.contains('hidden')) { window.closeVehicleModal(); }
-        });
-
-        function escHtml(str) {
-            return String(str)
-                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        }
-
-        // ── Re-renderiza dropdowns após refresh ──────────────────────────────
-        function renderDivisionDropdown(divisions) {
-            var wrap = document.getElementById('division-filter-wrap');
-            if (wrap) { wrap.classList.toggle('hidden', divisions.length < 2); }
-            var container = divFilterMenu ? divFilterMenu.querySelector('.overflow-y-auto') : null;
-            if (! container) { return; }
-            container.innerHTML = divisions.map(function (div) {
-                var label   = div === '' ? 'Sem divisão' : div;
-                var checked = activeDivisions.has(div) ? ' checked' : '';
-                return '<label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2'
-                    + ' text-sm text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60">'
-                    + '<input type="checkbox" class="division-checkbox h-4 w-4 rounded border-slate-300'
-                    + ' accent-zinc-900 dark:border-zinc-600 dark:accent-white"'
-                    + ' value="' + escHtml(div) + '"' + checked + '>'
-                    + escHtml(label) + '</label>';
-            }).join('');
-            updateDivisionCount();
-        }
-
-        function renderStatusDropdown(statuses) {
-            var wrap = document.getElementById('status-filter-wrap');
-            if (wrap) { wrap.classList.toggle('hidden', statuses.length < 2); }
-            var container = stFilterMenu ? stFilterMenu.querySelector('.overflow-y-auto') : null;
-            if (! container) { return; }
-            container.innerHTML = statuses.map(function (st) {
-                var label   = st === '' ? 'Indefinido' : st;
-                var checked = activeStatuses.has(st) ? ' checked' : '';
-                var cls     = COLOR_CLASSES[statusColor(st)] || COLOR_CLASSES.zinc;
-                return '<label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2'
-                    + ' text-sm text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60">'
-                    + '<input type="checkbox" class="status-checkbox h-4 w-4 rounded border-slate-300'
-                    + ' accent-zinc-900 dark:border-zinc-600 dark:accent-white"'
-                    + ' value="' + escHtml(st) + '"' + checked + '>'
-                    + '<span class="h-2 w-2 shrink-0 rounded-full ' + cls.dot + '"></span>'
-                    + escHtml(label) + '</label>';
-            }).join('');
-            updateStatusCount();
-        }
-
+        // Auto-dismiss flash
+        var flash = document.getElementById('flash-success');
+        if (flash) { setTimeout(function () { flash.style.display = 'none'; }, 4000); }
     })();
-    </script>
 
-    {{-- ─── Toast de erro do AutoRefresh ────────────────────────────────────── --}}
-    <div id="refresh-error-toast"
-         class="hidden fixed bottom-4 right-4 z-50 flex items-center gap-2.5 rounded-xl border px-4 py-3 shadow-lg
-                border-amber-200 bg-amber-50 text-amber-700
-                dark:border-amber-500/30 dark:bg-zinc-900 dark:text-amber-400">
-        <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
-        </svg>
-        <span class="text-xs font-medium">Falha ao atualizar — tentando novamente em 10 min</span>
-    </div>
+    // ─── Inline edit rows ────────────────────────────────────────────────────
+    function toggleEditRow(id) {
+        var editRow = document.getElementById('edit-row-' + id);
+        var isHidden = editRow.classList.contains('hidden');
+        document.querySelectorAll('[id^="edit-row-"]').forEach(function (r) { r.classList.add('hidden'); });
+        if (isHidden) {
+            editRow.classList.remove('hidden');
+            var first = editRow.querySelector('input');
+            if (first) { first.focus(); }
+        }
+    }
+
+    // ─── Implemento modal ────────────────────────────────────────────────────
+    var IMPLEMENTOS      = @json($implementos->values());
+    var PATCH_URL_TMPL   = '{{ route('control-tower.implemento', ['equipamento' => '__ID__']) }}';
+    var _currentMotoId   = null;
+    var _selectedImpId   = null;
+
+    function openImplementoModal(motoId, motoPlaca, currentImpId, currentNomeOverride) {
+        _currentMotoId = motoId;
+        _selectedImpId = currentImpId;
+
+        document.getElementById('modal-subtitle').textContent = motoPlaca;
+        document.getElementById('implemento-form').action = PATCH_URL_TMPL.replace('__ID__', motoId);
+        document.getElementById('modal-nome-override').value = currentNomeOverride || '';
+
+        var btnDesv = document.getElementById('modal-btn-desvincular');
+        currentImpId ? btnDesv.classList.remove('hidden') : btnDesv.classList.add('hidden');
+
+        renderImplementoList(motoId, currentImpId);
+        document.getElementById('implemento-backdrop').classList.remove('hidden');
+        document.getElementById('implemento-modal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function renderImplementoList(motoId, selectedImpId) {
+        var list = document.getElementById('modal-list');
+
+        if (IMPLEMENTOS.length === 0) {
+            list.innerHTML = '<p class="py-6 text-center text-sm text-zinc-400 dark:text-zinc-600">Nenhum implemento ativo cadastrado.</p>';
+            return;
+        }
+
+        list.innerHTML = IMPLEMENTOS.map(function (imp) {
+            var isCurrent = imp.id == selectedImpId;
+            var isTaken   = imp.taken_by !== null && imp.taken_by != motoId;
+            var label     = [imp.prefixo, imp.modelo].filter(Boolean).join(' · ') || imp.placa;
+
+            var base = 'flex items-center gap-3 rounded-xl border px-4 py-2.5 ';
+            var cls  = isTaken
+                ? base + 'cursor-not-allowed opacity-40 border-slate-100 bg-slate-50 dark:border-zinc-800 dark:bg-zinc-800/30'
+                : isCurrent
+                    ? base + 'cursor-pointer border-zinc-900 bg-zinc-900/5 ring-1 ring-zinc-900/10 dark:border-zinc-400 dark:bg-zinc-400/10'
+                    : base + 'cursor-pointer border-slate-200 bg-white hover:border-zinc-300 hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600';
+
+            var dot = isCurrent
+                ? '<span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-zinc-900 dark:bg-zinc-100"><span class="h-1.5 w-1.5 rounded-full bg-white dark:bg-zinc-900"></span></span>'
+                : '<span class="h-4 w-4 shrink-0 rounded-full border-2 border-slate-300 dark:border-zinc-600"></span>';
+
+            var badge = isTaken
+                ? '<span class="ml-auto shrink-0 text-[11px] text-zinc-400 dark:text-zinc-600">Em uso</span>'
+                : (isCurrent ? '<span class="ml-auto shrink-0 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Atual</span>' : '');
+
+            var onclick = isTaken ? '' : 'onclick="selectImplemento(' + imp.id + ')"';
+
+            return '<div id="imp-item-' + imp.id + '" class="' + cls + '" data-imp-id="' + imp.id + '" ' + onclick + '>'
+                + dot
+                + '<div class="min-w-0 flex-1">'
+                + '<p class="text-sm font-medium text-zinc-900 dark:text-zinc-100">' + escHtml(imp.placa) + '</p>'
+                + '<p class="text-xs text-zinc-500 dark:text-zinc-400">' + escHtml(label) + '</p>'
+                + '</div>' + badge + '</div>';
+        }).join('');
+
+        document.getElementById('modal-implemento-id').value = selectedImpId || '';
+    }
+
+    function selectImplemento(impId) {
+        _selectedImpId = impId;
+        document.getElementById('modal-implemento-id').value = impId;
+
+        document.querySelectorAll('#modal-list [data-imp-id]').forEach(function (item) {
+            if (item.classList.contains('cursor-not-allowed')) { return; }
+            var isSelected = item.dataset.impId == impId;
+            var base = 'flex items-center gap-3 rounded-xl border px-4 py-2.5 ';
+
+            item.className = isSelected
+                ? base + 'cursor-pointer border-zinc-900 bg-zinc-900/5 ring-1 ring-zinc-900/10 dark:border-zinc-400 dark:bg-zinc-400/10'
+                : base + 'cursor-pointer border-slate-200 bg-white hover:border-zinc-300 hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600';
+
+            var dot = item.querySelector('span:first-child');
+            if (dot) {
+                dot.outerHTML = isSelected
+                    ? '<span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-zinc-900 dark:bg-zinc-100"><span class="h-1.5 w-1.5 rounded-full bg-white dark:bg-zinc-900"></span></span>'
+                    : '<span class="h-4 w-4 shrink-0 rounded-full border-2 border-slate-300 dark:border-zinc-600"></span>';
+            }
+
+            var badge = item.querySelector('.ml-auto');
+            if (badge) { badge.remove(); }
+            if (isSelected) {
+                item.insertAdjacentHTML('beforeend', '<span class="ml-auto shrink-0 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Selecionado</span>');
+            }
+        });
+
+        document.getElementById('modal-btn-desvincular').classList.remove('hidden');
+    }
+
+    function desvinculaImplemento() {
+        _selectedImpId = null;
+        document.getElementById('modal-implemento-id').value = '';
+        renderImplementoList(_currentMotoId, null);
+        document.getElementById('modal-btn-desvincular').classList.add('hidden');
+    }
+
+    function closeImplementoModal() {
+        document.getElementById('implemento-backdrop').classList.add('hidden');
+        document.getElementById('implemento-modal').classList.add('hidden');
+        document.body.style.overflow = '';
+        _currentMotoId = null;
+        _selectedImpId = null;
+    }
+
+    function escHtml(str) {
+        return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { closeImplementoModal(); }
+    });
+    </script>
 
 </x-layouts.app>

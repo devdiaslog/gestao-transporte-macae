@@ -38,7 +38,24 @@
       "Bash(git push -u origin dev-master)",
       "Bash(where gh)",
       "Bash(git push)",
-      "Bash(vendor/bin/pint resources/views/components/layouts/app.blade.php --format agent)"
+      "Bash(vendor/bin/pint resources/views/components/layouts/app.blade.php --format agent)",
+      "Bash(php artisan tinker --execute \":*)",
+      "mcp__laravel-boost__database-query",
+      "Bash(curl -s http://localhost/control-tower -o /dev/null -w \"%{http_code}\" --max-time 10)",
+      "Bash(php check_mov.php)",
+      "Bash(php check_parado.php)",
+      "Bash(rm check_parado.php)",
+      "Bash(gh pr:*)",
+      "Bash(php check_times.php)",
+      "Bash(php artisan route:list --path=control-tower)",
+      "Bash(php artisan config:show app)",
+      "Bash(php artisan tinker --execute \"echo now\\(\\)->format\\(''d/m/Y H:i:s''\\) . '' \\('' . now\\(\\)->timezoneName . ''\\)'';\")",
+      "Bash(php check_gps.php)",
+      "WebFetch(domain:api-elog.bigcore.com.br)",
+      "Bash(grep -r \"ControlTower\\\\|control.tower\\\\|control_tower\\\\|tms\\\\|TMS\" app/ --include=*.php -l)",
+      "Bash(php artisan:*)",
+      "Bash(ls database/migrations/2026_04_11*)",
+      "mcp__laravel-boost__database-schema"
     ]
   }
 }

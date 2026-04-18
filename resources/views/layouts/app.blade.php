@@ -27,8 +27,6 @@
 
         {{-- Navigation --}}
         <nav class="flex-1 overflow-y-auto px-4 py-4 space-y-1">
-            <p class="px-3 pb-1 text-xs font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Menu</p>
-
             <a href="{{ route('users.index') }}"
                class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors
                       {{ request()->routeIs('users.*') ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100' }}">

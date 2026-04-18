@@ -61,24 +61,12 @@
         </div>
 
         {{-- Navigation --}}
+        @php
+            $isCadastrosActive = request()->routeIs('users.*', 'divisoes.*', 'subdivisoes.*', 'equipamentos.*', 'tipos-equipamentos.*', 'modelos-equipamentos.*');
+        @endphp
         <nav class="flex-1 space-y-0.5 overflow-y-auto px-2 py-4">
-            <p class="nav-label mb-2 hidden px-3 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600">
-                Principal
-            </p>
 
-            <a href="{{ route('users.index') }}"
-               title="Usuários"
-               class="nav-link flex items-center justify-center rounded-lg py-2.5 text-sm font-medium
-                      transition-all duration-200
-                      {{ request()->routeIs('users.*')
-                          ? 'bg-zinc-900 text-white dark:bg-zinc-800 dark:text-zinc-100'
-                          : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
-                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/>
-                </svg>
-                <span class="nav-label hidden whitespace-nowrap">Usuários</span>
-            </a>
-
+            {{-- Torre de Controle --}}
             <a href="{{ route('control-tower.index') }}"
                title="Torre de Controle"
                class="nav-link flex items-center justify-center rounded-lg py-2.5 text-sm font-medium
@@ -87,10 +75,85 @@
                           ? 'bg-zinc-900 text-white dark:bg-zinc-800 dark:text-zinc-100'
                           : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                 <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.348 14.652a3.75 3.75 0 0 1 0-5.304m5.304 0a3.75 3.75 0 0 1 0 5.304m-7.425 2.121a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.807-3.808-9.98 0-13.788m13.788 0c3.808 3.807 3.808 9.98 0 13.788M12 12h.008v.008H12V12Z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
                 </svg>
                 <span class="nav-label hidden whitespace-nowrap">Torre de Controle</span>
             </a>
+
+            {{-- Cadastros (accordion) --}}
+            <div class="accordion-group">
+                <button type="button"
+                        title="Cadastros"
+                        data-accordion="cadastros"
+                        class="nav-link accordion-trigger flex w-full items-center justify-center rounded-lg py-2.5 text-sm font-medium
+                               transition-all duration-200
+                               {{ $isCadastrosActive ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400' }}
+                               hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100">
+                    {{-- Ícone de grade --}}
+                    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/>
+                    </svg>
+                    <span class="nav-label hidden flex-1 whitespace-nowrap text-left font-semibold">Cadastros</span>
+                    <svg class="accordion-chevron nav-label hidden h-3.5 w-3.5 shrink-0 transition-transform duration-200"
+                         fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                    </svg>
+                </button>
+
+                <div id="accordion-cadastros"
+                     class="accordion-panel mt-0.5 hidden space-y-0.5 pl-3"
+                     {{ $isCadastrosActive ? 'data-active' : '' }}>
+
+                    {{-- Usuários --}}
+                    <a href="{{ route('users.index') }}"
+                       class="flex items-center gap-2 rounded-lg border-l-2 py-2 pl-3 pr-3 text-sm font-medium
+                              transition-all duration-200
+                              {{ request()->routeIs('users.*') ? 'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-zinc-400 dark:bg-zinc-800/70 dark:text-zinc-100' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                        Usuários
+                    </a>
+
+                    {{-- Divisões --}}
+                    <a href="{{ route('divisoes.index') }}"
+                       class="flex items-center gap-2 rounded-lg border-l-2 py-2 pl-3 pr-3 text-sm font-medium
+                              transition-all duration-200
+                              {{ request()->routeIs('divisoes.*') ? 'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-zinc-400 dark:bg-zinc-800/70 dark:text-zinc-100' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                        Divisões
+                    </a>
+
+                    {{-- Subdivisões --}}
+                    <a href="{{ route('subdivisoes.index') }}"
+                       class="flex items-center gap-2 rounded-lg border-l-2 py-2 pl-3 pr-3 text-sm font-medium
+                              transition-all duration-200
+                              {{ request()->routeIs('subdivisoes.*') ? 'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-zinc-400 dark:bg-zinc-800/70 dark:text-zinc-100' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                        Subdivisões
+                    </a>
+
+                    {{-- Equipamentos --}}
+                    <a href="{{ route('equipamentos.index') }}"
+                       class="flex items-center gap-2 rounded-lg border-l-2 py-2 pl-3 pr-3 text-sm font-medium
+                              transition-all duration-200
+                              {{ request()->routeIs('equipamentos.*') ? 'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-zinc-400 dark:bg-zinc-800/70 dark:text-zinc-100' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                        Equipamentos
+                    </a>
+
+                    {{-- Tipos de Equipamentos --}}
+                    <a href="{{ route('tipos-equipamentos.index') }}"
+                       class="flex items-center gap-2 rounded-lg border-l-2 py-2 pl-3 pr-3 text-sm font-medium
+                              transition-all duration-200
+                              {{ request()->routeIs('tipos-equipamentos.*') ? 'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-zinc-400 dark:bg-zinc-800/70 dark:text-zinc-100' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                        Tipos de Equipamentos
+                    </a>
+
+                    {{-- Modelos de Equipamentos --}}
+                    <a href="{{ route('modelos-equipamentos.index') }}"
+                       class="flex items-center gap-2 rounded-lg border-l-2 py-2 pl-3 pr-3 text-sm font-medium
+                              transition-all duration-200
+                              {{ request()->routeIs('modelos-equipamentos.*') ? 'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-zinc-400 dark:bg-zinc-800/70 dark:text-zinc-100' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                        Modelos de Equipamentos
+                    </a>
+                </div>
+            </div>
+
         </nav>
 
         {{-- User footer --}}
@@ -315,6 +378,13 @@
                 el.classList.add('hidden');
             });
 
+            document.querySelectorAll('.accordion-panel').forEach(function (el) {
+                el.classList.add('hidden');
+            });
+            document.querySelectorAll('.accordion-chevron').forEach(function (el) {
+                el.style.transform = '';
+            });
+
             document.querySelectorAll('.nav-link').forEach(function (el) {
                 el.classList.add('justify-center');
                 el.classList.remove('gap-3', 'px-3');
@@ -442,6 +512,30 @@
     });
     document.addEventListener('click', function () { setProfile(false); });
     profileDropdown?.addEventListener('click', function (e) { e.stopPropagation(); });
+
+    // ── Accordion nav ───────────────────────────────────────────────────────
+    document.querySelectorAll('.accordion-trigger').forEach(function (trigger) {
+        trigger.addEventListener('click', function () {
+            if (isDesktop() && isCollapsed()) { return; }
+
+            var key    = trigger.dataset.accordion;
+            var panel  = document.getElementById('accordion-' + key);
+            var chevron = trigger.querySelector('.accordion-chevron');
+            if (!panel) { return; }
+
+            var isOpen = !panel.classList.contains('hidden');
+            panel.classList.toggle('hidden', isOpen);
+            if (chevron) { chevron.style.transform = isOpen ? '' : 'rotate(180deg)'; }
+        });
+    });
+
+    // Auto-open accordion if panel has data-active attribute (set server-side)
+    document.querySelectorAll('.accordion-panel[data-active]').forEach(function (panel) {
+        panel.classList.remove('hidden');
+        var trigger = panel.previousElementSibling;
+        var chevron = trigger && trigger.querySelector('.accordion-chevron');
+        if (chevron) { chevron.style.transform = 'rotate(180deg)'; }
+    });
 
     // ── Theme toggle ────────────────────────────────────────────────────────
     document.getElementById('theme-toggle')?.addEventListener('click', function () {
