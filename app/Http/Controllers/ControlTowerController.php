@@ -13,6 +13,7 @@ use App\Services\VfleetsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 use Throwable;
 
@@ -90,6 +91,76 @@ class ControlTowerController extends Controller
             ->pluck('id', 'motorista_id'); // motorista_id => equipamento_id
 
         return view('control-tower.index', compact('equipamentos', 'divisoes', 'modelos', 'modelosImplemento', 'implementos', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado'));
+    }
+
+    public function export(Request $request): Response
+    {
+        $tipoMotorizado = TipoEquipamento::where('nome', 'Motorizado')->first();
+
+        $equipamentos = Equipamento::query()
+            ->with(['modelo', 'divisao', 'implemento.modelo', 'ultimoLogOperacional', 'motorista.contatos', 'posicao'])
+            ->where('status', true)
+            ->when($tipoMotorizado, fn ($q) => $q->where('tipo_id', $tipoMotorizado->id))
+            ->when($request->filled('divisao_id'), fn ($q) => $q->where('divisao_id', $request->divisao_id))
+            ->when($request->filled('modelo_id'), fn ($q) => $q->where('modelo_id', $request->modelo_id))
+            ->when($request->filled('status_operacional'), fn ($q) => $q->where('status_operacional', $request->status_operacional))
+            ->when($request->filled('implemento_modelo_id'), fn ($q) => $q->whereHas('implemento', fn ($q) => $q->where('modelo_id', $request->implemento_modelo_id)))
+            ->when($request->filled('motorista_id'), fn ($q) => $q->where('motorista_id', $request->motorista_id))
+            ->orderBy('placa')
+            ->get();
+
+        $tz = config('app.timezone');
+        $filename = 'torre_controle_'.now()->format('Y-m-d_H-i').'.csv';
+
+        $header = [
+            'Prefixo', 'Placa', 'ID Elog', 'ID Rastreador', 'Modelo',
+            'Semi-Reboque Prefixo', 'Semi-Reboque Placa', 'Semi-Reboque Modelo',
+            'Divisão', 'Status Operacional', 'Condutor', 'Telefone Condutor',
+            'Documento de Demanda', 'Origem', 'Destino', 'Observação',
+            'Última Atualização', 'Campo Atualizado',
+            'Latitude', 'Longitude', 'Data/Hora Posição', 'Sincronizado em',
+        ];
+
+        $rows = $equipamentos->map(function (Equipamento $eq) use ($tz) {
+            $ultimoLog = $eq->ultimoLogOperacional;
+            $telefone = $eq->motorista?->contatos->where('status', true)->first()?->telefone ?? '';
+
+            return [
+                $eq->prefixo ?? '',
+                $eq->placa,
+                $eq->id_elog ?? '',
+                $eq->id_rastreador ?? '',
+                $eq->modelo?->nome ?? '',
+                $eq->implemento?->prefixo ?? '',
+                $eq->implemento?->placa ?? '',
+                $eq->implemento_nome_override ?? $eq->implemento?->modelo?->nome ?? '',
+                $eq->divisao?->nome ?? '',
+                $eq->status_operacional ?? '',
+                $eq->motorista?->nome ?? '',
+                $telefone,
+                $eq->documento_demanda ?? '',
+                $eq->origem ?? '',
+                $eq->destino ?? '',
+                $eq->observacao_operacional ?? '',
+                $ultimoLog?->created_at->setTimezone($tz)->format('d/m/Y H:i') ?? '',
+                $ultimoLog?->campo ?? '',
+                $eq->posicao?->latitude ?? '',
+                $eq->posicao?->longitude ?? '',
+                $eq->posicao?->position_at?->setTimezone($tz)->format('d/m/Y H:i') ?? '',
+                $eq->posicao?->synced_at?->setTimezone($tz)->format('d/m/Y H:i') ?? '',
+            ];
+        });
+
+        $csv = collect([$header])
+            ->concat($rows)
+            ->map(fn (array $row) => implode(';', array_map(fn ($cell) => '"'.str_replace('"', '""', (string) $cell).'"', $row)))
+            ->implode("\n");
+
+        return response("\xEF\xBB\xBF".$csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     public function posicao(string $plate, VfleetsService $vfleets): JsonResponse

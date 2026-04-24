@@ -44,6 +44,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 // Protected routes
 Route::middleware('auth')->group(function () {
     Route::get('torre-de-controle', [ControlTowerController::class, 'index'])->name('control-tower.index');
+    Route::get('torre-de-controle-export', [ControlTowerController::class, 'export'])->name('control-tower.export');
     Route::get('torre-de-controle/posicao/{plate}', [ControlTowerController::class, 'posicao'])->name('control-tower.posicao');
     Route::patch('torre-de-controle/{equipamento}/implemento', [ControlTowerController::class, 'updateImplemento'])->name('control-tower.implemento');
     Route::get('torre-de-controle/{equipamento}/historico', [ControlTowerController::class, 'historico'])->name('control-tower.historico');

@@ -55,10 +55,11 @@
         <div class="flex flex-col gap-1">
             <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Campo</label>
             <select name="campo"
-                    class="rounded-lg border px-3 py-1.5 text-sm
+                    class="rounded-lg border px-3 py-1.5 text-sm outline-none transition-all
                            border-slate-200 bg-white text-zinc-700
+                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
                            dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300
-                           focus:outline-none focus:ring-2 focus:ring-blue-500">
+                           dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
                 <option value="">Todos</option>
                 @foreach($campos as $c)
                     <option value="{{ $c }}" @selected(request('campo') === $c)>{{ $c }}</option>
@@ -70,10 +71,11 @@
         <div class="flex flex-col gap-1">
             <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Data</label>
             <input type="date" name="data" value="{{ request('data') }}"
-                   class="rounded-lg border px-3 py-1.5 text-sm
+                   class="rounded-lg border px-3 py-1.5 text-sm outline-none transition-all
                           border-slate-200 bg-white text-zinc-700
+                          focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
                           dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300
-                          focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
         </div>
 
         {{-- Documento --}}
@@ -81,17 +83,19 @@
             <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Documento</label>
             <input type="text" name="documento" value="{{ request('documento') }}"
                    placeholder="Buscar valor…"
-                   class="rounded-lg border px-3 py-1.5 text-sm
+                   class="rounded-lg border px-3 py-1.5 text-sm outline-none transition-all
                           border-slate-200 bg-white text-zinc-700
+                          placeholder:text-zinc-400
+                          focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
                           dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300
-                          placeholder:text-zinc-400 dark:placeholder:text-zinc-600
-                          focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          dark:placeholder:text-zinc-600
+                          dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
         </div>
 
         <button type="submit"
-                class="rounded-lg border px-4 py-1.5 text-sm font-medium transition-colors
-                       border-blue-600 bg-blue-600 text-white hover:bg-blue-700
-                       dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600">
+                class="rounded-lg px-4 py-1.5 text-sm font-medium transition-colors
+                       bg-zinc-900 text-white hover:bg-zinc-700
+                       dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300">
             Filtrar
         </button>
 
