@@ -6,7 +6,9 @@ use App\Http\Requests\StoreEquipamentoRequest;
 use App\Http\Requests\UpdateEquipamentoRequest;
 use App\Models\Divisao;
 use App\Models\Equipamento;
+use App\Models\EquipamentoLog;
 use App\Models\ModeloEquipamento;
+use App\Models\Motorista;
 use App\Models\SubDivisao;
 use App\Models\TipoEquipamento;
 use Illuminate\Http\RedirectResponse;
@@ -117,7 +119,64 @@ class EquipamentoController extends Controller
             'status_operacional' => ['nullable', 'string', 'max:255'],
             'documento_demanda' => ['nullable', 'string', 'max:255'],
             'observacao_operacional' => ['nullable', 'string'],
+            'origem' => ['nullable', 'string', 'max:255'],
+            'destino' => ['nullable', 'string', 'max:255'],
+            'motorista_id' => ['nullable', 'integer', 'exists:motoristas,id'],
         ]);
+
+        // Log de campos de texto
+        $campos = [
+            'status_operacional' => 'Status Operacional',
+            'documento_demanda' => 'Documento de Demanda',
+            'observacao_operacional' => 'Observação',
+            'origem' => 'Origem',
+            'destino' => 'Destino',
+        ];
+
+        foreach ($campos as $field => $label) {
+            $anterior = $equipamento->$field ?: null;
+            $novo = ! empty($validated[$field]) ? $validated[$field] : null;
+
+            if ($anterior !== $novo) {
+                EquipamentoLog::create([
+                    'equipamento_id' => $equipamento->id,
+                    'user_id' => auth()->id(),
+                    'campo' => $label,
+                    'valor_anterior' => $anterior,
+                    'valor_novo' => $novo,
+                ]);
+            }
+        }
+
+        // Garante que o motorista não está alocado em outro equipamento
+        $novoMotoId = ! empty($validated['motorista_id']) ? (int) $validated['motorista_id'] : null;
+        if ($novoMotoId && $novoMotoId !== $equipamento->motorista_id) {
+            $jaAlocado = Equipamento::where('motorista_id', $novoMotoId)
+                ->where('id', '!=', $equipamento->id)
+                ->exists();
+
+            if ($jaAlocado) {
+                return redirect()->back()->withErrors([
+                    'motorista_id' => 'Este condutor já está alocado em outro equipamento.',
+                ]);
+            }
+        }
+
+        // Log do condutor (nome, não ID)
+        if ($equipamento->motorista_id !== $novoMotoId) {
+            $nomeAnterior = $equipamento->motorista?->nome;
+            $nomeNovo = $novoMotoId ? Motorista::find($novoMotoId)?->nome : null;
+
+            EquipamentoLog::create([
+                'equipamento_id' => $equipamento->id,
+                'user_id' => auth()->id(),
+                'campo' => 'Condutor',
+                'valor_anterior' => $nomeAnterior,
+                'valor_novo' => $nomeNovo,
+            ]);
+        }
+
+        $validated['motorista_id'] = $novoMotoId;
 
         $equipamento->update($validated);
 

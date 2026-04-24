@@ -23,6 +23,7 @@ class StoreEquipamentoRequest extends FormRequest
             'divisao_id' => ['nullable', 'exists:divisoes,id'],
             'sub_divisao_id' => ['nullable', 'exists:sub_divisoes,id'],
             'id_elog' => ['nullable', 'string'],
+            'id_rastreador' => ['nullable', 'string', 'max:255'],
             'prefixo' => ['nullable', 'string'],
             'placa' => ['required', 'string'],
             'status' => ['required', 'boolean'],

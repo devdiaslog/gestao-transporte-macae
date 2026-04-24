@@ -197,6 +197,25 @@
                 />
             </div>
 
+            {{-- ID Rastreador --}}
+            <div class="space-y-1.5">
+                <label for="id_rastreador" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    ID Rastreador
+                </label>
+                <input
+                    id="id_rastreador"
+                    type="text"
+                    name="id_rastreador"
+                    value="{{ old('id_rastreador') }}"
+                    placeholder="Identificador no sistema de rastreamento"
+                    class="block w-full rounded-lg border px-3.5 py-2.5 text-sm
+                           shadow-xs outline-none transition-all duration-200
+                           placeholder:text-zinc-400 focus:ring-2
+                           border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-zinc-900/10
+                           dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10"
+                />
+            </div>
+
             {{-- Status --}}
             <div class="space-y-1.5">
                 <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">

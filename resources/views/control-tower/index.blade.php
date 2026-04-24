@@ -1,5 +1,11 @@
 <x-layouts.app title="Torre de Controle">
 
+    {{-- Leaflet.js CSS --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
+    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+
+
+
     {{-- ─── Page header ──────────────────────────────────────────────────────── --}}
     <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -14,8 +20,11 @@
 
     {{-- ─── Toolbar ─────────────────────────────────────────────────────────── --}}
     @php
-        $currentDivisao = request('divisao_id');
-        $currentModelo  = request('modelo_id');
+        $currentDivisao          = request('divisao_id');
+        $currentModelo           = request('modelo_id');
+        $currentStatusOp         = request('status_operacional');
+        $currentImplementoModelo = request('implemento_modelo_id');
+        $currentMotorista        = request('motorista_id');
     @endphp
 
     <div class="mt-4 flex flex-wrap items-center gap-2">
@@ -48,6 +57,20 @@
                 @endforeach
             </select>
 
+            <select name="status_operacional" onchange="this.form.submit()"
+                    class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
+                           border-slate-200 bg-white text-zinc-700
+                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                           dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
+                           dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                <option value="">Todos os status</option>
+                @foreach($statusOperacionais as $statusOp)
+                    <option value="{{ $statusOp->nome }}" @selected($currentStatusOp === $statusOp->nome)>
+                        {{ $statusOp->nome }}
+                    </option>
+                @endforeach
+            </select>
+
             <select name="modelo_id" onchange="this.form.submit()"
                     class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
                            border-slate-200 bg-white text-zinc-700
@@ -60,7 +83,37 @@
                 @endforeach
             </select>
 
-            @if($currentDivisao || $currentModelo)
+            @if($motoristas->isNotEmpty())
+                <select name="motorista_id" onchange="this.form.submit()"
+                        class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
+                               border-slate-200 bg-white text-zinc-700
+                               focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                               dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
+                               dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                    <option value="">Todos os condutores</option>
+                    @foreach($motoristas as $motorista)
+                        <option value="{{ $motorista->id }}" @selected($currentMotorista == $motorista->id)>
+                            {{ $motorista->nome }}
+                        </option>
+                    @endforeach
+                </select>
+            @endif
+
+            @if($modelosImplemento->isNotEmpty())
+                <select name="implemento_modelo_id" onchange="this.form.submit()"
+                        class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
+                               border-slate-200 bg-white text-zinc-700
+                               focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                               dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
+                               dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                    <option value="">Todos os implementos</option>
+                    @foreach($modelosImplemento as $mi)
+                        <option value="{{ $mi->id }}" @selected($currentImplementoModelo == $mi->id)>{{ $mi->nome }}</option>
+                    @endforeach
+                </select>
+            @endif
+
+            @if($currentDivisao || $currentModelo || $currentStatusOp || $currentImplementoModelo || $currentMotorista)
                 <a href="{{ route('control-tower.index') }}"
                    class="flex items-center gap-1 rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors
                           border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700
@@ -77,11 +130,16 @@
         <div class="ml-auto flex items-center gap-1.5">
             <span class="text-xs text-zinc-400 dark:text-zinc-600">Colunas:</span>
             @foreach([
-                ['col' => 'prefixo',   'label' => 'Prefixo'],
-                ['col' => 'divisao',   'label' => 'Divisão'],
-                ['col' => 'status-op', 'label' => 'Status Op.'],
+                ['col' => 'placa',     'label' => 'Placa'],
+                ['col' => 'tempo',     'label' => 'Tp Atualização'],
+                ['col' => 'status-op', 'label' => 'Status'],
+                ['col' => 'condutor',  'label' => 'Condutor'],
                 ['col' => 'documento', 'label' => 'Documento'],
+                ['col' => 'origem',    'label' => 'Origem'],
+                ['col' => 'destino',   'label' => 'Destino'],
                 ['col' => 'obs',       'label' => 'Observação'],
+                ['col' => 'modelo',    'label' => 'Modelo'],
+                ['col' => 'divisao',   'label' => 'Divisão'],
             ] as $tog)
                 <button type="button"
                         data-toggle-col="{{ $tog['col'] }}"
@@ -96,17 +154,6 @@
     </div>
 
     {{-- ─── Flash / errors ─────────────────────────────────────────────────── --}}
-    @if(session('success'))
-        <div id="flash-success"
-             class="mt-3 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700
-                    dark:border-emerald-800/50 dark:bg-emerald-950/40 dark:text-emerald-400">
-            <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            {{ session('success') }}
-        </div>
-    @endif
-
     @if($errors->any())
         <div class="mt-3 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700
                     dark:border-rose-800/50 dark:bg-rose-950/40 dark:text-rose-400">
@@ -130,7 +177,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
                     </svg>
                 </div>
-                @if($currentDivisao || $currentModelo)
+                @if($currentDivisao || $currentModelo || $currentStatusOp || $currentImplementoModelo || $currentMotorista)
                     <h3 class="mt-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">Nenhum equipamento encontrado</h3>
                     <a href="{{ route('control-tower.index') }}"
                        class="mt-4 inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors
@@ -149,25 +196,37 @@
                     <thead class="sticky top-0 z-10">
                         <tr class="border-b border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
                             <th class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
-                                Placa
-                            </th>
-                            <th data-col="prefixo" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Prefixo
                             </th>
-                            <th class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                            <th data-col="tempo" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Tp Atualização
+                            </th>
+                            <th data-col="placa" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Placa
+                            </th>
+                            <th data-col="modelo" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Modelo / Implemento
                             </th>
-                            <th data-col="divisao" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
-                                Divisão
-                            </th>
                             <th data-col="status-op" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
-                                Status Op.
+                                Status
+                            </th>
+                            <th data-col="condutor" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Condutor
                             </th>
                             <th data-col="documento" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Documento
                             </th>
+                            <th data-col="origem" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Origem
+                            </th>
+                            <th data-col="destino" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Destino
+                            </th>
                             <th data-col="obs" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Observação
+                            </th>
+                            <th data-col="divisao" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Divisão
                             </th>
                             <th class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
                                 <span class="sr-only">Ações</span>
@@ -187,9 +246,18 @@
                                     $equipamento->modelo?->nome,
                                     $equipamento->divisao?->nome,
                                     $equipamento->status_operacional,
+                                    $equipamento->origem,
+                                    $equipamento->destino,
                                     $equipamento->documento_demanda,
                                     $impNome,
+                                    $equipamento->motorista?->nome,
                                 ]));
+
+                                $posicao     = $equipamento->posicao;
+                                $hasLocation = $posicao && $posicao->latitude && $posicao->longitude;
+                                $mapLabel    = trim(($equipamento->prefixo ?? '') . ' ' . $equipamento->placa);
+                                $posicaoAt   = $posicao?->position_at?->setTimezone(config('app.timezone'))->format('d/m/Y H:i');
+                                $syncedAt    = $posicao?->synced_at?->setTimezone(config('app.timezone'))->format('d/m/Y H:i');
                             @endphp
 
                             {{-- ─── Data row ──────────────────────────────── --}}
@@ -198,17 +266,44 @@
                                 class="ct-row transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/30">
 
                                 <td class="px-3 py-2 whitespace-nowrap">
+                                    <p class="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-100">{{ $equipamento->prefixo ?? '—' }}</p>
+                                </td>
+
+                                <td data-col="tempo" class="px-3 py-2 whitespace-nowrap">
+                                    @php
+                                        $ultimoLog = $equipamento->ultimoLogOperacional;
+                                    @endphp
+                                    @if($ultimoLog)
+                                        @php
+                                            $diff  = $ultimoLog->created_at->diffInMinutes(now());
+                                            $campo = $ultimoLog->campo === 'Status Operacional' ? 'S' : 'D';
+                                            $d     = intdiv($diff, 1440);
+                                            $h     = intdiv($diff % 1440, 60);
+                                            $m     = $diff % 60;
+                                            $hm    = sprintf('%02d:%02d', $h, $m);
+                                            $tempo = $d > 0 ? "{$d}d {$hm}" : $hm;
+                                        @endphp
+                                        <span title="Última alteração: {{ $ultimoLog->created_at->format('d/m/Y H:i') }} — {{ $ultimoLog->campo }}"
+                                              class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
+                                                     @if($d === 0 && $h < 1) bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400
+                                                     @elseif($d === 0 && $h < 8) bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400
+                                                     @else bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 @endif">
+                                            {{ $tempo }}
+                                            <span class="opacity-60">{{ $campo }}</span>
+                                        </span>
+                                    @else
+                                        <span class="text-zinc-300 dark:text-zinc-700">—</span>
+                                    @endif
+                                </td>
+
+                                <td data-col="placa" class="px-3 py-2 whitespace-nowrap">
                                     <p class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $equipamento->placa }}</p>
                                     @if($equipamento->id_elog)
                                         <p class="text-[11px] text-zinc-400 dark:text-zinc-600">{{ $equipamento->id_elog }}</p>
                                     @endif
                                 </td>
 
-                                <td data-col="prefixo" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
-                                    {{ $equipamento->prefixo ?? '—' }}
-                                </td>
-
-                                <td class="px-3 py-2">
+                                <td data-col="modelo" class="px-3 py-2">
                                     <p class="whitespace-nowrap text-zinc-700 dark:text-zinc-300">{{ $equipamento->modelo?->nome ?? '—' }}</p>
                                     <div class="mt-0.5 flex items-center gap-1">
                                         @if($impNome)
@@ -235,16 +330,25 @@
                                     </div>
                                 </td>
 
-                                <td data-col="divisao" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
-                                    {{ $equipamento->divisao?->nome ?? '—' }}
-                                </td>
-
                                 <td data-col="status-op" class="px-3 py-2 whitespace-nowrap">
                                     @if($equipamento->status_operacional)
-                                        <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700
-                                                     dark:bg-blue-950/40 dark:text-blue-400">
+                                        @php $cor = $statusCores[$equipamento->status_operacional] ?? '#71717A'; @endphp
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
+                                              style="background-color: {{ $cor }}1A; color: {{ $cor }}; box-shadow: inset 0 0 0 1px {{ $cor }}33;">
                                             {{ $equipamento->status_operacional }}
                                         </span>
+                                    @else
+                                        <span class="text-zinc-300 dark:text-zinc-700">—</span>
+                                    @endif
+                                </td>
+
+                                <td data-col="condutor" class="px-3 py-2 whitespace-nowrap">
+                                    @if($equipamento->motorista)
+                                        <p class="text-sm text-zinc-700 dark:text-zinc-300">{{ $equipamento->motorista->nome }}</p>
+                                        @php $telefone = $equipamento->motorista->contatos->where('status', true)->first()?->telefone; @endphp
+                                        @if($telefone)
+                                            <p class="text-[11px] text-zinc-400 dark:text-zinc-600">{{ $telefone }}</p>
+                                        @endif
                                     @else
                                         <span class="text-zinc-300 dark:text-zinc-700">—</span>
                                     @endif
@@ -254,39 +358,152 @@
                                     {{ $equipamento->documento_demanda ?? '—' }}
                                 </td>
 
+                                <td data-col="origem" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
+                                    {{ $equipamento->origem ?? '—' }}
+                                </td>
+
+                                <td data-col="destino" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
+                                    {{ $equipamento->destino ?? '—' }}
+                                </td>
+
                                 <td data-col="obs" class="px-3 py-2 text-zinc-600 dark:text-zinc-400">
                                     <span class="line-clamp-1 max-w-[180px] block">{{ $equipamento->observacao_operacional ?? '—' }}</span>
                                 </td>
 
+                                <td data-col="divisao" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
+                                    {{ $equipamento->divisao?->nome ?? '—' }}
+                                </td>
+
                                 <td class="px-3 py-2 text-right whitespace-nowrap">
-                                    <button type="button"
-                                            onclick="toggleEditRow({{ $equipamento->id }})"
-                                            title="Editar dados operacionais"
-                                            class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
-                                                   border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800
-                                                   dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-zinc-200">
-                                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931zm0 0L19.5 7.125"/>
-                                        </svg>
-                                        Editar
-                                    </button>
+                                    <div class="inline-flex items-center gap-1">
+                                        @if($hasLocation)
+                                            <button type="button"
+                                                    onclick="openMapModal({{ $posicao->latitude }}, {{ $posicao->longitude }}, '{{ addslashes($mapLabel) }}', '{{ addslashes($equipamento->id_rastreador) }}', '{{ $posicaoAt ?? '' }}', '{{ $syncedAt ?? '' }}')"
+                                                    title="Ver localização no mapa"
+                                                    class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
+                                                           border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700
+                                                           dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300">
+                                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+                                                </svg>
+                                                Mapa
+                                            </button>
+                                        @else
+                                            <button type="button" disabled
+                                                    title="{{ $posicao ? 'Sem coordenadas disponíveis' : 'Sem dados de rastreamento' }}"
+                                                    class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium cursor-not-allowed
+                                                           border-zinc-100 bg-zinc-50 text-zinc-300
+                                                           dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-700">
+                                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+                                                </svg>
+                                                Mapa
+                                            </button>
+                                        @endif
+                                        <a href="{{ route('ocorrencias.veiculo', $equipamento) }}"
+                                           title="Ver ocorrências do veículo"
+                                           class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
+                                                  border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700
+                                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300">
+                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+                                            </svg>
+                                            Ocorrências
+                                        </a>
+                                        <a href="{{ route('control-tower.historico', $equipamento) }}"
+                                           title="Ver histórico de alterações"
+                                           class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
+                                                  border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700
+                                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300">
+                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
+                                            </svg>
+                                            Logs
+                                        </a>
+                                        <button type="button"
+                                                onclick="toggleEditRow({{ $equipamento->id }})"
+                                                title="Editar dados operacionais"
+                                                class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
+                                                       border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800
+                                                       dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-zinc-200">
+                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931zm0 0L19.5 7.125"/>
+                                            </svg>
+                                            Editar
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
 
                             {{-- ─── Edit row ───────────────────────────────── --}}
                             <tr id="edit-row-{{ $equipamento->id }}" class="hidden border-t-0 bg-slate-50/80 dark:bg-zinc-800/20">
-                                <td colspan="8" class="px-3 pb-3 pt-2">
+                                <td colspan="12" class="px-3 pb-3 pt-2">
                                     <form method="POST"
                                           action="{{ route('equipamentos.operacional', $equipamento) }}"
                                           class="flex flex-wrap items-end gap-2">
                                         @csrf
                                         @method('PATCH')
 
-                                        <div class="flex min-w-[150px] flex-1 flex-col gap-1">
+                                        <div class="flex min-w-[180px] flex-1 flex-col gap-1">
+                                            <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Condutor</label>
+                                            <select name="motorista_id"
+                                                    class="rounded-lg border px-2.5 py-1.5 text-sm outline-none transition-all
+                                                           border-slate-200 bg-white text-zinc-700
+                                                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                                           dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300
+                                                           dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                                                <option value="">— Sem condutor —</option>
+                                                @foreach($motoristas as $motorista)
+                                                    @php
+                                                        $isAtual   = $equipamento->motorista_id === $motorista->id;
+                                                        $isOcupado = $motoristaOcupado->has($motorista->id) && ! $isAtual;
+                                                    @endphp
+                                                    @if(! $isOcupado)
+                                                        <option value="{{ $motorista->id }}" @selected($isAtual)>
+                                                            {{ $motorista->nome }}
+                                                        </option>
+                                                    @endif
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        <div class="flex min-w-[180px] flex-1 flex-col gap-1">
                                             <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Status Operacional</label>
-                                            <input type="text" name="status_operacional"
-                                                   value="{{ old('status_operacional', $equipamento->status_operacional) }}"
-                                                   placeholder="Ex.: Em Trânsito"
+                                            <select name="status_operacional"
+                                                    class="rounded-lg border px-2.5 py-1.5 text-sm outline-none transition-all
+                                                           border-slate-200 bg-white text-zinc-700
+                                                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                                           dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300
+                                                           dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                                                <option value="">— Selecione —</option>
+                                                @foreach($statusOperacionais as $statusOp)
+                                                    <option value="{{ $statusOp->nome }}"
+                                                            @selected(old('status_operacional', $equipamento->status_operacional) === $statusOp->nome)>
+                                                        {{ $statusOp->nome }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        <div class="flex min-w-[150px] flex-1 flex-col gap-1">
+                                            <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Origem</label>
+                                            <input type="text" name="origem"
+                                                   value="{{ old('origem', $equipamento->origem) }}"
+                                                   placeholder="Origem"
+                                                   class="rounded-lg border px-2.5 py-1.5 text-sm outline-none transition-all
+                                                          border-slate-200 bg-white text-zinc-700 placeholder-zinc-300
+                                                          focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:placeholder-zinc-600
+                                                          dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                                        </div>
+
+                                        <div class="flex min-w-[150px] flex-1 flex-col gap-1">
+                                            <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Destino</label>
+                                            <input type="text" name="destino"
+                                                   value="{{ old('destino', $equipamento->destino) }}"
+                                                   placeholder="Destino"
                                                    class="rounded-lg border px-2.5 py-1.5 text-sm outline-none transition-all
                                                           border-slate-200 bg-white text-zinc-700 placeholder-zinc-300
                                                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
@@ -331,6 +548,12 @@
                                                            dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700">
                                                 Cancelar
                                             </button>
+                                            <button type="button" onclick="confirmLimparTudo('edit-row-{{ $equipamento->id }}')"
+                                                    class="rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors
+                                                           border-rose-200 bg-white text-rose-600 hover:bg-rose-50
+                                                           dark:border-rose-900 dark:bg-zinc-800 dark:text-rose-400 dark:hover:bg-rose-950/30">
+                                                Limpar Tudo
+                                            </button>
                                         </div>
                                     </form>
                                 </td>
@@ -339,7 +562,7 @@
 
                         {{-- Empty search state --}}
                         <tr id="no-results" class="hidden">
-                            <td colspan="8" class="px-6 py-10 text-center text-sm text-zinc-400 dark:text-zinc-600">
+                            <td colspan="12" class="px-6 py-10 text-center text-sm text-zinc-400 dark:text-zinc-600">
                                 Nenhum resultado para a busca.
                             </td>
                         </tr>
@@ -358,9 +581,106 @@
     @if(!$equipamentos->isEmpty())
         <p class="mt-2 text-xs text-zinc-400 dark:text-zinc-600">
             {{ $equipamentos->total() }} {{ $equipamentos->total() === 1 ? 'equipamento' : 'equipamentos' }} no total
-            @if($currentDivisao || $currentModelo) · filtros ativos @endif
+            @if($currentDivisao || $currentModelo || $currentStatusOp || $currentImplementoModelo || $currentMotorista) · filtros ativos @endif
         </p>
     @endif
+
+    {{-- ═══════════════════════════════════════════════════════════════════════ --}}
+    {{-- ─── Mapa (Leaflet.js) ──────────────────────────────────────────────── --}}
+    {{-- Backdrop e overlay 100% via inline style — sem conflito com Tailwind  --}}
+    {{-- ═══════════════════════════════════════════════════════════════════════ --}}
+
+    {{-- Backdrop — visível apenas no modo modal (pequeno) --}}
+    <div id="map-backdrop"
+         onclick="closeMapModal()"
+         style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:9998; background:rgba(0,0,0,0.5); backdrop-filter:blur(2px);"></div>
+
+    {{-- Overlay — alterna entre modal pequeno e tela cheia via JS --}}
+    <div id="map-overlay"
+         style="display:none; position:fixed; z-index:9999; flex-direction:column;"
+         class="bg-white dark:bg-zinc-900">
+
+        {{-- Cabeçalho --}}
+        <div style="flex-shrink:0;"
+             class="flex items-center justify-between border-b px-5 py-3.5 border-slate-200 dark:border-zinc-800">
+            <div>
+                <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Localização</h3>
+                <p id="map-vehicle-label" class="text-xs text-zinc-500 dark:text-zinc-400"></p>
+                <p id="map-position-info" class="mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-600"></p>
+            </div>
+            <div class="flex items-center gap-2">
+                {{-- Atualizar posição --}}
+                <button type="button" id="map-btn-refresh" onclick="refreshMapPosition()" title="Atualizar posição desta placa"
+                        class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700
+                               dark:hover:bg-zinc-800 dark:hover:text-zinc-300">
+                    <svg id="map-refresh-icon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                    </svg>
+                </button>
+                {{-- Expandir / comprimir --}}
+                <button type="button" id="map-btn-fs" onclick="toggleMapFullscreen()" title="Expandir mapa"
+                        class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700
+                               dark:hover:bg-zinc-800 dark:hover:text-zinc-300">
+                    <svg id="map-icon-expand" style="display:block;" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/>
+                    </svg>
+                    <svg id="map-icon-compress" style="display:none;" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25"/>
+                    </svg>
+                </button>
+                <button type="button" onclick="closeMapModal()" title="Fechar mapa"
+                        class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700
+                               dark:hover:bg-zinc-800 dark:hover:text-zinc-300">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        {{-- Container do mapa --}}
+        <div id="leaflet-map" style="height:400px;"></div>
+    </div>
+
+    {{-- ═══════════════════════════════════════════════════════════════════════ --}}
+    {{-- ─── Confirmação limpar tudo ─────────────────────────────────────────── --}}
+    {{-- ═══════════════════════════════════════════════════════════════════════ --}}
+    <div id="confirm-backdrop"
+         onclick="closeConfirmModal()"
+         class="fixed inset-0 z-40 hidden bg-black/40 backdrop-blur-sm"></div>
+
+    <div id="confirm-modal"
+         class="fixed inset-x-4 top-1/2 z-50 hidden w-full max-w-sm -translate-y-1/2 overflow-hidden
+                rounded-2xl border shadow-2xl
+                border-slate-200 bg-white
+                dark:border-zinc-700 dark:bg-zinc-900
+                sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2">
+        <div class="p-6">
+            <div class="flex h-11 w-11 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-950/40">
+                <svg class="h-5 w-5 text-rose-600 dark:text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+                </svg>
+            </div>
+            <h3 class="mt-4 text-base font-semibold text-zinc-900 dark:text-zinc-100">Limpar todos os campos?</h3>
+            <p class="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+                Status, documento, origem, destino e observação serão apagados. Esta ação não pode ser desfeita.
+            </p>
+            <div class="mt-5 flex justify-end gap-2">
+                <button type="button" onclick="closeConfirmModal()"
+                        class="rounded-lg border px-4 py-2 text-sm font-medium transition-colors
+                               border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50
+                               dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700">
+                    Cancelar
+                </button>
+                <button type="button" id="confirm-btn-ok"
+                        class="rounded-lg px-4 py-2 text-sm font-medium transition-colors
+                               bg-rose-600 text-white hover:bg-rose-700
+                               dark:bg-rose-700 dark:hover:bg-rose-600">
+                    Sim, limpar tudo
+                </button>
+            </div>
+        </div>
+    </div>
 
     {{-- ═══════════════════════════════════════════════════════════════════════ --}}
     {{-- ─── Implemento modal ───────────────────────────────────────────────── --}}
@@ -449,7 +769,7 @@
     (function () {
         // ─── Column visibility (localStorage) ──────────────────────────────
         var STORE_KEY = 'ct_hidden_cols';
-        var ALL_COLS  = ['prefixo', 'divisao', 'status-op', 'documento', 'obs'];
+        var ALL_COLS  = ['placa', 'tempo', 'status-op', 'condutor', 'documento', 'origem', 'destino', 'obs', 'modelo', 'divisao'];
 
         function hiddenCols() {
             try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch (e) { return []; }
@@ -510,10 +830,36 @@
             updateCounter(visible);
         });
 
-        // Auto-dismiss flash
-        var flash = document.getElementById('flash-success');
-        if (flash) { setTimeout(function () { flash.style.display = 'none'; }, 4000); }
     })();
+
+    // ─── Limpar Tudo modal ───────────────────────────────────────────────────
+    var _limparRowId = null;
+
+    function confirmLimparTudo(editRowId) {
+        _limparRowId = editRowId;
+        document.getElementById('confirm-backdrop').classList.remove('hidden');
+        document.getElementById('confirm-modal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeConfirmModal() {
+        document.getElementById('confirm-backdrop').classList.add('hidden');
+        document.getElementById('confirm-modal').classList.add('hidden');
+        document.body.style.overflow = '';
+        _limparRowId = null;
+    }
+
+    document.getElementById('confirm-btn-ok').addEventListener('click', function () {
+        if (!_limparRowId) { return; }
+        var row = document.getElementById(_limparRowId);
+        // Clear all inputs and selects in the edit form
+        row.querySelectorAll('input[type="text"], select').forEach(function (el) {
+            el.value = '';
+        });
+        // Submit the form
+        row.querySelector('form').submit();
+        closeConfirmModal();
+    });
 
     // ─── Inline edit rows ────────────────────────────────────────────────────
     function toggleEditRow(id) {
@@ -641,8 +987,160 @@
     }
 
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') { closeImplementoModal(); }
+        if (e.key === 'Escape') {
+            closeImplementoModal();
+            closeConfirmModal();
+            closeMapModal();
+        }
     });
+    </script>
+
+    {{-- Leaflet.js --}}
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+
+    <script>
+    // ─── Mapa (Leaflet.js) ───────────────────────────────────────────────────
+    var _leafletMap      = null;
+    var _leafletMarker   = null;
+    var _mapIsFullscreen = false;
+    var _currentMapPlate = null;
+    var _posicaoBaseUrl  = '{{ url("torre-de-controle/posicao") }}';
+
+    function _applyMapSize(fullscreen) {
+        var overlay  = document.getElementById('map-overlay');
+        var mapDiv   = document.getElementById('leaflet-map');
+        var backdrop = document.getElementById('map-backdrop');
+        var iconExp  = document.getElementById('map-icon-expand');
+        var iconCmp  = document.getElementById('map-icon-compress');
+        var btn      = document.getElementById('map-btn-fs');
+
+        if (fullscreen) {
+            overlay.style.top          = '0';
+            overlay.style.left         = '0';
+            overlay.style.right        = '0';
+            overlay.style.bottom       = '0';
+            overlay.style.width        = '';
+            overlay.style.maxWidth     = '';
+            overlay.style.transform    = 'none';
+            overlay.style.borderRadius = '0';
+            overlay.style.boxShadow    = 'none';
+            mapDiv.style.height        = 'calc(100vh - 57px)';
+            backdrop.style.display     = 'none';
+            iconExp.style.display      = 'none';
+            iconCmp.style.display      = 'block';
+            btn.title                  = 'Sair da tela cheia';
+        } else {
+            overlay.style.top          = '50%';
+            overlay.style.left         = '50%';
+            overlay.style.right        = '';
+            overlay.style.bottom       = '';
+            overlay.style.width        = '680px';
+            overlay.style.maxWidth     = 'calc(100vw - 2rem)';
+            overlay.style.transform    = 'translate(-50%, -50%)';
+            overlay.style.borderRadius = '1rem';
+            overlay.style.boxShadow    = '0 25px 50px -12px rgba(0,0,0,.35)';
+            mapDiv.style.height        = '400px';
+            backdrop.style.display     = 'block';
+            iconExp.style.display      = 'block';
+            iconCmp.style.display      = 'none';
+            btn.title                  = 'Expandir mapa';
+        }
+    }
+
+    function updateMapInfo(posicaoAt, syncedAt) {
+        var el    = document.getElementById('map-position-info');
+        var parts = [];
+        if (posicaoAt) { parts.push('Posição: ' + posicaoAt); }
+        if (syncedAt)  { parts.push('Sync: ' + syncedAt); }
+        el.textContent = parts.join(' · ');
+    }
+
+    function openMapModal(lat, lng, label, plate, posicaoAt, syncedAt) {
+        _currentMapPlate = plate;
+        _mapIsFullscreen = false;
+        _applyMapSize(false);
+        document.getElementById('map-overlay').style.display = 'flex';
+        document.getElementById('map-vehicle-label').textContent = label;
+        updateMapInfo(posicaoAt, syncedAt);
+        document.body.style.overflow = 'hidden';
+
+        if (!_leafletMap) {
+            _leafletMap = L.map('leaflet-map').setView([lat, lng], 15);
+
+            var layerRua = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 19
+            });
+
+            var layerSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+                maxZoom: 19
+            });
+
+            layerRua.addTo(_leafletMap);
+
+            L.control.layers(
+                { 'Mapa': layerRua, 'Satélite': layerSatelite },
+                {},
+                { position: 'topright' }
+            ).addTo(_leafletMap);
+
+            _leafletMarker = L.marker([lat, lng])
+                .addTo(_leafletMap)
+                .bindPopup('<strong>' + label + '</strong>')
+                .openPopup();
+        } else {
+            _leafletMap.setView([lat, lng], 15);
+            _leafletMarker.setLatLng([lat, lng])
+                .setPopupContent('<strong>' + label + '</strong>')
+                .openPopup();
+        }
+
+        // Necessário para o Leaflet recalcular o tamanho após o modal se tornar visível
+        setTimeout(function () { _leafletMap.invalidateSize(); }, 150);
+    }
+
+    function refreshMapPosition() {
+        if (! _currentMapPlate) { return; }
+
+        var btn  = document.getElementById('map-btn-refresh');
+        var icon = document.getElementById('map-refresh-icon');
+        btn.disabled = true;
+        icon.style.animation = 'spin 1s linear infinite';
+
+        fetch(_posicaoBaseUrl + '/' + encodeURIComponent(_currentMapPlate), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (! data.ok) { return; }
+            if (_leafletMap && _leafletMarker) {
+                _leafletMap.setView([data.latitude, data.longitude], 15);
+                _leafletMarker.setLatLng([data.latitude, data.longitude]).openPopup();
+            }
+            updateMapInfo(data.position_at, data.synced_at);
+        })
+        .finally(function () {
+            btn.disabled = false;
+            icon.style.animation = '';
+        });
+    }
+
+    function toggleMapFullscreen() {
+        _mapIsFullscreen = !_mapIsFullscreen;
+        _applyMapSize(_mapIsFullscreen);
+        if (_leafletMap) {
+            setTimeout(function () { _leafletMap.invalidateSize(); }, 150);
+        }
+    }
+
+    function closeMapModal() {
+        document.getElementById('map-overlay').style.display  = 'none';
+        document.getElementById('map-backdrop').style.display = 'none';
+        document.body.style.overflow = '';
+        _mapIsFullscreen  = false;
+        _currentMapPlate  = null;
+    }
     </script>
 
 </x-layouts.app>

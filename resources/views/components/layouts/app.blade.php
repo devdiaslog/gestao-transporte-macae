@@ -62,23 +62,10 @@
 
         {{-- Navigation --}}
         @php
-            $isCadastrosActive = request()->routeIs('users.*', 'divisoes.*', 'subdivisoes.*', 'equipamentos.*', 'tipos-equipamentos.*', 'modelos-equipamentos.*');
+            $isCadastrosActive = request()->routeIs('users.*', 'divisoes.*', 'subdivisoes.*', 'equipamentos.*', 'tipos-equipamentos.*', 'modelos-equipamentos.*', 'motoristas.*');
+            $isOcorrenciasActive = request()->routeIs('responsaveis.*', 'tipos-ocorrencia.*', 'justificativas.*', 'ocorrencias.*');
         @endphp
         <nav class="flex-1 space-y-0.5 overflow-y-auto px-2 py-4">
-
-            {{-- Torre de Controle --}}
-            <a href="{{ route('control-tower.index') }}"
-               title="Torre de Controle"
-               class="nav-link flex items-center justify-center rounded-lg py-2.5 text-sm font-medium
-                      transition-all duration-200
-                      {{ request()->routeIs('control-tower.*')
-                          ? 'bg-zinc-900 text-white dark:bg-zinc-800 dark:text-zinc-100'
-                          : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
-                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
-                </svg>
-                <span class="nav-label hidden whitespace-nowrap">Torre de Controle</span>
-            </a>
 
             {{-- Cadastros (accordion) --}}
             <div class="accordion-group">
@@ -106,50 +93,125 @@
 
                     {{-- Usuários --}}
                     <a href="{{ route('users.index') }}"
-                       class="flex items-center gap-2 rounded-lg border-l-2 py-2 pl-3 pr-3 text-sm font-medium
+                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
-                              {{ request()->routeIs('users.*') ? 'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-zinc-400 dark:bg-zinc-800/70 dark:text-zinc-100' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                              {{ request()->routeIs('users.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Usuários
                     </a>
 
                     {{-- Divisões --}}
                     <a href="{{ route('divisoes.index') }}"
-                       class="flex items-center gap-2 rounded-lg border-l-2 py-2 pl-3 pr-3 text-sm font-medium
+                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
-                              {{ request()->routeIs('divisoes.*') ? 'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-zinc-400 dark:bg-zinc-800/70 dark:text-zinc-100' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                              {{ request()->routeIs('divisoes.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Divisões
                     </a>
 
                     {{-- Subdivisões --}}
                     <a href="{{ route('subdivisoes.index') }}"
-                       class="flex items-center gap-2 rounded-lg border-l-2 py-2 pl-3 pr-3 text-sm font-medium
+                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
-                              {{ request()->routeIs('subdivisoes.*') ? 'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-zinc-400 dark:bg-zinc-800/70 dark:text-zinc-100' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                              {{ request()->routeIs('subdivisoes.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Subdivisões
                     </a>
 
                     {{-- Equipamentos --}}
                     <a href="{{ route('equipamentos.index') }}"
-                       class="flex items-center gap-2 rounded-lg border-l-2 py-2 pl-3 pr-3 text-sm font-medium
+                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
-                              {{ request()->routeIs('equipamentos.*') ? 'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-zinc-400 dark:bg-zinc-800/70 dark:text-zinc-100' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                              {{ request()->routeIs('equipamentos.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Equipamentos
                     </a>
 
                     {{-- Tipos de Equipamentos --}}
                     <a href="{{ route('tipos-equipamentos.index') }}"
-                       class="flex items-center gap-2 rounded-lg border-l-2 py-2 pl-3 pr-3 text-sm font-medium
+                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
-                              {{ request()->routeIs('tipos-equipamentos.*') ? 'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-zinc-400 dark:bg-zinc-800/70 dark:text-zinc-100' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                              {{ request()->routeIs('tipos-equipamentos.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Tipos de Equipamentos
                     </a>
 
                     {{-- Modelos de Equipamentos --}}
                     <a href="{{ route('modelos-equipamentos.index') }}"
-                       class="flex items-center gap-2 rounded-lg border-l-2 py-2 pl-3 pr-3 text-sm font-medium
+                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
-                              {{ request()->routeIs('modelos-equipamentos.*') ? 'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-zinc-400 dark:bg-zinc-800/70 dark:text-zinc-100' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                              {{ request()->routeIs('modelos-equipamentos.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Modelos de Equipamentos
+                    </a>
+
+                    {{-- Motoristas --}}
+                    <a href="{{ route('motoristas.index') }}"
+                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
+                              transition-all duration-200
+                              {{ request()->routeIs('motoristas.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                        Motoristas
+                    </a>
+                </div>
+            </div>
+
+            {{-- Torre de Controle --}}
+            <a href="{{ route('control-tower.index') }}"
+               title="Torre de Controle"
+               class="nav-link flex items-center justify-center rounded-lg py-2.5 text-sm font-medium
+                      transition-all duration-200
+                      {{ request()->routeIs('control-tower.*')
+                          ? 'bg-zinc-900 text-white dark:bg-zinc-800 dark:text-zinc-100'
+                          : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
+                </svg>
+                <span class="nav-label hidden whitespace-nowrap">Torre de Controle</span>
+            </a>
+
+            {{-- Ocorrências (accordion) --}}
+            <div class="accordion-group">
+                <button type="button"
+                        title="Ocorrências"
+                        data-accordion="ocorrencias"
+                        class="nav-link accordion-trigger flex w-full items-center justify-center rounded-lg py-2.5 text-sm font-medium
+                               transition-all duration-200
+                               {{ $isOcorrenciasActive ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400' }}
+                               hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100">
+                    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+                    </svg>
+                    <span class="nav-label hidden flex-1 whitespace-nowrap text-left font-semibold">Ocorrências</span>
+                    <svg class="accordion-chevron nav-label hidden h-3.5 w-3.5 shrink-0 transition-transform duration-200"
+                         fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                    </svg>
+                </button>
+
+                <div id="accordion-ocorrencias"
+                     class="accordion-panel mt-0.5 hidden space-y-0.5 pl-3"
+                     {{ $isOcorrenciasActive ? 'data-active' : '' }}>
+
+                    <a href="{{ route('ocorrencias.index') }}"
+                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
+                              transition-all duration-200
+                              {{ request()->routeIs('ocorrencias.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                        Ocorrências
+                    </a>
+
+                    <a href="{{ route('responsaveis.index') }}"
+                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
+                              transition-all duration-200
+                              {{ request()->routeIs('responsaveis.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                        Responsáveis
+                    </a>
+
+                    <a href="{{ route('tipos-ocorrencia.index') }}"
+                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
+                              transition-all duration-200
+                              {{ request()->routeIs('tipos-ocorrencia.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                        Tipos de Ocorrência
+                    </a>
+
+                    <a href="{{ route('justificativas.index') }}"
+                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
+                              transition-all duration-200
+                              {{ request()->routeIs('justificativas.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                        Justificativas
                     </a>
                 </div>
             </div>
@@ -530,12 +592,15 @@
     });
 
     // Auto-open accordion if panel has data-active attribute (set server-side)
-    document.querySelectorAll('.accordion-panel[data-active]').forEach(function (panel) {
-        panel.classList.remove('hidden');
-        var trigger = panel.previousElementSibling;
-        var chevron = trigger && trigger.querySelector('.accordion-chevron');
-        if (chevron) { chevron.style.transform = 'rotate(180deg)'; }
-    });
+    // Skip if sidebar is collapsed — panels must stay hidden when icons-only
+    if (!isDesktop() || !isCollapsed()) {
+        document.querySelectorAll('.accordion-panel[data-active]').forEach(function (panel) {
+            panel.classList.remove('hidden');
+            var trigger = panel.previousElementSibling;
+            var chevron = trigger && trigger.querySelector('.accordion-chevron');
+            if (chevron) { chevron.style.transform = 'rotate(180deg)'; }
+        });
+    }
 
     // ── Theme toggle ────────────────────────────────────────────────────────
     document.getElementById('theme-toggle')?.addEventListener('click', function () {

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Equipamento extends Model
@@ -19,13 +20,17 @@ class Equipamento extends Model
         'sub_divisao_id',
         'implemento_id',
         'implemento_nome_override',
+        'motorista_id',
         'id_elog',
+        'id_rastreador',
         'prefixo',
         'placa',
         'status',
         'status_operacional',
         'documento_demanda',
         'observacao_operacional',
+        'origem',
+        'destino',
     ];
 
     protected function casts(): array
@@ -58,5 +63,22 @@ class Equipamento extends Model
     public function implemento(): BelongsTo
     {
         return $this->belongsTo(Equipamento::class, 'implemento_id');
+    }
+
+    public function motorista(): BelongsTo
+    {
+        return $this->belongsTo(Motorista::class, 'motorista_id');
+    }
+
+    public function posicao(): HasOne
+    {
+        return $this->hasOne(PosicaoVeiculo::class, 'license_plate', 'id_rastreador');
+    }
+
+    public function ultimoLogOperacional(): HasOne
+    {
+        return $this->hasOne(EquipamentoLog::class)
+            ->whereIn('campo', ['Status Operacional', 'Documento de Demanda'])
+            ->latest();
     }
 }

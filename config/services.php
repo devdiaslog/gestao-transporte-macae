@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    'vfleets' => [
+        'token_url' => 'https://idp.vfleets.com.br/realms/integration/protocol/openid-connect/token',
+        'api_url' => 'https://api.vfleets.com.br/ws.integracao/positions/v1',
+        'client_id' => env('VFLEETS_CLIENT_ID'),
+        'client_secret' => env('VFLEETS_CLIENT_SECRET'),
+        'grant_type' => 'client_credentials',
+        'sync_key' => env('VFLEETS_SYNC_KEY'),
+    ],
+
 ];

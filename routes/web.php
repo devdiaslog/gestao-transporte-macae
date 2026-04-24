@@ -4,13 +4,34 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ControlTowerController;
 use App\Http\Controllers\DivisaoController;
 use App\Http\Controllers\EquipamentoController;
+use App\Http\Controllers\JustificativaController;
 use App\Http\Controllers\ModeloEquipamentoController;
+use App\Http\Controllers\MotoristaController;
+use App\Http\Controllers\OcorrenciaController;
+use App\Http\Controllers\ResponsavelController;
 use App\Http\Controllers\SubDivisaoController;
 use App\Http\Controllers\TipoEquipamentoController;
+use App\Http\Controllers\TipoOcorrenciaController;
 use App\Http\Controllers\UserController;
+use App\Services\VfleetsService;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect()->route('users.index'));
+Route::get('/', fn () => redirect()->route('ocorrencias.index'));
+
+// Sincronização de posições — protegida por chave secreta
+Route::get('sync/posicoes', function (VfleetsService $vfleets) {
+    if (request('key') !== config('services.vfleets.sync_key') || ! config('services.vfleets.sync_key')) {
+        abort(403);
+    }
+
+    try {
+        $total = $vfleets->sincronizar();
+
+        return response()->json(['ok' => true, 'sincronizados' => $total]);
+    } catch (Throwable $e) {
+        return response()->json(['ok' => false, 'erro' => $e->getMessage()], 500);
+    }
+})->name('sync.posicoes');
 
 // Auth routes (guest only)
 Route::middleware('guest')->group(function () {
@@ -23,7 +44,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 // Protected routes
 Route::middleware('auth')->group(function () {
     Route::get('torre-de-controle', [ControlTowerController::class, 'index'])->name('control-tower.index');
+    Route::get('torre-de-controle/posicao/{plate}', [ControlTowerController::class, 'posicao'])->name('control-tower.posicao');
     Route::patch('torre-de-controle/{equipamento}/implemento', [ControlTowerController::class, 'updateImplemento'])->name('control-tower.implemento');
+    Route::get('torre-de-controle/{equipamento}/historico', [ControlTowerController::class, 'historico'])->name('control-tower.historico');
 
     Route::resource('users', UserController::class)->except(['show']);
     Route::get('users-export', [UserController::class, 'export'])->name('users.export');
@@ -39,4 +62,13 @@ Route::middleware('auth')->group(function () {
     Route::resource('equipamentos', EquipamentoController::class)->except(['show'])->parameters(['equipamentos' => 'equipamento']);
     Route::get('equipamentos-export', [EquipamentoController::class, 'export'])->name('equipamentos.export');
     Route::patch('equipamentos/{equipamento}/operacional', [EquipamentoController::class, 'updateOperacional'])->name('equipamentos.operacional');
+
+    Route::resource('motoristas', MotoristaController::class)->except(['show']);
+
+    Route::resource('responsaveis', ResponsavelController::class)->except(['show'])->parameters(['responsaveis' => 'responsavel']);
+    Route::resource('tipos-ocorrencia', TipoOcorrenciaController::class)->except(['show'])->parameters(['tipos-ocorrencia' => 'tipoOcorrencia']);
+    Route::resource('justificativas', JustificativaController::class)->except(['show'])->parameters(['justificativas' => 'justificativa']);
+    Route::get('ocorrencias-export', [OcorrenciaController::class, 'export'])->name('ocorrencias.export');
+    Route::get('ocorrencias/veiculo/{equipamento}', [OcorrenciaController::class, 'veiculo'])->name('ocorrencias.veiculo');
+    Route::resource('ocorrencias', OcorrenciaController::class)->except(['show'])->parameters(['ocorrencias' => 'ocorrencia']);
 });

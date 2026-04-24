@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             DivisaoSeeder::class,
             TipoEquipamentoSeeder::class,
             ModeloEquipamentoSeeder::class,
+            StatusOperacionalSeeder::class,
         ]);
     }
 }
