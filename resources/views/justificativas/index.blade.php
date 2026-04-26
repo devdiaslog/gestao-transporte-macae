@@ -102,7 +102,7 @@
                         @foreach($justificativas as $justificativa)
                             <tr class="transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-zinc-800/30">
                                 <td class="px-6 py-4">
-                                    <p class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $justificativa->descricao }}</p>
+                                    <p class="font-semibold text-zinc-900 dark:text-zinc-100">{{ titulo($justificativa->descricao) }}</p>
                                 </td>
                                 <td class="px-6 py-4">
                                     @if($justificativa->obrigar_observacao)

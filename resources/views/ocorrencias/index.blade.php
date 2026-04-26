@@ -62,7 +62,7 @@
                            dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:focus:border-zinc-400">
                 <option value="">Todos os tipos</option>
                 @foreach($tipos as $tipo)
-                    <option value="{{ $tipo->id_tipo }}" @selected($currentTipo == $tipo->id_tipo)>{{ $tipo->descricao }}</option>
+                    <option value="{{ $tipo->id_tipo }}" @selected($currentTipo == $tipo->id_tipo)>{{ titulo($tipo->descricao) }}</option>
                 @endforeach
             </select>
 
@@ -73,7 +73,7 @@
                 <option value="">Todos os responsáveis</option>
                 @foreach($responsaveis as $responsavel)
                     <option value="{{ $responsavel->id_responsavel }}" @selected($currentResponsavel == $responsavel->id_responsavel)>
-                        {{ $responsavel->nome }}
+                        {{ titulo($responsavel->nome) }}
                     </option>
                 @endforeach
             </select>
@@ -155,6 +155,7 @@
                             <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Início</th>
                             <th scope="col" class="hidden px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 lg:table-cell">Fim</th>
                             <th scope="col" class="hidden px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 xl:table-cell">Documento</th>
+                            <th scope="col" class="hidden px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 xl:table-cell">Nº RO</th>
                             <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Ações</th>
                         </tr>
                     </thead>
@@ -169,7 +170,7 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <span class="inline-flex items-center rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                                        {{ $ocorrencia->tipo?->descricao ?? '—' }}
+                                        {{ $ocorrencia->tipo ? titulo($ocorrencia->tipo->descricao) : '—' }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4">
@@ -186,7 +187,7 @@
                                     @endif
                                 </td>
                                 <td class="hidden px-6 py-4 text-zinc-600 dark:text-zinc-400 sm:table-cell">
-                                    {{ $ocorrencia->responsavel?->nome ?? '—' }}
+                                    {{ $ocorrencia->responsavel ? titulo($ocorrencia->responsavel->nome) : '—' }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
                                     {{ $ocorrencia->data_hora_inicio->format('d/m/Y H:i') }}
@@ -197,6 +198,9 @@
                                 <td class="hidden px-6 py-4 whitespace-nowrap text-zinc-600 dark:text-zinc-400 xl:table-cell">
                                     {{ $ocorrencia->documento ?? '—' }}
                                 </td>
+                                <td class="hidden px-6 py-4 whitespace-nowrap text-zinc-600 dark:text-zinc-400 xl:table-cell">
+                                    {{ $ocorrencia->numero_ro ?? '—' }}
+                                </td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center justify-end gap-2">
                                         {{-- Ver --}}
@@ -205,13 +209,14 @@
                                                 data-view="{{ json_encode([
                                                     'id'               => $ocorrencia->id_ocorrencia,
                                                     'veiculo'          => ($ocorrencia->veiculo?->placa ?? '—').($ocorrencia->veiculo?->prefixo ? ' — '.$ocorrencia->veiculo->prefixo : ''),
-                                                    'tipo'             => $ocorrencia->tipo?->descricao ?? '—',
+                                                    'tipo'             => $ocorrencia->tipo ? titulo($ocorrencia->tipo->descricao) : '—',
                                                     'status'           => $ocorrencia->status_ocorrencia,
-                                                    'responsavel'      => $ocorrencia->responsavel?->nome ?? '—',
-                                                    'justificativa'    => $ocorrencia->justificativa?->descricao ?? '—',
+                                                    'responsavel'      => $ocorrencia->responsavel ? titulo($ocorrencia->responsavel->nome) : '—',
+                                                    'justificativa'    => $ocorrencia->justificativa ? titulo($ocorrencia->justificativa->descricao) : '—',
                                                     'data_hora_inicio' => $ocorrencia->data_hora_inicio->format('d/m/Y H:i'),
                                                     'data_hora_fim'    => $ocorrencia->data_hora_fim?->format('d/m/Y H:i') ?? '—',
                                                     'documento'        => $ocorrencia->documento ?? '—',
+                                                    'numero_ro'        => $ocorrencia->numero_ro ?? '—',
                                                     'observacao'       => $ocorrencia->observacao ?? '—',
                                                 ]) }}"
                                                 class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-150
@@ -236,6 +241,7 @@
                                                     'data_hora_inicio' => $ocorrencia->data_hora_inicio?->format('Y-m-d\TH:i'),
                                                     'data_hora_fim'    => $ocorrencia->data_hora_fim?->format('Y-m-d\TH:i'),
                                                     'documento'        => $ocorrencia->documento,
+                                                    'numero_ro'        => $ocorrencia->numero_ro,
                                                     'observacao'       => $ocorrencia->observacao,
                                                 ]) }}"
                                                 class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-150
@@ -340,6 +346,10 @@
                     <p class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Documento</p>
                     <p id="view-documento" class="mt-1 text-sm text-zinc-700 dark:text-zinc-300"></p>
                 </div>
+                <div>
+                    <p class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Nº RO</p>
+                    <p id="view-numero-ro" class="mt-1 text-sm text-zinc-700 dark:text-zinc-300"></p>
+                </div>
             </div>
             <div id="view-obs-wrapper" class="px-6 py-4">
                 <p class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Observação</p>
@@ -423,7 +433,7 @@
                                        {{ $errors->has('id_tipo') ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10 dark:border-red-700' : 'border-slate-300 focus:border-zinc-900 focus:ring-zinc-900/10 dark:border-zinc-700 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10' }}">
                             <option value="">— Selecione —</option>
                             @foreach($tipos as $tipo)
-                                <option value="{{ $tipo->id_tipo }}">{{ $tipo->descricao }}</option>
+                                <option value="{{ $tipo->id_tipo }}">{{ titulo($tipo->descricao) }}</option>
                             @endforeach
                         </select>
                         @error('id_tipo')
@@ -443,7 +453,7 @@
                             <option value="">— Nenhum —</option>
                             @foreach($responsaveis as $responsavel)
                                 <option value="{{ $responsavel->id_responsavel }}">
-                                    {{ $responsavel->nome }} ({{ $responsavel->tipo->label() }})
+                                    {{ titulo($responsavel->nome) }} ({{ $responsavel->tipo->label() }})
                                 </option>
                             @endforeach
                         </select>
@@ -466,7 +476,7 @@
                             @foreach($justificativas as $justificativa)
                                 <option value="{{ $justificativa->id_justificativa }}"
                                         data-obrigar="{{ $justificativa->obrigar_observacao ? '1' : '0' }}">
-                                    {{ $justificativa->descricao }}
+                                    {{ titulo($justificativa->descricao) }}
                                 </option>
                             @endforeach
                         </select>
@@ -502,14 +512,27 @@
                     </div>
 
                     {{-- Documento --}}
-                    <div class="space-y-1.5 sm:col-span-2">
+                    <div class="space-y-1.5">
                         <label for="modal-documento" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Documento</label>
                         <input id="modal-documento" type="text" name="documento" maxlength="100"
-                               placeholder="Ex.: NF-12345, OS-789…"
+                               placeholder="Ex.: 509488769, 6100026000…"
                                class="block w-full rounded-lg border px-3.5 py-2.5 text-sm shadow-xs outline-none transition-all duration-200 focus:ring-2
                                       bg-white text-zinc-900 placeholder:text-zinc-400 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500
                                       {{ $errors->has('documento') ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10 dark:border-red-700' : 'border-slate-300 focus:border-zinc-900 focus:ring-zinc-900/10 dark:border-zinc-700 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10' }}">
                         @error('documento')
+                            <p class="modal-field-error text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    {{-- Número RO --}}
+                    <div class="space-y-1.5">
+                        <label for="modal-numero-ro" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Nº RO</label>
+                        <input id="modal-numero-ro" type="text" name="numero_ro" maxlength="100"
+                               placeholder="Ex.: 12345/2026…"
+                               class="block w-full rounded-lg border px-3.5 py-2.5 text-sm shadow-xs outline-none transition-all duration-200 focus:ring-2
+                                      bg-white text-zinc-900 placeholder:text-zinc-400 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500
+                                      {{ $errors->has('numero_ro') ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10 dark:border-red-700' : 'border-slate-300 focus:border-zinc-900 focus:ring-zinc-900/10 dark:border-zinc-700 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10' }}">
+                        @error('numero_ro')
                             <p class="modal-field-error text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
                         @enderror
                     </div>
@@ -628,7 +651,7 @@
         // ─── Limpar erros de validação do modal ──────────────────────────────────
         var errorBorderClasses  = ['border-red-400', 'focus:border-red-500', 'focus:ring-red-500/10', 'dark:border-red-700'];
         var normalBorderClasses = ['border-slate-300', 'focus:border-zinc-900', 'focus:ring-zinc-900/10', 'dark:border-zinc-700', 'dark:focus:border-zinc-400', 'dark:focus:ring-zinc-400/10'];
-        var modalFieldIds       = ['modal-id-veiculo', 'modal-id-tipo', 'modal-id-responsavel', 'modal-id-justificativa', 'modal-data-inicio', 'modal-data-fim', 'modal-documento', 'modal-observacao'];
+        var modalFieldIds       = ['modal-id-veiculo', 'modal-id-tipo', 'modal-id-responsavel', 'modal-id-justificativa', 'modal-data-inicio', 'modal-data-fim', 'modal-documento', 'modal-numero-ro', 'modal-observacao'];
 
         function clearModalErrors() {
             document.querySelectorAll('.modal-field-error').forEach(function (el) { el.remove(); });
@@ -648,6 +671,7 @@
             document.getElementById('modal-data-inicio').value      = '';
             document.getElementById('modal-data-fim').value         = '';
             document.getElementById('modal-documento').value        = '';
+            document.getElementById('modal-numero-ro').value        = '';
             obsArea.value                                            = '';
             filterResponsaveis();
             filterJustificativas();
@@ -694,6 +718,7 @@
             document.getElementById('modal-data-inicio').value    = data.data_hora_inicio || '';
             document.getElementById('modal-data-fim').value       = data.data_hora_fim    || '';
             document.getElementById('modal-documento').value      = data.documento        || '';
+            document.getElementById('modal-numero-ro').value      = data.numero_ro        || '';
             obsArea.value                                          = data.observacao       || '';
 
             filterResponsaveis();
@@ -726,6 +751,7 @@
             document.getElementById('view-inicio').textContent        = data.data_hora_inicio;
             document.getElementById('view-fim').textContent           = data.data_hora_fim;
             document.getElementById('view-documento').textContent     = data.documento;
+            document.getElementById('view-numero-ro').textContent     = data.numero_ro;
             document.getElementById('view-observacao').textContent    = data.observacao;
 
             var badge = document.getElementById('view-status-badge');
@@ -760,6 +786,7 @@
             if (old.data_hora_inicio) { document.getElementById('modal-data-inicio').value = old.data_hora_inicio; }
             if (old.data_hora_fim)    { document.getElementById('modal-data-fim').value    = old.data_hora_fim; }
             if (old.documento)        { document.getElementById('modal-documento').value   = old.documento; }
+            if (old.numero_ro)        { document.getElementById('modal-numero-ro').value   = old.numero_ro; }
             if (old.observacao)       { obsArea.value                                      = old.observacao; }
 
             filterResponsaveis();

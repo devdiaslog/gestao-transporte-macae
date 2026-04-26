@@ -77,6 +77,7 @@ class StoreOcorrenciaRequest extends FormRequest
             'data_hora_fim' => ['nullable', 'date', 'after_or_equal:data_hora_inicio'],
             'observacao' => ['nullable', 'string'],
             'documento' => ['nullable', 'string', 'max:100'],
+            'numero_ro' => ['nullable', 'string', 'max:100'],
         ];
     }
 

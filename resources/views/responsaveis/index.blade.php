@@ -117,7 +117,7 @@
                         @foreach($responsaveis as $responsavel)
                             <tr class="transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-zinc-800/30">
                                 <td class="px-6 py-4">
-                                    <p class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $responsavel->nome }}</p>
+                                    <p class="font-semibold text-zinc-900 dark:text-zinc-100">{{ titulo($responsavel->nome) }}</p>
                                 </td>
                                 <td class="px-6 py-4">
                                     @if($responsavel->tipo->value === 'INTERNO')

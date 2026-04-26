@@ -24,6 +24,7 @@ class Ocorrencia extends Model
         'data_hora_fim',
         'observacao',
         'documento',
+        'numero_ro',
     ];
 
     protected function casts(): array

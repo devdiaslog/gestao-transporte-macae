@@ -84,7 +84,7 @@
                         @foreach($tipos as $tipo)
                             <tr class="transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-zinc-800/30">
                                 <td class="px-6 py-4">
-                                    <p class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $tipo->descricao }}</p>
+                                    <p class="font-semibold text-zinc-900 dark:text-zinc-100">{{ titulo($tipo->descricao) }}</p>
                                 </td>
                                 <td class="hidden px-6 py-4 text-zinc-500 dark:text-zinc-400 sm:table-cell">
                                     {{ $tipo->created_at->format('d/m/Y') }}

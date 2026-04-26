@@ -13,6 +13,9 @@ class DatabaseSeeder extends Seeder
             TipoEquipamentoSeeder::class,
             ModeloEquipamentoSeeder::class,
             StatusOperacionalSeeder::class,
+            ResponsavelSeeder::class,
+            TipoOcorrenciaSeeder::class,
+            JustificativaSeeder::class,
         ]);
     }
 }
