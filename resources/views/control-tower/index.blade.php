@@ -138,30 +138,60 @@
             </a>
         </form>
 
-        {{-- Column toggles --}}
-        <div class="ml-auto flex items-center gap-1.5">
-            <span class="text-xs text-zinc-400 dark:text-zinc-600">Colunas:</span>
-            @foreach([
-                ['col' => 'placa',     'label' => 'Placa'],
-                ['col' => 'tempo',     'label' => 'Tp Atualização'],
-                ['col' => 'status-op', 'label' => 'Status'],
-                ['col' => 'condutor',  'label' => 'Condutor'],
-                ['col' => 'documento', 'label' => 'Documento'],
-                ['col' => 'origem',    'label' => 'Origem'],
-                ['col' => 'destino',   'label' => 'Destino'],
-                ['col' => 'obs',       'label' => 'Observação'],
-                ['col' => 'modelo',    'label' => 'Modelo'],
-                ['col' => 'divisao',   'label' => 'Divisão'],
-            ] as $tog)
-                <button type="button"
-                        data-toggle-col="{{ $tog['col'] }}"
-                        onclick="toggleColumn('{{ $tog['col'] }}')"
-                        class="col-toggle rounded-md border px-2 py-1 text-xs font-medium transition-colors
-                               border-zinc-200 bg-white text-zinc-600
-                               dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-                    {{ $tog['label'] }}
-                </button>
-            @endforeach
+        {{-- Column picker --}}
+        <div class="relative ml-auto" id="col-picker-wrapper">
+            <button type="button" id="col-picker-btn" onclick="toggleColPicker()"
+                    class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors
+                           border-slate-200 bg-white text-zinc-600 hover:border-slate-300 hover:bg-slate-50
+                           dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:bg-zinc-900">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 4.5v15m6-15v15M3.75 9h16.5M3.75 15h16.5"/>
+                </svg>
+                Colunas
+            </button>
+
+            {{-- Dropdown panel --}}
+            <div id="col-picker-panel"
+                 class="absolute right-0 top-full z-30 mt-1.5 hidden w-52 overflow-hidden rounded-xl border shadow-lg
+                        border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+
+                {{-- Search --}}
+                <div class="border-b border-slate-100 px-3 py-2 dark:border-zinc-800">
+                    <div class="flex items-center gap-2">
+                        <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+                        </svg>
+                        <input id="col-picker-search" type="text" placeholder="Filtrar…"
+                               class="w-full bg-transparent text-xs outline-none text-zinc-700 placeholder-zinc-400 dark:text-zinc-300 dark:placeholder-zinc-600">
+                    </div>
+                </div>
+
+                {{-- Column list --}}
+                <div class="py-1.5">
+                    <p class="px-3 pb-1 pt-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Colunas</p>
+                    @foreach([
+                        ['col' => 'placa',     'label' => 'Placa'],
+                        ['col' => 'tempo',     'label' => 'Tp Atualização'],
+                        ['col' => 'status-op', 'label' => 'Status'],
+                        ['col' => 'condutor',  'label' => 'Condutor'],
+                        ['col' => 'documento', 'label' => 'Documento'],
+                        ['col' => 'origem',    'label' => 'Origem'],
+                        ['col' => 'destino',   'label' => 'Destino'],
+                        ['col' => 'obs',       'label' => 'Observação'],
+                        ['col' => 'modelo',    'label' => 'Modelo / Implemento'],
+                        ['col' => 'divisao',   'label' => 'Divisão'],
+                    ] as $tog)
+                        <label data-col-label="{{ strtolower($tog['label']) }}"
+                               class="col-picker-item flex cursor-pointer items-center gap-2.5 px-3 py-1.5 transition-colors
+                                      hover:bg-slate-50 dark:hover:bg-zinc-800/50">
+                            <input type="checkbox" data-col="{{ $tog['col'] }}"
+                                   class="col-picker-check h-4 w-4 rounded border-slate-300 accent-zinc-900 dark:accent-zinc-100"
+                                   onchange="toggleColumn('{{ $tog['col'] }}')">
+                            <span class="text-xs text-zinc-700 dark:text-zinc-300">{{ $tog['label'] }}</span>
+                        </label>
+                    @endforeach
+                </div>
+            </div>
         </div>
     </div>
 
@@ -794,26 +824,44 @@
                 document.querySelectorAll('[data-col="' + col + '"]').forEach(function (el) {
                     el.style.display = isHidden ? 'none' : '';
                 });
-                var btn = document.querySelector('[data-toggle-col="' + col + '"]');
-                if (btn) {
-                    if (isHidden) {
-                        btn.classList.remove('border-zinc-200', 'bg-white', 'text-zinc-600', 'dark:border-zinc-700', 'dark:bg-zinc-900', 'dark:text-zinc-400');
-                        btn.classList.add('border-zinc-400', 'bg-zinc-900', 'text-white', 'dark:border-zinc-500', 'dark:bg-zinc-700', 'dark:text-zinc-200');
-                    } else {
-                        btn.classList.add('border-zinc-200', 'bg-white', 'text-zinc-600', 'dark:border-zinc-700', 'dark:bg-zinc-900', 'dark:text-zinc-400');
-                        btn.classList.remove('border-zinc-400', 'bg-zinc-900', 'text-white', 'dark:border-zinc-500', 'dark:bg-zinc-700', 'dark:text-zinc-200');
-                    }
-                }
+                var check = document.querySelector('.col-picker-check[data-col="' + col + '"]');
+                if (check) { check.checked = !isHidden; }
             });
         }
 
         window.toggleColumn = function (col) {
             var hidden = hiddenCols();
-            var idx = hidden.indexOf(col);
+            var idx    = hidden.indexOf(col);
             if (idx === -1) { hidden.push(col); } else { hidden.splice(idx, 1); }
             localStorage.setItem(STORE_KEY, JSON.stringify(hidden));
             applyColVisibility();
         };
+
+        // ─── Column picker dropdown ─────────────────────────────────────────
+        window.toggleColPicker = function () {
+            var panel = document.getElementById('col-picker-panel');
+            panel.classList.toggle('hidden');
+            if (!panel.classList.contains('hidden')) {
+                document.getElementById('col-picker-search').value = '';
+                document.querySelectorAll('.col-picker-item').forEach(function (el) { el.style.display = ''; });
+                document.getElementById('col-picker-search').focus();
+            }
+        };
+
+        document.addEventListener('click', function (e) {
+            var wrapper = document.getElementById('col-picker-wrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                document.getElementById('col-picker-panel').classList.add('hidden');
+            }
+        });
+
+        document.getElementById('col-picker-search').addEventListener('input', function () {
+            var q = this.value.toLowerCase();
+            document.querySelectorAll('.col-picker-item').forEach(function (item) {
+                var lbl = item.dataset.colLabel || '';
+                item.style.display = (!q || lbl.indexOf(q) !== -1) ? '' : 'none';
+            });
+        });
 
         applyColVisibility();
 
@@ -1000,6 +1048,7 @@
 
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
+            document.getElementById('col-picker-panel').classList.add('hidden');
             closeImplementoModal();
             closeConfirmModal();
             closeMapModal();
