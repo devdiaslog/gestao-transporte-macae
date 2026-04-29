@@ -62,12 +62,19 @@
 
         {{-- Navigation --}}
         @php
+            $authUser = auth()->user();
+            $isAdmin = $authUser?->role === \App\Enums\UserRole::Administrador;
+            $isSupervisor = $authUser?->role === \App\Enums\UserRole::Supervisor;
+            $canManageUsers = $isAdmin;
+            $canManageCadastros = $isAdmin || $isSupervisor;
+            $canManageSupportTables = $isAdmin || $isSupervisor;
             $isCadastrosActive = request()->routeIs('users.*', 'divisoes.*', 'subdivisoes.*', 'equipamentos.*', 'tipos-equipamentos.*', 'modelos-equipamentos.*', 'motoristas.*');
             $isOcorrenciasActive = request()->routeIs('responsaveis.*', 'tipos-ocorrencia.*', 'justificativas.*', 'ocorrencias.*');
         @endphp
         <nav class="flex-1 space-y-0.5 overflow-y-auto px-2 py-4">
 
-            {{-- Cadastros (accordion) --}}
+            {{-- Cadastros (accordion) — apenas Administrador e Supervisor --}}
+            @if($canManageCadastros || $canManageUsers)
             <div class="accordion-group">
                 <button type="button"
                         title="Cadastros"
@@ -92,14 +99,17 @@
                      {{ $isCadastrosActive ? 'data-active' : '' }}>
 
                     {{-- Usuários --}}
+                    @if($canManageUsers)
                     <a href="{{ route('users.index') }}"
                        class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
                               {{ request()->routeIs('users.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Usuários
                     </a>
+                    @endif
 
-                    {{-- Divisões --}}
+                    {{-- Divisões → Motoristas — apenas Administrador e Supervisor --}}
+                    @if($canManageCadastros)
                     <a href="{{ route('divisoes.index') }}"
                        class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
@@ -146,8 +156,10 @@
                               {{ request()->routeIs('motoristas.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Motoristas
                     </a>
+                    @endif
                 </div>
             </div>
+            @endif
 
             {{-- Torre de Controle --}}
             <a href="{{ route('control-tower.index') }}"
@@ -193,6 +205,7 @@
                         Ocorrências
                     </a>
 
+                    @if($canManageSupportTables)
                     <a href="{{ route('responsaveis.index') }}"
                        class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
@@ -213,6 +226,7 @@
                               {{ request()->routeIs('justificativas.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Justificativas
                     </a>
+                    @endif
                 </div>
             </div>
 

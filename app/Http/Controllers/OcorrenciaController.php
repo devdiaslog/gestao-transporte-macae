@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Http\Requests\StoreOcorrenciaRequest;
 use App\Http\Requests\UpdateOcorrenciaRequest;
 use App\Models\Equipamento;
@@ -10,6 +11,7 @@ use App\Models\Ocorrencia;
 use App\Models\Responsavel;
 use App\Models\TipoEquipamento;
 use App\Models\TipoOcorrencia;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -47,7 +49,9 @@ class OcorrenciaController extends Controller
 
     public function store(StoreOcorrenciaRequest $request): RedirectResponse
     {
-        Ocorrencia::create($request->validated());
+        Ocorrencia::create(array_merge($request->validated(), [
+            'created_by' => auth()->id(),
+        ]));
 
         return redirect()->back()
             ->with('success', 'Ocorrência registrada com sucesso.');
@@ -128,6 +132,13 @@ class OcorrenciaController extends Controller
 
     public function destroy(Ocorrencia $ocorrencia): RedirectResponse
     {
+        /** @var User $user */
+        $user = auth()->user();
+
+        if ($user->role === UserRole::Operador && $ocorrencia->created_by !== $user->id) {
+            abort(403, 'Você só pode remover ocorrências registradas por você.');
+        }
+
         $ocorrencia->delete();
 
         return redirect()->back()

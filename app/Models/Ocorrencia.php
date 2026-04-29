@@ -25,6 +25,7 @@ class Ocorrencia extends Model
         'observacao',
         'documento',
         'numero_ro',
+        'created_by',
     ];
 
     protected function casts(): array
@@ -60,5 +61,10 @@ class Ocorrencia extends Model
     public function justificativa(): BelongsTo
     {
         return $this->belongsTo(Justificativa::class, 'id_justificativa', 'id_justificativa');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

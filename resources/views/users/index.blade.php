@@ -174,6 +174,9 @@
                             <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
                                 Status
                             </th>
+                            <th scope="col" class="hidden px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 md:table-cell">
+                                Perfil
+                            </th>
                             <th scope="col" class="hidden px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 sm:table-cell">
                                 Cadastrado em
                             </th>
@@ -212,6 +215,15 @@
                                             @if($color === 'amber')   bg-amber-500 @endif">
                                         </span>
                                         {{ $user->status->label() }}
+                                    </span>
+                                </td>
+                                <td class="hidden px-6 py-4 md:table-cell">
+                                    @php $roleColor = $user->role->color(); @endphp
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1
+                                        @if($roleColor === 'violet') bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-400 dark:ring-violet-800/50 @endif
+                                        @if($roleColor === 'blue')   bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:ring-blue-800/50 @endif
+                                        @if($roleColor === 'zinc')   bg-zinc-50 text-zinc-700 ring-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:ring-zinc-700 @endif">
+                                        {{ $user->role->label() }}
                                     </span>
                                 </td>
                                 <td class="hidden px-6 py-4 text-zinc-500 dark:text-zinc-400 sm:table-cell">
