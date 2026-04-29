@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\StatusAuditoria;
 use App\Enums\UserRole;
 use App\Http\Requests\StoreOcorrenciaRequest;
 use App\Http\Requests\UpdateOcorrenciaRequest;
@@ -16,6 +17,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rules\Enum;
 use Illuminate\View\View;
 
 class OcorrenciaController extends Controller
@@ -23,12 +26,13 @@ class OcorrenciaController extends Controller
     public function index(Request $request): View
     {
         $ocorrencias = Ocorrencia::query()
-            ->with(['veiculo', 'tipo', 'responsavel', 'justificativa'])
+            ->with(['veiculo', 'tipo', 'responsavel', 'justificativa', 'creator', 'auditor'])
             ->when($request->filled('id_veiculo'), fn ($q) => $q->where('id_veiculo', $request->id_veiculo))
             ->when($request->filled('id_tipo'), fn ($q) => $q->where('id_tipo', $request->id_tipo))
             ->when($request->filled('id_responsavel'), fn ($q) => $q->where('id_responsavel', $request->id_responsavel))
             ->when(! $request->has('status') || $request->status === 'aberta', fn ($q) => $q->whereNull('data_hora_fim'))
             ->when($request->has('status') && $request->status === 'fechada', fn ($q) => $q->whereNotNull('data_hora_fim'))
+            ->when($request->filled('status_auditoria'), fn ($q) => $q->where('status_auditoria', $request->status_auditoria))
             ->when($request->filled('data_inicio'), fn ($q) => $q->whereDate('data_hora_inicio', '>=', Carbon::parse($request->data_inicio)))
             ->when($request->filled('data_fim'), fn ($q) => $q->whereDate('data_hora_inicio', '<=', Carbon::parse($request->data_fim)))
             ->latest('data_hora_inicio')
@@ -114,7 +118,7 @@ class OcorrenciaController extends Controller
     public function veiculo(Request $request, Equipamento $equipamento): View
     {
         $ocorrencias = Ocorrencia::query()
-            ->with(['tipo', 'responsavel', 'justificativa'])
+            ->with(['tipo', 'responsavel', 'justificativa', 'creator', 'auditor'])
             ->where('id_veiculo', $equipamento->id)
             ->when(! $request->has('status') || $request->status === 'aberta', fn ($q) => $q->whereNull('data_hora_fim'))
             ->when($request->has('status') && $request->status === 'fechada', fn ($q) => $q->whereNotNull('data_hora_fim'))
@@ -128,6 +132,35 @@ class OcorrenciaController extends Controller
         [, $tipos, $responsaveis, $justificativas, $tiposMap, $responsaveisMap] = $this->formData();
 
         return view('ocorrencias.veiculo', compact('equipamento', 'ocorrencias', 'tipos', 'responsaveis', 'justificativas', 'tiposMap', 'responsaveisMap'));
+    }
+
+    public function auditar(Request $request, Ocorrencia $ocorrencia): RedirectResponse
+    {
+        Gate::authorize('auditar-ocorrencias');
+
+        if (is_null($ocorrencia->data_hora_fim)) {
+            abort(422, 'Só é possível auditar ocorrências fechadas.');
+        }
+
+        $request->validate([
+            'status_auditoria' => ['required', new Enum(StatusAuditoria::class)],
+            'observacao_auditoria' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $status = StatusAuditoria::from($request->status_auditoria);
+
+        if ($status === StatusAuditoria::Reprovada && empty($request->observacao_auditoria)) {
+            return back()->withErrors(['observacao_auditoria' => 'Informe o motivo da reprovação.']);
+        }
+
+        $ocorrencia->update([
+            'status_auditoria' => $status,
+            'auditado_por' => $status === StatusAuditoria::Pendente ? null : auth()->id(),
+            'auditado_em' => $status === StatusAuditoria::Pendente ? null : now(),
+            'observacao_auditoria' => $status === StatusAuditoria::Pendente ? null : $request->observacao_auditoria,
+        ]);
+
+        return redirect()->back()->with('success', 'Auditoria registrada com sucesso.');
     }
 
     public function destroy(Ocorrencia $ocorrencia): RedirectResponse

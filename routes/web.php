@@ -53,6 +53,7 @@ Route::middleware('auth')->group(function () {
     // Ocorrências — acessível a todos os perfis (restrições de edição/exclusão tratadas no controller)
     Route::get('ocorrencias-export', [OcorrenciaController::class, 'export'])->name('ocorrencias.export');
     Route::get('ocorrencias/veiculo/{equipamento}', [OcorrenciaController::class, 'veiculo'])->name('ocorrencias.veiculo');
+    Route::patch('ocorrencias/{ocorrencia}/auditoria', [OcorrenciaController::class, 'auditar'])->name('ocorrencias.auditar');
     Route::resource('ocorrencias', OcorrenciaController::class)->except(['show'])->parameters(['ocorrencias' => 'ocorrencia']);
 
     // Usuários — apenas Administrador

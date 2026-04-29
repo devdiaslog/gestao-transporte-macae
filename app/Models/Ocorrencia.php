@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\StatusAuditoria;
 use Database\Factories\OcorrenciaFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -26,6 +27,10 @@ class Ocorrencia extends Model
         'documento',
         'numero_ro',
         'created_by',
+        'status_auditoria',
+        'auditado_por',
+        'auditado_em',
+        'observacao_auditoria',
     ];
 
     protected function casts(): array
@@ -33,6 +38,8 @@ class Ocorrencia extends Model
         return [
             'data_hora_inicio' => 'datetime',
             'data_hora_fim' => 'datetime',
+            'status_auditoria' => StatusAuditoria::class,
+            'auditado_em' => 'datetime',
         ];
     }
 
@@ -66,5 +73,10 @@ class Ocorrencia extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function auditor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'auditado_por');
     }
 }

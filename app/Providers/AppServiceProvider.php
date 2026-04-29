@@ -24,5 +24,8 @@ class AppServiceProvider extends ServiceProvider
 
         /** Administrador e Supervisor podem gerenciar cadastros (equipamentos, divisões, motoristas, etc.). */
         Gate::define('manage-cadastros', fn (User $user) => in_array($user->role, [UserRole::Administrador, UserRole::Supervisor]));
+
+        /** Administrador e Supervisor podem auditar ocorrências fechadas. */
+        Gate::define('auditar-ocorrencias', fn (User $user) => in_array($user->role, [UserRole::Administrador, UserRole::Supervisor]));
     }
 }

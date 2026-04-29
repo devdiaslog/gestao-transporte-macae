@@ -1,13 +1,15 @@
 <x-layouts.app title="Ocorrências">
 
     @php
-        $currentVeiculo     = request('id_veiculo');
-        $currentTipo        = request('id_tipo');
-        $currentResponsavel = request('id_responsavel');
-        $currentStatus      = request()->has('status') ? request('status') : 'aberta';
-        $currentDataInicio  = request('data_inicio');
-        $currentDataFim     = request('data_fim');
-        $hasFilters         = request()->hasAny(['id_veiculo', 'id_tipo', 'id_responsavel', 'status', 'data_inicio', 'data_fim']);
+        $currentVeiculo          = request('id_veiculo');
+        $currentTipo             = request('id_tipo');
+        $currentResponsavel      = request('id_responsavel');
+        $currentStatus           = request()->has('status') ? request('status') : 'aberta';
+        $currentStatusAuditoria  = request('status_auditoria');
+        $currentDataInicio       = request('data_inicio');
+        $currentDataFim          = request('data_fim');
+        $hasFilters              = request()->hasAny(['id_veiculo', 'id_tipo', 'id_responsavel', 'status', 'status_auditoria', 'data_inicio', 'data_fim']);
+        $canAudit                = auth()->user()->role !== \App\Enums\UserRole::Operador;
     @endphp
 
     <div class="mt-4 flex flex-wrap items-start justify-between gap-4">
@@ -43,7 +45,7 @@
     <form id="filter-form" method="GET" action="{{ route('ocorrencias.index') }}" class="mt-6 space-y-3">
 
         {{-- Linha 1: selects --}}
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <select name="id_veiculo"
                     class="rounded-lg border px-3 py-2.5 text-sm font-medium outline-none transition-all
                            border-slate-300 bg-white text-zinc-700 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
@@ -85,6 +87,16 @@
                 <option value="">Todos os status</option>
                 <option value="aberta"  @selected($currentStatus === 'aberta')>Em Aberto</option>
                 <option value="fechada" @selected($currentStatus === 'fechada')>Fechada</option>
+            </select>
+
+            <select name="status_auditoria"
+                    class="rounded-lg border px-3 py-2.5 text-sm font-medium outline-none transition-all
+                           border-slate-300 bg-white text-zinc-700 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                           dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:focus:border-zinc-400">
+                <option value="">Todas as auditorias</option>
+                <option value="pendente"  @selected($currentStatusAuditoria === 'pendente')>Pendente</option>
+                <option value="aprovada"  @selected($currentStatusAuditoria === 'aprovada')>Aprovada</option>
+                <option value="reprovada" @selected($currentStatusAuditoria === 'reprovada')>Reprovada</option>
             </select>
         </div>
 
@@ -151,6 +163,7 @@
                             <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Veículo</th>
                             <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Tipo</th>
                             <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Status</th>
+                            <th scope="col" class="hidden px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 lg:table-cell">Auditoria</th>
                             <th scope="col" class="hidden px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 sm:table-cell">Responsável</th>
                             <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Início</th>
                             <th scope="col" class="hidden px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 lg:table-cell">Fim</th>
@@ -186,6 +199,15 @@
                                         </span>
                                     @endif
                                 </td>
+                                @php $auditColor = $ocorrencia->status_auditoria->color(); @endphp
+                                <td class="hidden px-6 py-4 lg:table-cell">
+                                    <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium
+                                        @if($auditColor === 'amber')   bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 @endif
+                                        @if($auditColor === 'emerald') bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 @endif
+                                        @if($auditColor === 'red')     bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 @endif">
+                                        {{ $ocorrencia->status_auditoria->label() }}
+                                    </span>
+                                </td>
                                 <td class="hidden px-6 py-4 text-zinc-600 dark:text-zinc-400 sm:table-cell">
                                     {{ $ocorrencia->responsavel ? titulo($ocorrencia->responsavel->nome) : '—' }}
                                 </td>
@@ -207,17 +229,23 @@
                                         <button type="button"
                                                 onclick="openViewModal(this)"
                                                 data-view="{{ json_encode([
-                                                    'id'               => $ocorrencia->id_ocorrencia,
-                                                    'veiculo'          => ($ocorrencia->veiculo?->placa ?? '—').($ocorrencia->veiculo?->prefixo ? ' — '.$ocorrencia->veiculo->prefixo : ''),
-                                                    'tipo'             => $ocorrencia->tipo ? titulo($ocorrencia->tipo->descricao) : '—',
-                                                    'status'           => $ocorrencia->status_ocorrencia,
-                                                    'responsavel'      => $ocorrencia->responsavel ? titulo($ocorrencia->responsavel->nome) : '—',
-                                                    'justificativa'    => $ocorrencia->justificativa ? titulo($ocorrencia->justificativa->descricao) : '—',
-                                                    'data_hora_inicio' => $ocorrencia->data_hora_inicio->format('d/m/Y H:i'),
-                                                    'data_hora_fim'    => $ocorrencia->data_hora_fim?->format('d/m/Y H:i') ?? '—',
-                                                    'documento'        => $ocorrencia->documento ?? '—',
-                                                    'numero_ro'        => $ocorrencia->numero_ro ?? '—',
-                                                    'observacao'       => $ocorrencia->observacao ?? '—',
+                                                    'id'                   => $ocorrencia->id_ocorrencia,
+                                                    'veiculo'              => ($ocorrencia->veiculo?->placa ?? '—').($ocorrencia->veiculo?->prefixo ? ' — '.$ocorrencia->veiculo->prefixo : ''),
+                                                    'tipo'                 => $ocorrencia->tipo ? titulo($ocorrencia->tipo->descricao) : '—',
+                                                    'status'               => $ocorrencia->status_ocorrencia,
+                                                    'responsavel'          => $ocorrencia->responsavel ? titulo($ocorrencia->responsavel->nome) : '—',
+                                                    'justificativa'        => $ocorrencia->justificativa ? titulo($ocorrencia->justificativa->descricao) : '—',
+                                                    'data_hora_inicio'     => $ocorrencia->data_hora_inicio->format('d/m/Y H:i'),
+                                                    'data_hora_fim'        => $ocorrencia->data_hora_fim?->format('d/m/Y H:i') ?? '—',
+                                                    'documento'            => $ocorrencia->documento ?? '—',
+                                                    'numero_ro'            => $ocorrencia->numero_ro ?? '—',
+                                                    'observacao'           => $ocorrencia->observacao ?? '—',
+                                                    'status_auditoria'     => $ocorrencia->status_auditoria->label(),
+                                                    'audit_color'          => $ocorrencia->status_auditoria->color(),
+                                                    'criador_nome'         => $ocorrencia->creator?->name ?? '—',
+                                                    'auditado_por_nome'    => $ocorrencia->auditor?->name ?? null,
+                                                    'auditado_em'          => $ocorrencia->auditado_em?->format('d/m/Y H:i') ?? null,
+                                                    'observacao_auditoria' => $ocorrencia->observacao_auditoria ?? null,
                                                 ]) }}"
                                                 class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-150
                                                        border-zinc-200 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50
@@ -233,16 +261,24 @@
                                         <button type="button"
                                                 onclick="openEditModal(this)"
                                                 data-ocorrencia="{{ json_encode([
-                                                    'id'               => $ocorrencia->id_ocorrencia,
-                                                    'id_veiculo'       => $ocorrencia->id_veiculo,
-                                                    'id_tipo'          => $ocorrencia->id_tipo,
-                                                    'id_responsavel'   => $ocorrencia->id_responsavel,
-                                                    'id_justificativa' => $ocorrencia->id_justificativa,
-                                                    'data_hora_inicio' => $ocorrencia->data_hora_inicio?->format('Y-m-d\TH:i'),
-                                                    'data_hora_fim'    => $ocorrencia->data_hora_fim?->format('Y-m-d\TH:i'),
-                                                    'documento'        => $ocorrencia->documento,
-                                                    'numero_ro'        => $ocorrencia->numero_ro,
-                                                    'observacao'       => $ocorrencia->observacao,
+                                                    'id'                   => $ocorrencia->id_ocorrencia,
+                                                    'id_veiculo'           => $ocorrencia->id_veiculo,
+                                                    'id_tipo'              => $ocorrencia->id_tipo,
+                                                    'id_responsavel'       => $ocorrencia->id_responsavel,
+                                                    'id_justificativa'     => $ocorrencia->id_justificativa,
+                                                    'data_hora_inicio'     => $ocorrencia->data_hora_inicio?->format('Y-m-d\TH:i'),
+                                                    'data_hora_fim'        => $ocorrencia->data_hora_fim?->format('Y-m-d\TH:i'),
+                                                    'documento'            => $ocorrencia->documento,
+                                                    'numero_ro'            => $ocorrencia->numero_ro,
+                                                    'observacao'           => $ocorrencia->observacao,
+                                                    'status_ocorrencia'    => $ocorrencia->status_ocorrencia,
+                                                    'status_auditoria'     => $ocorrencia->status_auditoria->value,
+                                                    'audit_color'          => $ocorrencia->status_auditoria->color(),
+                                                    'criador_nome'         => $ocorrencia->creator?->name ?? '—',
+                                                    'auditado_por_nome'    => $ocorrencia->auditor?->name ?? null,
+                                                    'auditado_em'          => $ocorrencia->auditado_em?->format('d/m/Y H:i') ?? null,
+                                                    'observacao_auditoria' => $ocorrencia->observacao_auditoria ?? null,
+                                                    'audit_url'            => route('ocorrencias.auditar', $ocorrencia),
                                                 ]) }}"
                                                 class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-150
                                                        border-zinc-200 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50
@@ -356,6 +392,31 @@
             <div id="view-obs-wrapper" class="px-6 py-4">
                 <p class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Observação</p>
                 <p id="view-observacao" class="mt-1 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300"></p>
+            </div>
+            <div class="px-6 py-4">
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 mb-3">Rastreabilidade</p>
+                <div class="grid grid-cols-2 gap-x-6 gap-y-3">
+                    <div>
+                        <p class="text-[11px] text-zinc-400 dark:text-zinc-600">Registrado por</p>
+                        <p id="view-criador-nome" class="mt-0.5 text-sm font-medium text-zinc-900 dark:text-zinc-100"></p>
+                    </div>
+                    <div>
+                        <p class="text-[11px] text-zinc-400 dark:text-zinc-600">Auditoria</p>
+                        <p id="view-audit-status" class="mt-0.5"></p>
+                    </div>
+                    <div id="view-auditor-section" class="hidden">
+                        <p class="text-[11px] text-zinc-400 dark:text-zinc-600">Auditado por</p>
+                        <p id="view-auditado-por-nome" class="mt-0.5 text-sm text-zinc-700 dark:text-zinc-300"></p>
+                    </div>
+                    <div id="view-auditado-em-section" class="hidden">
+                        <p class="text-[11px] text-zinc-400 dark:text-zinc-600">Data auditoria</p>
+                        <p id="view-auditado-em" class="mt-0.5 text-sm text-zinc-700 dark:text-zinc-300"></p>
+                    </div>
+                </div>
+                <div id="view-obs-auditoria-wrapper" class="mt-3 hidden">
+                    <p class="text-[11px] text-zinc-400 dark:text-zinc-600">Observação da auditoria</p>
+                    <p id="view-observacao-auditoria" class="mt-0.5 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300"></p>
+                </div>
             </div>
         </div>
 
@@ -552,6 +613,41 @@
                         @enderror
                     </div>
 
+                    @if($canAudit)
+                    {{-- Auditoria --}}
+                    <div id="modal-audit-section" class="hidden sm:col-span-2 border-t border-slate-100 dark:border-zinc-800 pt-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Auditoria</p>
+                                <p id="modal-audit-status-badge" class="mt-1"></p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[11px] text-zinc-400 dark:text-zinc-600">Registrado por</p>
+                                <p id="modal-criador-nome" class="text-sm font-medium text-zinc-700 dark:text-zinc-300"></p>
+                            </div>
+                        </div>
+                        <div id="modal-auditor-info" class="hidden mb-3 rounded-lg bg-slate-50 dark:bg-zinc-800/50 px-4 py-3 text-sm">
+                            <p class="text-[11px] text-zinc-400 dark:text-zinc-600 mb-1">Auditado por</p>
+                            <p id="modal-auditado-por-nome" class="font-medium text-zinc-900 dark:text-zinc-100"></p>
+                            <p id="modal-auditado-em" class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5"></p>
+                            <div id="modal-obs-auditoria-view" class="mt-2 hidden">
+                                <p class="text-[11px] text-zinc-400 dark:text-zinc-600">Motivo</p>
+                                <p id="modal-obs-auditoria-text" class="text-zinc-700 dark:text-zinc-300 mt-0.5"></p>
+                            </div>
+                        </div>
+                        <div id="modal-obs-auditoria-input-wrapper" class="hidden mb-3 space-y-1.5">
+                            <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                                Motivo da reprovação <span class="text-red-500">*</span>
+                            </label>
+                            <textarea id="modal-obs-auditoria-input" rows="2"
+                                      class="block w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm shadow-xs outline-none transition-all duration-200 focus:ring-2 focus:border-zinc-900 focus:ring-zinc-900/10
+                                             bg-white text-zinc-900 placeholder:text-zinc-400 dark:bg-zinc-800 dark:text-zinc-100 dark:border-zinc-700 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10"
+                                      placeholder="Descreva o motivo da reprovação…"></textarea>
+                        </div>
+                        <div id="modal-audit-buttons" class="flex flex-wrap gap-2"></div>
+                    </div>
+                    @endif
+
                 </div>
 
                 {{-- Footer --}}
@@ -574,12 +670,21 @@
         </div>
     </div>
 
+    {{-- ─── Hidden audit form ─────────────────────────────────────────────────── --}}
+    <form id="audit-form" method="POST" class="hidden">
+        @csrf
+        @method('PATCH')
+        <input type="hidden" id="audit-status-input" name="status_auditoria">
+        <input type="hidden" id="audit-obs-input" name="observacao_auditoria">
+    </form>
+
     <script>
     (function () {
         var storeUrl        = '{{ route('ocorrencias.store') }}';
         var updateBase      = '{{ url('ocorrencias') }}';
         var tiposMap        = @json($tiposMap);
         var responsaveisMap = @json($responsaveisMap);
+        var canAudit        = {{ $canAudit ? 'true' : 'false' }};
 
         var justSel     = document.getElementById('modal-id-justificativa');
         var respSel     = document.getElementById('modal-id-responsavel');
@@ -699,6 +804,8 @@
             document.getElementById('modal-method').value         = '';
             document.getElementById('ocorrencia-form').action     = storeUrl;
             resetForm();
+            var auditSection = document.getElementById('modal-audit-section');
+            if (auditSection) { auditSection.classList.add('hidden'); }
             openModal();
             document.getElementById('modal-id-veiculo').focus();
         };
@@ -730,8 +837,145 @@
             justSel.value = data.id_justificativa || '';
             updateObsRequired();
 
+            // ─── Audit section ───────────────────────────────────────────────────
+            var auditSection = document.getElementById('modal-audit-section');
+            if (auditSection) {
+                if (canAudit && data.status_ocorrencia === 'Fechada') {
+                    auditSection.classList.remove('hidden');
+
+                    // Creator
+                    document.getElementById('modal-criador-nome').textContent = data.criador_nome || '—';
+
+                    // Status badge
+                    var badgeEl = document.getElementById('modal-audit-status-badge');
+                    badgeEl.innerHTML = auditBadgeHtml(data.status_auditoria, data.audit_color);
+
+                    // Auditor info
+                    var auditorInfo = document.getElementById('modal-auditor-info');
+                    if (data.auditado_por_nome) {
+                        auditorInfo.classList.remove('hidden');
+                        document.getElementById('modal-auditado-por-nome').textContent = data.auditado_por_nome;
+                        document.getElementById('modal-auditado-em').textContent       = data.auditado_em || '';
+                        var obsView = document.getElementById('modal-obs-auditoria-view');
+                        if (data.observacao_auditoria) {
+                            obsView.classList.remove('hidden');
+                            document.getElementById('modal-obs-auditoria-text').textContent = data.observacao_auditoria;
+                        } else {
+                            obsView.classList.add('hidden');
+                        }
+                    } else {
+                        auditorInfo.classList.add('hidden');
+                    }
+
+                    // Reset obs input
+                    document.getElementById('modal-obs-auditoria-input-wrapper').classList.add('hidden');
+                    document.getElementById('modal-obs-auditoria-input').value = '';
+
+                    // Render action buttons
+                    renderAuditButtons(data);
+                } else {
+                    auditSection.classList.add('hidden');
+                }
+            }
+
             openModal();
         };
+
+        // ─── Audit badge helper ──────────────────────────────────────────────────
+        function auditBadgeHtml(statusValue, color) {
+            var label = statusValue === 'pendente' ? 'Pendente' : (statusValue === 'aprovada' ? 'Aprovada' : 'Reprovada');
+            var cls   = color === 'emerald'
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                : (color === 'red'
+                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400');
+            return '<span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ' + cls + '">' + label + '</span>';
+        }
+
+        // ─── Render audit action buttons ─────────────────────────────────────────
+        function renderAuditButtons(data) {
+            var container = document.getElementById('modal-audit-buttons');
+            container.innerHTML = '';
+
+            var btnBase = 'inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150 border ';
+
+            function makeBtn(label, classes, onClick) {
+                var b = document.createElement('button');
+                b.type      = 'button';
+                b.className = btnBase + classes;
+                b.textContent = label;
+                b.addEventListener('click', onClick);
+                return b;
+            }
+
+            var status = data.status_auditoria;
+
+            if (status === 'pendente') {
+                container.appendChild(makeBtn('Aprovar', 'border-emerald-200 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40', function () {
+                    submitAudit(data.audit_url, 'aprovada', null);
+                }));
+                container.appendChild(makeBtn('Reprovar', 'border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40', function () {
+                    showReprovacaoInput(data);
+                }));
+            } else if (status === 'aprovada') {
+                container.appendChild(makeBtn('Reprovar', 'border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40', function () {
+                    showReprovacaoInput(data);
+                }));
+                container.appendChild(makeBtn('Reverter para Pendente', 'border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60', function () {
+                    if (confirm('Reverter auditoria para pendente?')) { submitAudit(data.audit_url, 'pendente', null); }
+                }));
+            } else {
+                container.appendChild(makeBtn('Aprovar', 'border-emerald-200 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40', function () {
+                    submitAudit(data.audit_url, 'aprovada', null);
+                }));
+                container.appendChild(makeBtn('Reverter para Pendente', 'border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60', function () {
+                    if (confirm('Reverter auditoria para pendente?')) { submitAudit(data.audit_url, 'pendente', null); }
+                }));
+            }
+        }
+
+        function showReprovacaoInput(data) {
+            var wrapper = document.getElementById('modal-obs-auditoria-input-wrapper');
+            wrapper.classList.remove('hidden');
+            var textarea = document.getElementById('modal-obs-auditoria-input');
+            textarea.focus();
+
+            // Replace buttons with confirm button
+            var container = document.getElementById('modal-audit-buttons');
+            container.innerHTML = '';
+            var btnBase = 'inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150 border ';
+
+            var confirmBtn = document.createElement('button');
+            confirmBtn.type      = 'button';
+            confirmBtn.className = btnBase + 'border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40';
+            confirmBtn.textContent = 'Confirmar Reprovação';
+            confirmBtn.addEventListener('click', function () {
+                var obs = textarea.value.trim();
+                if (! obs) { textarea.focus(); return; }
+                submitAudit(data.audit_url, 'reprovada', obs);
+            });
+
+            var cancelBtn = document.createElement('button');
+            cancelBtn.type      = 'button';
+            cancelBtn.className = btnBase + 'border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60';
+            cancelBtn.textContent = 'Cancelar';
+            cancelBtn.addEventListener('click', function () {
+                wrapper.classList.add('hidden');
+                textarea.value = '';
+                renderAuditButtons(data);
+            });
+
+            container.appendChild(confirmBtn);
+            container.appendChild(cancelBtn);
+        }
+
+        function submitAudit(url, status, obs) {
+            var form = document.getElementById('audit-form');
+            form.action = url;
+            document.getElementById('audit-status-input').value = status;
+            document.getElementById('audit-obs-input').value    = obs || '';
+            form.submit();
+        }
 
         // ─── View modal ──────────────────────────────────────────────────────────
         window.closeViewModal = function () {
@@ -761,6 +1005,34 @@
                 badge.innerHTML = '<span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"><span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>Em Aberto</span>';
             } else {
                 badge.innerHTML = '<span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Fechada</span>';
+            }
+
+            // ─── Rastreabilidade ─────────────────────────────────────────────────
+            document.getElementById('view-criador-nome').textContent = data.criador_nome || '—';
+            document.getElementById('view-audit-status').innerHTML   = auditBadgeHtml(
+                data.audit_color === 'emerald' ? 'aprovada' : (data.audit_color === 'red' ? 'reprovada' : 'pendente'),
+                data.audit_color
+            );
+
+            var auditorSection  = document.getElementById('view-auditor-section');
+            var auditadoEmSec   = document.getElementById('view-auditado-em-section');
+            var obsAuditWrapper = document.getElementById('view-obs-auditoria-wrapper');
+
+            if (data.auditado_por_nome) {
+                auditorSection.classList.remove('hidden');
+                auditadoEmSec.classList.remove('hidden');
+                document.getElementById('view-auditado-por-nome').textContent = data.auditado_por_nome;
+                document.getElementById('view-auditado-em').textContent       = data.auditado_em || '';
+            } else {
+                auditorSection.classList.add('hidden');
+                auditadoEmSec.classList.add('hidden');
+            }
+
+            if (data.observacao_auditoria) {
+                obsAuditWrapper.classList.remove('hidden');
+                document.getElementById('view-observacao-auditoria').textContent = data.observacao_auditoria;
+            } else {
+                obsAuditWrapper.classList.add('hidden');
             }
 
             document.getElementById('view-backdrop').classList.remove('hidden');
