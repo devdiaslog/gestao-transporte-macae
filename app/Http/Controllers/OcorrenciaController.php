@@ -149,7 +149,7 @@ class OcorrenciaController extends Controller
 
         $status = StatusAuditoria::from($request->status_auditoria);
 
-        if ($status === StatusAuditoria::Reprovada && empty($request->observacao_auditoria)) {
+        if ($status === StatusAuditoria::Reprovada && blank($request->observacao_auditoria)) {
             return back()->withErrors(['observacao_auditoria' => 'Informe o motivo da reprovação.']);
         }
 

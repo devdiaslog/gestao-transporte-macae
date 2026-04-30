@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\UserRole;
+use App\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -27,7 +28,7 @@ class UserSeeder extends Seeder
                 [
                     'name' => $data['name'],
                     'password' => Hash::make($data['password']),
-                    'status' => 'active',
+                    'status' => UserStatus::Active,
                     'role' => $data['role'],
                 ],
             );
