@@ -332,7 +332,7 @@
          class="fixed inset-0 z-40 hidden bg-black/40 backdrop-blur-sm"></div>
 
     <div id="view-modal"
-         class="fixed inset-x-4 top-1/2 z-50 hidden w-full max-w-lg -translate-y-1/2 overflow-hidden
+         class="fixed inset-x-4 top-1/2 z-50 hidden w-full max-w-xl -translate-y-1/2 overflow-hidden
                 rounded-2xl border shadow-2xl
                 border-slate-200 bg-white
                 dark:border-zinc-700 dark:bg-zinc-900
@@ -437,7 +437,7 @@
 
     {{-- ─── Modal criar / editar ────────────────────────────────────────────────── --}}
     <div id="ocorrencia-modal"
-         class="fixed inset-x-4 top-1/2 z-50 hidden w-full max-w-2xl -translate-y-1/2 overflow-hidden
+         class="fixed inset-x-4 top-1/2 z-50 hidden w-full max-w-3xl -translate-y-1/2 overflow-hidden
                 rounded-2xl border shadow-2xl
                 border-slate-200 bg-white
                 dark:border-zinc-700 dark:bg-zinc-900
@@ -626,7 +626,7 @@
                                 <p id="modal-criador-nome" class="text-sm font-medium text-zinc-700 dark:text-zinc-300"></p>
                             </div>
                         </div>
-                        <div id="modal-auditor-info" class="hidden mb-3 rounded-lg bg-slate-50 dark:bg-zinc-800/50 px-4 py-3 text-sm">
+                        <div id="modal-auditor-info" class="hidden mb-3 rounded-lg border border-slate-200 bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800/50 px-4 py-3 text-sm">
                             <p class="text-[11px] text-zinc-400 dark:text-zinc-600 mb-1">Auditado por</p>
                             <p id="modal-auditado-por-nome" class="font-medium text-zinc-900 dark:text-zinc-100"></p>
                             <p id="modal-auditado-em" class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5"></p>
@@ -922,14 +922,14 @@
                     showReprovacaoInput(data);
                 }));
                 container.appendChild(makeBtn('Reverter para Pendente', 'border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60', function () {
-                    if (confirm('Reverter auditoria para pendente?')) { submitAudit(data.audit_url, 'pendente', null); }
+                    showReverterConfirmacao(data);
                 }));
             } else {
                 container.appendChild(makeBtn('Aprovar', 'border-emerald-200 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40', function () {
                     submitAudit(data.audit_url, 'aprovada', null);
                 }));
                 container.appendChild(makeBtn('Reverter para Pendente', 'border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60', function () {
-                    if (confirm('Reverter auditoria para pendente?')) { submitAudit(data.audit_url, 'pendente', null); }
+                    showReverterConfirmacao(data);
                 }));
             }
         }
@@ -965,6 +965,40 @@
                 renderAuditButtons(data);
             });
 
+            container.appendChild(confirmBtn);
+            container.appendChild(cancelBtn);
+        }
+
+        function showReverterConfirmacao(data) {
+            var wrapper = document.getElementById('modal-obs-auditoria-input-wrapper');
+            wrapper.classList.add('hidden');
+
+            var container = document.getElementById('modal-audit-buttons');
+            container.innerHTML = '';
+            var btnBase = 'inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150 border ';
+
+            // Inline confirm message
+            var msg = document.createElement('span');
+            msg.className   = 'text-xs text-zinc-500 dark:text-zinc-400 self-center';
+            msg.textContent = 'Reverter para Pendente?';
+
+            var confirmBtn = document.createElement('button');
+            confirmBtn.type      = 'button';
+            confirmBtn.className = btnBase + 'border-zinc-300 bg-zinc-900 text-white hover:bg-zinc-700 dark:border-zinc-600 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200';
+            confirmBtn.textContent = 'Confirmar';
+            confirmBtn.addEventListener('click', function () {
+                submitAudit(data.audit_url, 'pendente', null);
+            });
+
+            var cancelBtn = document.createElement('button');
+            cancelBtn.type      = 'button';
+            cancelBtn.className = btnBase + 'border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60';
+            cancelBtn.textContent = 'Cancelar';
+            cancelBtn.addEventListener('click', function () {
+                renderAuditButtons(data);
+            });
+
+            container.appendChild(msg);
             container.appendChild(confirmBtn);
             container.appendChild(cancelBtn);
         }
