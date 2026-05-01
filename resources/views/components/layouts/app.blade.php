@@ -180,6 +180,7 @@
                 <button type="button"
                         title="Ocorrências"
                         data-accordion="ocorrencias"
+                        data-href="{{ route('ocorrencias.index') }}"
                         class="nav-link accordion-trigger flex w-full items-center justify-center rounded-lg py-2.5 text-sm font-medium
                                transition-all duration-200
                                {{ $isOcorrenciasActive ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400' }}
@@ -592,7 +593,11 @@
     // ── Accordion nav ───────────────────────────────────────────────────────
     document.querySelectorAll('.accordion-trigger').forEach(function (trigger) {
         trigger.addEventListener('click', function () {
-            if (isDesktop() && isCollapsed()) { return; }
+            if (isDesktop() && sidebar.classList.contains('w-16')) {
+                var href = trigger.dataset.href;
+                if (href) { window.location.href = href; }
+                return;
+            }
 
             var key    = trigger.dataset.accordion;
             var panel  = document.getElementById('accordion-' + key);

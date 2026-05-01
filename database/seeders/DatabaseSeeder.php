@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             ResponsavelSeeder::class,
             TipoOcorrenciaSeeder::class,
             JustificativaSeeder::class,
+            EquipamentoSeeder::class,
         ]);
     }
 }
