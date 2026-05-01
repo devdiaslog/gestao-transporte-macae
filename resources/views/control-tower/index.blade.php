@@ -1,7 +1,7 @@
 <x-layouts.app title="Torre de Controle">
 
     {{-- Leaflet.js CSS --}}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
+    <link rel="stylesheet" href="/vendor/leaflet/leaflet.css"/>
     <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
 
 
@@ -1057,7 +1057,7 @@
     </script>
 
     {{-- Leaflet.js --}}
-    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+    <script src="/vendor/leaflet/leaflet.js"></script>
 
     <script>
     // ─── Mapa (Leaflet.js) ───────────────────────────────────────────────────
