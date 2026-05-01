@@ -19,6 +19,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700&display=swap" rel="stylesheet">
 
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="alternate icon" href="/favicon.ico">
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
@@ -175,61 +178,45 @@
                 <span class="nav-label hidden whitespace-nowrap">Torre de Controle</span>
             </a>
 
-            {{-- Ocorrências (accordion) --}}
-            <div class="accordion-group">
-                <button type="button"
-                        title="Ocorrências"
-                        data-accordion="ocorrencias"
-                        data-href="{{ route('ocorrencias.index') }}"
-                        class="nav-link accordion-trigger flex w-full items-center justify-center rounded-lg py-2.5 text-sm font-medium
-                               transition-all duration-200
-                               {{ $isOcorrenciasActive ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400' }}
-                               hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100">
-                    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
-                    </svg>
-                    <span class="nav-label hidden flex-1 whitespace-nowrap text-left font-semibold">Ocorrências</span>
-                    <svg class="accordion-chevron nav-label hidden h-3.5 w-3.5 shrink-0 transition-transform duration-200"
-                         fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-                    </svg>
-                </button>
+            {{-- Ocorrências --}}
+            <a href="{{ route('ocorrencias.index') }}"
+               title="Ocorrências"
+               class="nav-link flex items-center justify-center rounded-lg py-2.5 text-sm font-medium
+                      transition-all duration-200
+                      {{ $isOcorrenciasActive
+                          ? 'bg-zinc-900 text-white dark:bg-zinc-800 dark:text-zinc-100'
+                          : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+                </svg>
+                <span class="nav-label hidden whitespace-nowrap">Ocorrências</span>
+            </a>
 
-                <div id="accordion-ocorrencias"
-                     class="accordion-panel mt-0.5 hidden space-y-0.5 pl-3"
-                     {{ $isOcorrenciasActive ? 'data-active' : '' }}>
+            {{-- Sub-links de Ocorrências: visíveis apenas com sidebar expandido --}}
+            @if($canManageSupportTables)
+            <div class="nav-label hidden mt-0.5 space-y-0.5 pl-3">
+                <a href="{{ route('responsaveis.index') }}"
+                   class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
+                          transition-all duration-200
+                          {{ request()->routeIs('responsaveis.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                    Responsáveis
+                </a>
 
-                    <a href="{{ route('ocorrencias.index') }}"
-                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
-                              transition-all duration-200
-                              {{ request()->routeIs('ocorrencias.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
-                        Ocorrências
-                    </a>
+                <a href="{{ route('tipos-ocorrencia.index') }}"
+                   class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
+                          transition-all duration-200
+                          {{ request()->routeIs('tipos-ocorrencia.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                    Tipos de Ocorrência
+                </a>
 
-                    @if($canManageSupportTables)
-                    <a href="{{ route('responsaveis.index') }}"
-                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
-                              transition-all duration-200
-                              {{ request()->routeIs('responsaveis.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
-                        Responsáveis
-                    </a>
-
-                    <a href="{{ route('tipos-ocorrencia.index') }}"
-                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
-                              transition-all duration-200
-                              {{ request()->routeIs('tipos-ocorrencia.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
-                        Tipos de Ocorrência
-                    </a>
-
-                    <a href="{{ route('justificativas.index') }}"
-                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
-                              transition-all duration-200
-                              {{ request()->routeIs('justificativas.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
-                        Justificativas
-                    </a>
-                    @endif
-                </div>
+                <a href="{{ route('justificativas.index') }}"
+                   class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
+                          transition-all duration-200
+                          {{ request()->routeIs('justificativas.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                    Justificativas
+                </a>
             </div>
+            @endif
 
         </nav>
 
@@ -592,13 +579,22 @@
 
     // ── Accordion nav ───────────────────────────────────────────────────────
     document.querySelectorAll('.accordion-trigger').forEach(function (trigger) {
-        trigger.addEventListener('click', function () {
-            if (isDesktop() && sidebar.classList.contains('w-16')) {
+        trigger.addEventListener('click', function (e) {
+            // Detecta modo ícone verificando se o label está oculto
+            var label    = trigger.querySelector('.nav-label');
+            var iconOnly = isDesktop() && label && label.classList.contains('hidden');
+
+            if (iconOnly) {
+                // <a> com href: deixa o browser navegar normalmente
+                if (trigger.tagName === 'A') { return; }
+                // <button> com data-href: navega via JS
                 var href = trigger.dataset.href;
                 if (href) { window.location.href = href; }
                 return;
             }
 
+            // Sidebar expandido: comportamento de accordion
+            e.preventDefault();
             var key    = trigger.dataset.accordion;
             var panel  = document.getElementById('accordion-' + key);
             var chevron = trigger.querySelector('.accordion-chevron');
