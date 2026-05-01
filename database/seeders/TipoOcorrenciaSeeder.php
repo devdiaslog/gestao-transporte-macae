@@ -13,13 +13,9 @@ class TipoOcorrenciaSeeder extends Seeder
             'ATRASO DOCUMENTAÇÃO',
             'ATRASO DESCARREGAMENTO',
             'ATRASO CARREGAMENTO',
-            'FROTA SEM MOTORISTA',
-            'DEMANDA CANCELADA',
             'ATRASO SAÍDA DA FROTA',
-            'ATRASO PROGRAMAÇÃO',
-            'RECUSA',
-            'MANUTENÇÃO',
-            'AGUARDANDO PROGRAMAÇÃO',
+            'ATRASO TRATATIVA DE RECUSA',
+            'ATRASO POR MANUTENÇÃO',
         ];
 
         foreach ($tipos as $descricao) {

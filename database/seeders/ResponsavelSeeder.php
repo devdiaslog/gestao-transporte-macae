@@ -19,20 +19,32 @@ class ResponsavelSeeder extends Seeder
 
         $externos = [
             'PORTO DE MACAÉ (BMAC)',
+            'PORTO DO AÇU (AÇU)',
+            'PORTO DO RIO (PBG)',
+            'PORTO DO AÇU - TMUT',
+            'PORTO DO AÇU - DOME',
+
+            'ARM-MACAÉ - AL-06',
             'ARM-MACAÉ - AL-13',
-            'ARM-MACAÉ - TRIAGEM',
-            'PORTO DO RIO',
-            'ARM RIO',
-            'ARM-RIO - TRIAGEM',
-            'PARQUE DE TUBOS - ANCORAGEM',
-            'PORTO DO AÇU -TMUT',
-            'PORTO DO AÇU',
-            'ARM-MACAÉ',
             'ARM-MACAÉ - AL-17',
             'ARM-MACAÉ - AL-26',
             'ARM-MACAÉ - AL-33',
+            'ARM-MACAÉ - AE-20',
+            'ARM-MACAÉ - TRIAGEM',
+            'ARM-MACAÉ - PRESERVAÇÃO DE CONTENTORES',
+            'ARM-MACAÉ - ÁREA EXTERNA',
             'ARM-MACAÉ - SUCATA',
             'ARM-MACAÉ - DOCAS',
+
+            'PARQUE DE TUBOS - ANCORAGEM',
+            'PARQUE DE TUBOS - OTBM',
+
+            'ARM-RIO - TRIAGEM',
+            'ARM-RIO - ÁREA EXTERNA',
+
+            'MACAÉ DIVERSOS',
+            'RIO DIVERSOS',
+
         ];
 
         foreach ($internos as $nome) {
