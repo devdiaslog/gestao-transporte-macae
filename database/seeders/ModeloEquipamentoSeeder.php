@@ -14,13 +14,24 @@ class ModeloEquipamentoSeeder extends Seeder
 
         $modelos = [
             // Implementos
+            ['nome' => 'Prancha Baixa Reta 3E',      'tipo_equipamento_id' => $implementos],
+            ['nome' => 'Prancha Baixa Reta 4E',      'tipo_equipamento_id' => $implementos],
             ['nome' => 'Prancha Baixa 3E',      'tipo_equipamento_id' => $implementos],
             ['nome' => 'Prancha Baixa 4E',      'tipo_equipamento_id' => $implementos],
+            ['nome' => 'Prancha Rebaixada 3E',      'tipo_equipamento_id' => $implementos],
+            ['nome' => 'Prancha Rebaixada 4E',      'tipo_equipamento_id' => $implementos],
+            ['nome' => 'Prancha SuperRebaixada 3E',      'tipo_equipamento_id' => $implementos],
+            ['nome' => 'Prancha SuperRebaixada 4E',      'tipo_equipamento_id' => $implementos],
+            ['nome' => 'Carreta Aberta 3E',      'tipo_equipamento_id' => $implementos],
+            ['nome' => 'Carreta Grade 3E ',      'tipo_equipamento_id' => $implementos],
+            ['nome' => 'Carreta Grade Extensiva 3E ',      'tipo_equipamento_id' => $implementos],
+            ['nome' => 'Carreta Aberta Extensiva 3E ',      'tipo_equipamento_id' => $implementos],
 
             // Motorizados
             ['nome' => 'Cavalo 2544',            'tipo_equipamento_id' => $motorizado],
             ['nome' => 'Cavalo 2644',            'tipo_equipamento_id' => $motorizado],
             ['nome' => 'Cavalo 1933',            'tipo_equipamento_id' => $motorizado],
+            ['nome' => 'Cavalo 3344',            'tipo_equipamento_id' => $motorizado],
             ['nome' => 'Caminhão Truck',         'tipo_equipamento_id' => $motorizado],
             ['nome' => 'Caminhão Toco',          'tipo_equipamento_id' => $motorizado],
             ['nome' => 'Caminhão Leve',          'tipo_equipamento_id' => $motorizado],
