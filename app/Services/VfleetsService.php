@@ -68,14 +68,19 @@ class VfleetsService
 
     /**
      * Retorna os campos de estado calculados para um registro.
-     * Mantém state_since se o estado não mudou; reseta se mudou.
+     * - Estado igual ao anterior: mantém state_since existente (timer continua).
+     * - Estado diferente ou primeiro sync: usa position_at como melhor aproximação
+     *   de quando o veículo entrou no estado atual; cai em $now só se não houver.
      */
-    private function resolveStateFields(?float $speed, ?PosicaoVeiculo $existing, Carbon $now): array
+    private function resolveStateFields(?float $speed, ?PosicaoVeiculo $existing, Carbon $now, ?Carbon $positionAt): array
     {
         $newState = $this->deriveTrackerState($speed);
-        $stateSince = ($existing && $existing->tracker_state === $newState)
-            ? $existing->state_since
-            : $now;
+
+        if ($existing && $existing->tracker_state === $newState) {
+            $stateSince = $existing->state_since;
+        } else {
+            $stateSince = $positionAt ?? $now;
+        }
 
         return ['tracker_state' => $newState, 'state_since' => $stateSince];
     }
@@ -136,7 +141,8 @@ class VfleetsService
             }
 
             $existing = PosicaoVeiculo::where('license_plate', $plate)->first();
-            $stateFields = $this->resolveStateFields($pos['speed'] ?? null, $existing, $syncedAt);
+            $positionAt = isset($pos['dateTime']) ? Carbon::parse($pos['dateTime']) : null;
+            $stateFields = $this->resolveStateFields($pos['speed'] ?? null, $existing, $syncedAt, $positionAt);
 
             return PosicaoVeiculo::updateOrCreate(
                 ['license_plate' => $plate],
@@ -185,7 +191,8 @@ class VfleetsService
                 continue;
             }
 
-            $stateFields = $this->resolveStateFields($pos['speed'] ?? null, $existing->get($plate), $syncedAt);
+            $positionAt = isset($pos['dateTime']) ? Carbon::parse($pos['dateTime']) : null;
+            $stateFields = $this->resolveStateFields($pos['speed'] ?? null, $existing->get($plate), $syncedAt, $positionAt);
 
             PosicaoVeiculo::updateOrCreate(
                 ['license_plate' => $plate],
