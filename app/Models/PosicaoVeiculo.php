@@ -25,6 +25,8 @@ class PosicaoVeiculo extends Model
         'transmission_way',
         'rfid',
         'synced_at',
+        'tracker_state',
+        'state_since',
     ];
 
     protected function casts(): array
@@ -32,6 +34,7 @@ class PosicaoVeiculo extends Model
         return [
             'position_at' => 'datetime',
             'synced_at' => 'datetime',
+            'state_since' => 'datetime',
             'latitude' => 'float',
             'longitude' => 'float',
             'ignition' => 'boolean',

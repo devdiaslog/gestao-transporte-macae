@@ -170,9 +170,10 @@
                 <div class="py-1.5">
                     <p class="px-3 pb-1 pt-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Colunas</p>
                     @foreach([
-                        ['col' => 'placa',     'label' => 'Placa'],
-                        ['col' => 'tempo',     'label' => 'Tp Atualização'],
-                        ['col' => 'status-op', 'label' => 'Status'],
+                        ['col' => 'placa',        'label' => 'Placa'],
+                        ['col' => 'tempo',        'label' => 'Tp Atualização'],
+                        ['col' => 'status-op',    'label' => 'Status'],
+                        ['col' => 'rastreador',   'label' => 'Rastreador'],
                         ['col' => 'condutor',  'label' => 'Condutor'],
                         ['col' => 'documento', 'label' => 'Documento'],
                         ['col' => 'origem',    'label' => 'Origem'],
@@ -251,6 +252,9 @@
                             </th>
                             <th data-col="status-op" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Status
+                            </th>
+                            <th data-col="rastreador" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Rastreador
                             </th>
                             <th data-col="condutor" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Condutor
@@ -378,6 +382,43 @@
                                         <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
                                               style="background-color: {{ $cor }}1A; color: {{ $cor }}; box-shadow: inset 0 0 0 1px {{ $cor }}33;">
                                             {{ $equipamento->status_operacional }}
+                                        </span>
+                                    @else
+                                        <span class="text-zinc-300 dark:text-zinc-700">—</span>
+                                    @endif
+                                </td>
+
+                                <td data-col="rastreador" class="px-3 py-2 whitespace-nowrap">
+                                    @php
+                                        $trackerState = $posicao?->tracker_state;
+                                        $stateSince   = $posicao?->state_since;
+                                        if ($trackerState && $stateSince) {
+                                            $mins  = (int) $stateSince->diffInMinutes(now());
+                                            $h     = intdiv($mins, 60);
+                                            $m     = $mins % 60;
+                                            $tempo = $h > 0 ? "{$h}h {$m}m" : "{$m}m";
+                                        }
+                                    @endphp
+                                    @if($trackerState === 'Em Movimento')
+                                        <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
+                                                     bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200
+                                                     dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-800/50">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                            Em Mov. · {{ $tempo ?? '—' }}
+                                        </span>
+                                    @elseif($trackerState === 'Parado')
+                                        <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
+                                                     bg-red-50 text-red-700 ring-1 ring-red-200
+                                                     dark:bg-red-950/40 dark:text-red-400 dark:ring-red-800/50">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+                                            Parado · {{ $tempo ?? '—' }}
+                                        </span>
+                                    @elseif($trackerState === 'Sem Sinal')
+                                        <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
+                                                     bg-zinc-100 text-zinc-500 ring-1 ring-zinc-200
+                                                     dark:bg-zinc-800 dark:text-zinc-500 dark:ring-zinc-700">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-zinc-400"></span>
+                                            Sem Sinal
                                         </span>
                                     @else
                                         <span class="text-zinc-300 dark:text-zinc-700">—</span>

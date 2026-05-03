@@ -55,6 +55,59 @@ class VfleetsService
     }
 
     /**
+     * Determina o estado do rastreador com base na velocidade.
+     */
+    private function deriveTrackerState(?float $speed): string
+    {
+        if ($speed === null) {
+            return 'Sem Sinal';
+        }
+
+        return $speed > 0 ? 'Em Movimento' : 'Parado';
+    }
+
+    /**
+     * Retorna os campos de estado calculados para um registro.
+     * Mantém state_since se o estado não mudou; reseta se mudou.
+     */
+    private function resolveStateFields(?float $speed, ?PosicaoVeiculo $existing, Carbon $now): array
+    {
+        $newState = $this->deriveTrackerState($speed);
+        $stateSince = ($existing && $existing->tracker_state === $newState)
+            ? $existing->state_since
+            : $now;
+
+        return ['tracker_state' => $newState, 'state_since' => $stateSince];
+    }
+
+    /**
+     * Monta o array de atributos comuns para updateOrCreate.
+     *
+     * @param  array<string, mixed>  $pos
+     */
+    private function buildAttributes(array $pos, Carbon $syncedAt, array $stateFields): array
+    {
+        return [
+            'prefix' => $pos['prefix'] ?? null,
+            'chassis' => $pos['chassis'] ?? null,
+            'position_at' => isset($pos['dateTime']) ? Carbon::parse($pos['dateTime']) : null,
+            'latitude' => $pos['latitude'] ?? null,
+            'longitude' => $pos['longitude'] ?? null,
+            'speed' => $pos['speed'] ?? null,
+            'ignition' => $pos['ignition'] ?? null,
+            'direction' => $pos['direction'] ?? null,
+            'hodometer' => $pos['hodometer'] ?? null,
+            'gps_status' => $pos['gpsStatus'] ?? null,
+            'gsm_status' => $pos['gsmStatus'] ?? null,
+            'event_type' => $pos['eventType'] ?? null,
+            'transmission_way' => $pos['transmissionWay'] ?? null,
+            'rfid' => $pos['rfid'] ?? null,
+            'synced_at' => $syncedAt,
+            ...$stateFields,
+        ];
+    }
+
+    /**
      * Busca a última posição de uma placa específica na API e salva no banco.
      * Retorna o registro atualizado, ou null se a placa não for encontrada.
      *
@@ -82,25 +135,12 @@ class VfleetsService
                 continue;
             }
 
+            $existing = PosicaoVeiculo::where('license_plate', $plate)->first();
+            $stateFields = $this->resolveStateFields($pos['speed'] ?? null, $existing, $syncedAt);
+
             return PosicaoVeiculo::updateOrCreate(
                 ['license_plate' => $plate],
-                [
-                    'prefix' => $pos['prefix'] ?? null,
-                    'chassis' => $pos['chassis'] ?? null,
-                    'position_at' => isset($pos['dateTime']) ? Carbon::parse($pos['dateTime']) : null,
-                    'latitude' => $pos['latitude'] ?? null,
-                    'longitude' => $pos['longitude'] ?? null,
-                    'speed' => $pos['speed'] ?? null,
-                    'ignition' => $pos['ignition'] ?? null,
-                    'direction' => $pos['direction'] ?? null,
-                    'hodometer' => $pos['hodometer'] ?? null,
-                    'gps_status' => $pos['gpsStatus'] ?? null,
-                    'gsm_status' => $pos['gsmStatus'] ?? null,
-                    'event_type' => $pos['eventType'] ?? null,
-                    'transmission_way' => $pos['transmissionWay'] ?? null,
-                    'rfid' => $pos['rfid'] ?? null,
-                    'synced_at' => $syncedAt,
-                ]
+                $this->buildAttributes($pos, $syncedAt, $stateFields),
             );
         }
 
@@ -132,6 +172,12 @@ class VfleetsService
         $syncedAt = now();
         $total = 0;
 
+        // Pré-carrega registros existentes para evitar N+1 nas comparações de estado
+        $plates = collect($posicoes)->pluck('licensePlate')->filter()->unique()->values()->all();
+        $existing = PosicaoVeiculo::whereIn('license_plate', $plates)
+            ->get()
+            ->keyBy('license_plate');
+
         foreach ($posicoes as $pos) {
             $plate = $pos['licensePlate'] ?? null;
 
@@ -139,25 +185,11 @@ class VfleetsService
                 continue;
             }
 
+            $stateFields = $this->resolveStateFields($pos['speed'] ?? null, $existing->get($plate), $syncedAt);
+
             PosicaoVeiculo::updateOrCreate(
                 ['license_plate' => $plate],
-                [
-                    'prefix' => $pos['prefix'] ?? null,
-                    'chassis' => $pos['chassis'] ?? null,
-                    'position_at' => isset($pos['dateTime']) ? Carbon::parse($pos['dateTime']) : null,
-                    'latitude' => $pos['latitude'] ?? null,
-                    'longitude' => $pos['longitude'] ?? null,
-                    'speed' => $pos['speed'] ?? null,
-                    'ignition' => $pos['ignition'] ?? null,
-                    'direction' => $pos['direction'] ?? null,
-                    'hodometer' => $pos['hodometer'] ?? null,
-                    'gps_status' => $pos['gpsStatus'] ?? null,
-                    'gsm_status' => $pos['gsmStatus'] ?? null,
-                    'event_type' => $pos['eventType'] ?? null,
-                    'transmission_way' => $pos['transmissionWay'] ?? null,
-                    'rfid' => $pos['rfid'] ?? null,
-                    'synced_at' => $syncedAt,
-                ]
+                $this->buildAttributes($pos, $syncedAt, $stateFields),
             );
 
             $total++;
