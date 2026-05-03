@@ -175,10 +175,11 @@ class ControlTowerController extends Controller
             return response()->json(['ok' => false, 'erro' => 'Sem localização disponível.'], 404);
         }
 
-        $mins = $pos->state_since ? (int) $pos->state_since->diffInMinutes(now()) : null;
-        $h = $mins !== null ? intdiv($mins, 60) : 0;
+        $mins = $pos->state_since ? (int) abs($pos->state_since->diffInMinutes(now())) : null;
+        $d = $mins !== null ? intdiv($mins, 1440) : 0;
+        $h = $mins !== null ? intdiv($mins % 1440, 60) : 0;
         $m = $mins !== null ? $mins % 60 : 0;
-        $duration = $mins !== null ? ($h > 0 ? "{$h}h {$m}m" : "{$m}m") : null;
+        $duration = $mins !== null ? ($d > 0 ? "{$d}d {$h}h {$m}m" : ($h > 0 ? "{$h}h {$m}m" : "{$m}m")) : null;
 
         return response()->json([
             'ok' => true,

@@ -411,9 +411,10 @@
                                         $stateSince   = $posicao?->state_since;
                                         if ($trackerState && $stateSince) {
                                             $mins  = (int) abs($stateSince->diffInMinutes(now()));
-                                            $h     = intdiv($mins, 60);
+                                            $d     = intdiv($mins, 1440);
+                                            $h     = intdiv($mins % 1440, 60);
                                             $m     = $mins % 60;
-                                            $tempo = $h > 0 ? "{$h}h {$m}m" : "{$m}m";
+                                            $tempo = $d > 0 ? "{$d}d {$h}h {$m}m" : ($h > 0 ? "{$h}h {$m}m" : "{$m}m");
                                         }
                                     @endphp
                                     @if($trackerState === 'Em Movimento')
