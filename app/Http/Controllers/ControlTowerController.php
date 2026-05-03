@@ -175,12 +175,19 @@ class ControlTowerController extends Controller
             return response()->json(['ok' => false, 'erro' => 'Sem localização disponível.'], 404);
         }
 
+        $mins = $pos->state_since ? (int) $pos->state_since->diffInMinutes(now()) : null;
+        $h = $mins !== null ? intdiv($mins, 60) : 0;
+        $m = $mins !== null ? $mins % 60 : 0;
+        $duration = $mins !== null ? ($h > 0 ? "{$h}h {$m}m" : "{$m}m") : null;
+
         return response()->json([
             'ok' => true,
             'latitude' => $pos->latitude,
             'longitude' => $pos->longitude,
             'position_at' => $pos->position_at?->setTimezone(config('app.timezone'))->format('d/m/Y H:i'),
             'synced_at' => $pos->synced_at?->setTimezone(config('app.timezone'))->format('d/m/Y H:i'),
+            'tracker_state' => $pos->tracker_state,
+            'state_duration' => $duration,
         ]);
     }
 

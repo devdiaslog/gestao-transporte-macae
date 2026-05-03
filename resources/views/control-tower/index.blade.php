@@ -460,7 +460,7 @@
                                 <td class="px-3 py-2 text-right whitespace-nowrap">
                                     <div class="inline-flex items-center gap-1">
                                         <button type="button"
-                                                onclick="openMapModal({{ $hasLocation ? $posicao->latitude : 'null' }}, {{ $hasLocation ? $posicao->longitude : 'null' }}, '{{ addslashes($mapLabel) }}', '{{ addslashes($equipamento->id_rastreador) }}', '{{ $posicaoAt ?? '' }}', '{{ $syncedAt ?? '' }}')"
+                                                onclick="openMapModal({{ $hasLocation ? $posicao->latitude : 'null' }}, {{ $hasLocation ? $posicao->longitude : 'null' }}, '{{ addslashes($mapLabel) }}', '{{ addslashes($equipamento->id_rastreador) }}', '{{ $posicaoAt ?? '' }}', '{{ $syncedAt ?? '' }}', {{ $equipamento->id }})"
                                                 title="{{ $hasLocation ? 'Ver localização no mapa' : 'Sincronizar e ver localização no mapa' }}"
                                                 class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
                                                        border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700
@@ -1092,6 +1092,7 @@
     var _leafletMarker   = null;
     var _mapIsFullscreen = false;
     var _currentMapPlate = null;
+    var _currentRowId    = null;
     var _posicaoBaseUrl  = '{{ url("torre-de-controle/posicao") }}';
 
     function _applyMapSize(fullscreen) {
@@ -1174,6 +1175,37 @@
         setTimeout(function () { _leafletMap.invalidateSize(); }, 150);
     }
 
+    function updateRastreadorCell(rowId, trackerState, duration) {
+        if (!rowId) { return; }
+        var row  = document.getElementById('row-' + rowId);
+        if (!row) { return; }
+        var cell = row.querySelector('[data-col="rastreador"]');
+        if (!cell) { return; }
+
+        var dot   = '<span class="h-1.5 w-1.5 rounded-full ';
+        var badge = '<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ';
+        var label, cls;
+
+        if (trackerState === 'Em Movimento') {
+            cls   = 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-800/50';
+            dot  += 'bg-emerald-500"></span>';
+            label = 'Em Mov.' + (duration ? ' · ' + duration : '');
+        } else if (trackerState === 'Parado') {
+            cls   = 'bg-red-50 text-red-700 ring-1 ring-red-200 dark:bg-red-950/40 dark:text-red-400 dark:ring-red-800/50';
+            dot  += 'bg-red-500"></span>';
+            label = 'Parado' + (duration ? ' · ' + duration : '');
+        } else if (trackerState === 'Sem Sinal') {
+            cls   = 'bg-zinc-100 text-zinc-500 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-500 dark:ring-zinc-700';
+            dot  += 'bg-zinc-400"></span>';
+            label = 'Sem Sinal';
+        } else {
+            cell.innerHTML = '<span class="text-zinc-300 dark:text-zinc-700">—</span>';
+            return;
+        }
+
+        cell.innerHTML = badge + cls + '">' + dot + label + '</span>';
+    }
+
     function _syncAndRender(label) {
         var btn  = document.getElementById('map-btn-refresh');
         var icon = document.getElementById('map-refresh-icon');
@@ -1191,6 +1223,7 @@
             }
             _renderMap(data.latitude, data.longitude, label);
             updateMapInfo(data.position_at, data.synced_at);
+            updateRastreadorCell(_currentRowId, data.tracker_state, data.state_duration);
         })
         .catch(function () {
             document.getElementById('map-position-info').textContent = 'Erro ao buscar localização.';
@@ -1201,8 +1234,9 @@
         });
     }
 
-    function openMapModal(lat, lng, label, plate, posicaoAt, syncedAt) {
+    function openMapModal(lat, lng, label, plate, posicaoAt, syncedAt, rowId) {
         _currentMapPlate = plate;
+        _currentRowId    = rowId || null;
         _mapIsFullscreen = false;
         _applyMapSize(false);
         document.getElementById('map-overlay').style.display = 'flex';
@@ -1237,6 +1271,7 @@
             if (!data.ok) { return; }
             _renderMap(data.latitude, data.longitude, label);
             updateMapInfo(data.position_at, data.synced_at);
+            updateRastreadorCell(_currentRowId, data.tracker_state, data.state_duration);
         })
         .finally(function () {
             btn.disabled = false;
