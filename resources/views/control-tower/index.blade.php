@@ -410,7 +410,7 @@
                                         $trackerState = $posicao?->tracker_state;
                                         $stateSince   = $posicao?->state_since;
                                         $positionAt   = $posicao?->position_at;
-                                        $isStale      = $positionAt && $positionAt->diffInHours(now()) >= 2;
+                                        $isStale      = $positionAt && $positionAt->diffInHours(now()) >= 1;
 
                                         if ($trackerState && $stateSince) {
                                             $mins  = (int) abs($stateSince->diffInMinutes(now()));
