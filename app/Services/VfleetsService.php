@@ -95,7 +95,7 @@ class VfleetsService
         return [
             'prefix' => $pos['prefix'] ?? null,
             'chassis' => $pos['chassis'] ?? null,
-            'position_at' => isset($pos['dateTime']) ? Carbon::parse($pos['dateTime']) : null,
+            'position_at' => isset($pos['dateTime']) ? Carbon::parse($pos['dateTime'], 'UTC') : null,
             'latitude' => $pos['latitude'] ?? null,
             'longitude' => $pos['longitude'] ?? null,
             'speed' => $pos['speed'] ?? null,
@@ -141,7 +141,7 @@ class VfleetsService
             }
 
             $existing = PosicaoVeiculo::where('license_plate', $plate)->first();
-            $positionAt = isset($pos['dateTime']) ? Carbon::parse($pos['dateTime']) : null;
+            $positionAt = isset($pos['dateTime']) ? Carbon::parse($pos['dateTime'], 'UTC') : null;
             $stateFields = $this->resolveStateFields($pos['speed'] ?? null, $existing, $syncedAt, $positionAt);
 
             return PosicaoVeiculo::updateOrCreate(
@@ -191,7 +191,7 @@ class VfleetsService
                 continue;
             }
 
-            $positionAt = isset($pos['dateTime']) ? Carbon::parse($pos['dateTime']) : null;
+            $positionAt = isset($pos['dateTime']) ? Carbon::parse($pos['dateTime'], 'UTC') : null;
             $stateFields = $this->resolveStateFields($pos['speed'] ?? null, $existing->get($plate), $syncedAt, $positionAt);
 
             PosicaoVeiculo::updateOrCreate(

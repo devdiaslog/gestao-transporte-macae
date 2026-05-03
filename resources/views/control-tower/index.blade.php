@@ -233,6 +233,23 @@
             </div>
 
         @else
+            {{-- Label de última sincronização --}}
+            @php
+                $tz = config('app.timezone');
+                $ultimaSinc = $equipamentos
+                    ->map(fn ($e) => $e->posicao?->synced_at)
+                    ->filter()
+                    ->max();
+            @endphp
+            @if($ultimaSinc)
+                <div class="flex items-center gap-1.5 px-1 pb-1 text-[11px] text-zinc-400 dark:text-zinc-600">
+                    <svg class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z"/>
+                    </svg>
+                    Última sincronização do rastreador: {{ $ultimaSinc->setTimezone($tz)->format('d/m/Y H:i') }}
+                </div>
+            @endif
+
             {{-- Scrollable area --}}
             <div class="overflow-auto" style="max-height: calc(100vh - 260px)">
                 <table id="ct-table" class="w-full text-sm">
@@ -393,7 +410,7 @@
                                         $trackerState = $posicao?->tracker_state;
                                         $stateSince   = $posicao?->state_since;
                                         if ($trackerState && $stateSince) {
-                                            $mins  = (int) $stateSince->diffInMinutes(now());
+                                            $mins  = (int) abs($stateSince->diffInMinutes(now()));
                                             $h     = intdiv($mins, 60);
                                             $m     = $mins % 60;
                                             $tempo = $h > 0 ? "{$h}h {$m}m" : "{$m}m";
