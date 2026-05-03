@@ -409,6 +409,9 @@
                                     @php
                                         $trackerState = $posicao?->tracker_state;
                                         $stateSince   = $posicao?->state_since;
+                                        $positionAt   = $posicao?->position_at;
+                                        $isStale      = $positionAt && $positionAt->diffInHours(now()) >= 2;
+
                                         if ($trackerState && $stateSince) {
                                             $mins  = (int) abs($stateSince->diffInMinutes(now()));
                                             $d     = intdiv($mins, 1440);
@@ -418,19 +421,39 @@
                                         }
                                     @endphp
                                     @if($trackerState === 'Em Movimento')
-                                        <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
-                                                     bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200
-                                                     dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-800/50">
-                                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                                            Em Mov. · {{ $tempo ?? '—' }}
-                                        </span>
+                                        @if($isStale)
+                                            <span title="Último sinal: {{ $positionAt->setTimezone(config('app.timezone'))->format('d/m H:i') }}"
+                                                  class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
+                                                         bg-zinc-100 text-zinc-400 ring-1 ring-zinc-200
+                                                         dark:bg-zinc-800 dark:text-zinc-500 dark:ring-zinc-700">
+                                                <span class="h-1.5 w-1.5 rounded-full bg-zinc-400"></span>
+                                                Em Mov. · {{ $tempo ?? '—' }}
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
+                                                         bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200
+                                                         dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-800/50">
+                                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                                Em Mov. · {{ $tempo ?? '—' }}
+                                            </span>
+                                        @endif
                                     @elseif($trackerState === 'Parado')
-                                        <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
-                                                     bg-red-50 text-red-700 ring-1 ring-red-200
-                                                     dark:bg-red-950/40 dark:text-red-400 dark:ring-red-800/50">
-                                            <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
-                                            Parado · {{ $tempo ?? '—' }}
-                                        </span>
+                                        @if($isStale)
+                                            <span title="Último sinal: {{ $positionAt->setTimezone(config('app.timezone'))->format('d/m H:i') }}"
+                                                  class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
+                                                         bg-zinc-100 text-zinc-400 ring-1 ring-zinc-200
+                                                         dark:bg-zinc-800 dark:text-zinc-500 dark:ring-zinc-700">
+                                                <span class="h-1.5 w-1.5 rounded-full bg-zinc-400"></span>
+                                                Parado · {{ $tempo ?? '—' }}
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
+                                                         bg-red-50 text-red-700 ring-1 ring-red-200
+                                                         dark:bg-red-950/40 dark:text-red-400 dark:ring-red-800/50">
+                                                <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+                                                Parado · {{ $tempo ?? '—' }}
+                                            </span>
+                                        @endif
                                     @elseif($trackerState === 'Sem Sinal')
                                         <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
                                                      bg-zinc-100 text-zinc-500 ring-1 ring-zinc-200
