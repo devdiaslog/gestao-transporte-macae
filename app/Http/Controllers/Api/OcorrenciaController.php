@@ -46,7 +46,7 @@ class OcorrenciaController extends Controller
             'id' => $o->id,
             'veiculo_placa' => $o->veiculo?->placa,
             'veiculo_prefixo' => $o->veiculo?->prefixo,
-            'tipo' => $o->tipo?->nome,
+            'tipo' => $o->tipo?->descricao,
             'responsavel' => $o->responsavel?->nome,
             'data_hora_inicio' => $o->data_hora_inicio?->setTimezone($tz)->format('d/m/Y H:i'),
             'data_hora_fim' => $o->data_hora_fim?->setTimezone($tz)->format('d/m/Y H:i'),
