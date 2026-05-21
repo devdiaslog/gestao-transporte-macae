@@ -10,6 +10,8 @@ class ReporteItem extends Model
 {
     use HasFactory;
 
+    protected $table = 'reporte_itens';
+
     protected $fillable = [
         'reporte_id',
         'prefixo',
