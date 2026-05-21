@@ -276,12 +276,6 @@
                             <th data-col="documento" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Documento
                             </th>
-                            <th data-col="origem" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
-                                Origem
-                            </th>
-                            <th data-col="destino" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
-                                Destino
-                            </th>
                             <th data-col="obs" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Observação
                             </th>
@@ -426,13 +420,6 @@
                                     {{ $repDocumento ?? '—' }}
                                 </td>
 
-                                <td data-col="origem" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
-                                    {{ $equipamento->origem ?? '—' }}
-                                </td>
-
-                                <td data-col="destino" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
-                                    {{ $equipamento->destino ?? '—' }}
-                                </td>
 
                                 <td data-col="obs" class="px-3 py-2 text-zinc-600 dark:text-zinc-400">
                                     <span class="line-clamp-1 max-w-[180px] block">{{ $repObservacao ?? '—' }}</span>
