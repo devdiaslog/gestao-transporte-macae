@@ -68,6 +68,9 @@ class ReporteController extends Controller
                 'prefixo' => $item['prefixo'] ?? null,
                 'status_operacional' => $item['status_operacional'] ?? null,
                 'tempo_parado' => $item['tempo_parado'] ?? null,
+                'data_hora_previsao' => $item['data_hora_previsao'] ?? null,
+                'primeiro_contato' => $item['primeiro_contato'] ?? null,
+                'segundo_contato' => $item['segundo_contato'] ?? null,
                 'observacao' => $item['observacao'] ?? null,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -108,6 +111,9 @@ class ReporteController extends Controller
                 'prefixo' => $i->prefixo,
                 'status_operacional' => $i->status_operacional,
                 'tempo_parado' => $i->tempo_parado,
+                'data_hora_previsao' => $i->data_hora_previsao,
+                'primeiro_contato' => $i->primeiro_contato,
+                'segundo_contato' => $i->segundo_contato,
                 'observacao' => $i->observacao,
             ]),
         ]);
@@ -133,6 +139,9 @@ class ReporteController extends Controller
                 'prefixo' => $item['prefixo'] ?? null,
                 'status_operacional' => $item['status_operacional'] ?? null,
                 'tempo_parado' => $item['tempo_parado'] ?? null,
+                'data_hora_previsao' => $item['data_hora_previsao'] ?? null,
+                'primeiro_contato' => $item['primeiro_contato'] ?? null,
+                'segundo_contato' => $item['segundo_contato'] ?? null,
                 'observacao' => $item['observacao'] ?? null,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -162,7 +171,7 @@ class ReporteController extends Controller
     {
         $tz = config('app.timezone');
 
-        $rows = collect([['Nº Reporte', 'Nome', 'Status Reporte', 'Prefixo', 'Status Operacional', 'Tempo Parado', 'Observação', 'Data/Hora Emissão', 'Emitido Por']])
+        $rows = collect([['Nº Reporte', 'Nome', 'Status Reporte', 'Prefixo', 'Status Operacional', 'Tempo Parado', 'Previsão', '1º Contato', '2º Contato', 'Observação', 'Data/Hora Emissão', 'Emitido Por']])
             ->concat($itens->map(fn (ReporteItem $i) => [
                 $i->reporte?->numero_reporte ?? '',
                 $i->reporte?->nome ?? '',
@@ -170,6 +179,9 @@ class ReporteController extends Controller
                 $i->prefixo ?? '',
                 $i->status_operacional ?? '',
                 $i->tempo_parado ?? '',
+                $i->data_hora_previsao ?? '',
+                $i->primeiro_contato ?? '',
+                $i->segundo_contato ?? '',
                 $i->observacao ?? '',
                 $i->reporte?->data_hora_emissao?->setTimezone($tz)->format('d/m/Y H:i') ?? '',
                 $i->reporte?->creator?->name ?? '',

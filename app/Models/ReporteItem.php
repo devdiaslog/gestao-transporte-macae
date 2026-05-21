@@ -17,6 +17,9 @@ class ReporteItem extends Model
         'prefixo',
         'status_operacional',
         'tempo_parado',
+        'data_hora_previsao',
+        'primeiro_contato',
+        'segundo_contato',
         'observacao',
     ];
 

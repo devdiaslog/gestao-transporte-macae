@@ -112,10 +112,13 @@
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-slate-200 bg-slate-50">
-                                <th class="w-8 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">#</th>
+                            <th class="w-8 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">#</th>
                             <th class="w-24 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Prefixo</th>
-                            <th class="w-52 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Status Operacional</th>
-                            <th class="w-32 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Tempo Parado</th>
+                            <th class="w-44 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Status Operacional</th>
+                            <th class="w-28 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Tempo Parado</th>
+                            <th class="w-32 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Previsão</th>
+                            <th class="w-36 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">1º Contato</th>
+                            <th class="w-36 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">2º Contato</th>
                             <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Observação</th>
                         </tr>
                     </thead>
@@ -126,11 +129,14 @@
                                 <td class="px-4 py-3 font-semibold text-zinc-800">{{ $item->prefixo ?? '—' }}</td>
                                 <td class="px-4 py-3 text-zinc-600">{{ $item->status_operacional ?? '—' }}</td>
                                 <td class="px-4 py-3 text-zinc-600">{{ $item->tempo_parado ?? '—' }}</td>
+                                <td class="px-4 py-3 text-zinc-600">{{ $item->data_hora_previsao ?? '—' }}</td>
+                                <td class="px-4 py-3 text-zinc-600">{{ $item->primeiro_contato ?? '—' }}</td>
+                                <td class="px-4 py-3 text-zinc-600">{{ $item->segundo_contato ?? '—' }}</td>
                                 <td class="px-4 py-3 text-zinc-500">{{ $item->observacao ?? '—' }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-4 py-8 text-center text-sm text-zinc-400">Nenhum item registrado.</td>
+                                <td colspan="8" class="px-4 py-8 text-center text-sm text-zinc-400">Nenhum item registrado.</td>
                             </tr>
                         @endforelse
                     </tbody>

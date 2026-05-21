@@ -27,6 +27,9 @@ class StoreReporteRequest extends FormRequest
             'itens.*.prefixo' => ['nullable', 'string', 'max:50'],
             'itens.*.status_operacional' => ['nullable', 'string', 'max:100'],
             'itens.*.tempo_parado' => ['nullable', 'string', 'max:20'],
+            'itens.*.data_hora_previsao' => ['nullable', 'string', 'max:30'],
+            'itens.*.primeiro_contato' => ['nullable', 'string', 'max:100'],
+            'itens.*.segundo_contato' => ['nullable', 'string', 'max:100'],
             'itens.*.observacao' => ['nullable', 'string', 'max:500'],
         ];
     }

@@ -241,8 +241,11 @@
                             <thead>
                                 <tr class="bg-slate-50 dark:bg-zinc-800">
                                     <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-28">Prefixo</th>
-                                    <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-52">Status Operacional</th>
-                                    <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-32">Tempo Parado</th>
+                                    <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-48">Status Operacional</th>
+                                    <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-28">Tempo Parado</th>
+                                    <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-32">Previsão</th>
+                                    <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-36">1º Contato</th>
+                                    <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-36">2º Contato</th>
                                     <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Observação</th>
                                     <th class="px-3 py-2.5 w-8"></th>
                                 </tr>
@@ -317,6 +320,21 @@
                 '</td>' +
                 '<td class="px-2 py-1.5">' +
                     '<input type="text" name="itens[' + index + '][tempo_parado]" placeholder="Ex: 2h 30m"' +
+                           ' class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm outline-none' +
+                                  ' focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">' +
+                '</td>' +
+                '<td class="px-2 py-1.5">' +
+                    '<input type="text" name="itens[' + index + '][data_hora_previsao]" placeholder="Ex: 14:30"' +
+                           ' class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm outline-none' +
+                                  ' focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">' +
+                '</td>' +
+                '<td class="px-2 py-1.5">' +
+                    '<input type="text" name="itens[' + index + '][primeiro_contato]" placeholder="Nome / Telefone"' +
+                           ' class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm outline-none' +
+                                  ' focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">' +
+                '</td>' +
+                '<td class="px-2 py-1.5">' +
+                    '<input type="text" name="itens[' + index + '][segundo_contato]" placeholder="Nome / Telefone"' +
                            ' class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm outline-none' +
                                   ' focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">' +
                 '</td>' +
@@ -396,10 +414,13 @@
                         var idx = rowIndex++;
                         document.getElementById('itens-body').insertAdjacentHTML('beforeend', buildRow(idx));
                         var row = document.getElementById('itens-body').lastElementChild;
-                        row.querySelector('[name="itens[' + idx + '][prefixo]"]').value            = item.prefixo || '';
-                        row.querySelector('[name="itens[' + idx + '][status_operacional]"]').value  = item.status_operacional || '';
-                        row.querySelector('[name="itens[' + idx + '][tempo_parado]"]').value        = item.tempo_parado || '';
-                        row.querySelector('[name="itens[' + idx + '][observacao]"]').value          = item.observacao || '';
+                        row.querySelector('[name="itens[' + idx + '][prefixo]"]').value             = item.prefixo || '';
+                        row.querySelector('[name="itens[' + idx + '][status_operacional]"]').value   = item.status_operacional || '';
+                        row.querySelector('[name="itens[' + idx + '][tempo_parado]"]').value         = item.tempo_parado || '';
+                        row.querySelector('[name="itens[' + idx + '][data_hora_previsao]"]').value   = item.data_hora_previsao || '';
+                        row.querySelector('[name="itens[' + idx + '][primeiro_contato]"]').value     = item.primeiro_contato || '';
+                        row.querySelector('[name="itens[' + idx + '][segundo_contato]"]').value      = item.segundo_contato || '';
+                        row.querySelector('[name="itens[' + idx + '][observacao]"]').value           = item.observacao || '';
                     });
 
                     if (rowIndex === 0) { addRow(); }
