@@ -41,37 +41,49 @@
     <form method="GET" action="{{ route('reportes.index') }}" class="mt-6">
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {{-- Busca --}}
-            <div class="relative">
-                <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 0Z"/>
-                </svg>
-                <input type="text" name="busca" value="{{ $currentBusca }}" placeholder="Buscar prefixo, nome ou nº..."
-                       class="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition-all
-                              focus:border-zinc-400 focus:ring-1 focus:ring-zinc-300
-                              dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Pesquisa</label>
+                <div class="relative">
+                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 0Z"/>
+                    </svg>
+                    <input type="text" name="busca" value="{{ $currentBusca }}" placeholder="Buscar prefixo, nome ou nº..."
+                           class="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition-all
+                                  focus:border-zinc-400 focus:ring-1 focus:ring-zinc-300
+                                  dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500">
+                </div>
             </div>
 
             {{-- Status --}}
-            <select name="status"
-                    onchange="this.form.submit()"
-                    class="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition-all
-                           focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
-                <option value="">Todos os status</option>
-                <option value="publicado" @selected($currentStatus === 'publicado')>Publicado</option>
-                <option value="rascunho"  @selected($currentStatus === 'rascunho')>Rascunho</option>
-            </select>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Status</label>
+                <select name="status"
+                        onchange="this.form.submit()"
+                        class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition-all
+                               focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
+                    <option value="">Todos</option>
+                    <option value="publicado" @selected($currentStatus === 'publicado')>Publicado</option>
+                    <option value="rascunho"  @selected($currentStatus === 'rascunho')>Rascunho</option>
+                </select>
+            </div>
 
             {{-- Data início --}}
-            <input type="date" name="data_inicio" value="{{ $currentDataInicio }}"
-                   onchange="this.form.submit()"
-                   class="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition-all
-                          focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Data Início</label>
+                <input type="date" name="data_inicio" value="{{ $currentDataInicio }}"
+                       onchange="this.form.submit()"
+                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition-all
+                              focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
+            </div>
 
             {{-- Data fim --}}
-            <input type="date" name="data_fim" value="{{ $currentDataFim }}"
-                   onchange="this.form.submit()"
-                   class="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition-all
-                          focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Data Fim</label>
+                <input type="date" name="data_fim" value="{{ $currentDataFim }}"
+                       onchange="this.form.submit()"
+                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition-all
+                              focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
+            </div>
         </div>
 
         <div class="mt-2 flex items-center gap-3">
