@@ -485,18 +485,33 @@
                                     $ultimoReporte = $ultimosReportes[$equipamento->prefixo] ?? null;
                                     $tz = config('app.timezone');
                                 @endphp
-                                <td data-col="reporte" class="px-3 py-2 whitespace-nowrap">
+                                <td data-col="reporte" class="px-3 py-2 max-w-xs">
                                     @if($ultimoReporte)
-                                        <a href="{{ route('reportes.show', $ultimoReporte->reporte) }}" target="_blank"
-                                           class="group flex flex-col gap-0.5">
-                                            <span class="font-mono text-xs font-semibold text-zinc-700 underline decoration-dotted underline-offset-2
-                                                         hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100">
+                                        <div class="flex flex-col gap-0.5">
+                                            <a href="{{ route('reportes.show', $ultimoReporte->reporte) }}" target="_blank"
+                                               class="font-mono text-xs font-semibold text-zinc-500 underline decoration-dotted underline-offset-2
+                                                      hover:text-zinc-800 dark:text-zinc-500 dark:hover:text-zinc-300 whitespace-nowrap">
                                                 {{ $ultimoReporte->reporte->numero_reporte }}
-                                            </span>
-                                            <span class="text-[11px] text-zinc-400 dark:text-zinc-600">
-                                                {{ $ultimoReporte->reporte->data_hora_emissao?->setTimezone($tz)->format('d/m/Y H:i') }}
-                                            </span>
-                                        </a>
+                                                · {{ $ultimoReporte->reporte->data_hora_emissao?->setTimezone($tz)->format('d/m H:i') }}
+                                            </a>
+                                            @if($ultimoReporte->documento)
+                                                <span class="text-xs font-medium text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
+                                                    {{ $ultimoReporte->documento }}
+                                                </span>
+                                            @endif
+                                            @if($ultimoReporte->status_operacional)
+                                                @php $cor = $statusCores[$ultimoReporte->status_operacional] ?? '#71717A'; @endphp
+                                                <span class="inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap"
+                                                      style="background-color:{{ $cor }}1A; color:{{ $cor }}; box-shadow:inset 0 0 0 1px {{ $cor }}33;">
+                                                    {{ $ultimoReporte->status_operacional }}
+                                                </span>
+                                            @endif
+                                            @if($ultimoReporte->observacao)
+                                                <span class="text-[11px] text-zinc-500 dark:text-zinc-500 line-clamp-2">
+                                                    {{ $ultimoReporte->observacao }}
+                                                </span>
+                                            @endif
+                                        </div>
                                     @else
                                         <span class="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-600
                                                      ring-1 ring-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:ring-rose-800/40">
