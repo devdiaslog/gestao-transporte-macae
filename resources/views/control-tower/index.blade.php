@@ -170,17 +170,14 @@
                 <div class="py-1.5">
                     <p class="px-3 pb-1 pt-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Colunas</p>
                     @foreach([
-                        ['col' => 'placa',        'label' => 'Placa'],
-                        ['col' => 'tempo',        'label' => 'Tp Atualização'],
-                        ['col' => 'status-op',    'label' => 'Status'],
-                        ['col' => 'rastreador',   'label' => 'Rastreador'],
-                        ['col' => 'condutor',  'label' => 'Condutor'],
-                        ['col' => 'documento', 'label' => 'Documento'],
-                        ['col' => 'origem',    'label' => 'Origem'],
-                        ['col' => 'destino',   'label' => 'Destino'],
-                        ['col' => 'obs',       'label' => 'Observação'],
-                        ['col' => 'modelo',    'label' => 'Modelo / Implemento'],
-                        ['col' => 'divisao',   'label' => 'Divisão'],
+                        ['col' => 'placa',           'label' => 'Placa'],
+                        ['col' => 'modelo',          'label' => 'Modelo / Implemento'],
+                        ['col' => 'status-op',       'label' => 'Status'],
+                        ['col' => 'condutor',        'label' => 'Condutor'],
+                        ['col' => 'ultimo-reporte',  'label' => 'Último Reporte'],
+                        ['col' => 'documento',       'label' => 'Documento'],
+                        ['col' => 'obs',             'label' => 'Observação'],
+                        ['col' => 'divisao',         'label' => 'Divisão'],
                     ] as $tog)
                         <label data-col-label="{{ strtolower($tog['label']) }}"
                                class="col-picker-item flex cursor-pointer items-center gap-2.5 px-3 py-1.5 transition-colors
