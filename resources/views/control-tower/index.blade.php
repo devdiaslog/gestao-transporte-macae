@@ -252,6 +252,10 @@
                 <table id="ct-table" class="w-full text-sm">
                     <thead class="sticky top-0 z-10">
                         <tr class="border-b border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+                            <th class="w-8 px-3 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap"
+                                title="Reporte do dia">
+                                Hj
+                            </th>
                             <th class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Prefixo
                             </th>
@@ -309,17 +313,37 @@
                                     $equipamento->motorista?->nome,
                                 ]));
 
-                                $posicao     = $equipamento->posicao;
-                                $hasLocation = $posicao && $posicao->latitude && $posicao->longitude;
-                                $mapLabel    = trim(($equipamento->prefixo ?? '') . ' ' . $equipamento->placa);
-                                $posicaoAt   = $posicao?->position_at?->setTimezone(config('app.timezone'))->format('d/m/Y H:i');
-                                $syncedAt    = $posicao?->synced_at?->setTimezone(config('app.timezone'))->format('d/m/Y H:i');
+                                $posicao        = $equipamento->posicao;
+                                $hasLocation    = $posicao && $posicao->latitude && $posicao->longitude;
+                                $mapLabel       = trim(($equipamento->prefixo ?? '') . ' ' . $equipamento->placa);
+                                $posicaoAt      = $posicao?->position_at?->setTimezone(config('app.timezone'))->format('d/m/Y H:i');
+                                $syncedAt       = $posicao?->synced_at?->setTimezone(config('app.timezone'))->format('d/m/Y H:i');
+                                $tz             = config('app.timezone');
+                                $reporteHoje    = $ultimoReporte && $ultimoReporte->reporte->data_hora_emissao?->setTimezone($tz)->isToday();
                             @endphp
 
                             {{-- ─── Data row ──────────────────────────────── --}}
                             <tr id="row-{{ $equipamento->id }}"
                                 data-search="{{ strtolower($searchText) }}"
                                 class="ct-row transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/30">
+
+                                {{-- Sinalizador reporte do dia --}}
+                                <td class="px-3 py-2 text-center">
+                                    @if($reporteHoje)
+                                        <span title="Reporte do dia feito"
+                                              class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/40">
+                                            <svg class="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+                                            </svg>
+                                        </span>
+                                    @else
+                                        <span title="{{ $ultimoReporte ? 'Último reporte: ' . $ultimoReporte->reporte->data_hora_emissao?->setTimezone($tz)->format('d/m/Y') : 'Sem reporte' }}"
+                                              class="inline-flex h-6 w-6 items-center justify-center rounded-full
+                                                     {{ $ultimoReporte ? 'bg-amber-50 dark:bg-amber-950/30' : 'bg-rose-50 dark:bg-rose-950/30' }}">
+                                            <span class="h-2 w-2 rounded-full {{ $ultimoReporte ? 'bg-amber-400 dark:bg-amber-500' : 'bg-rose-400 dark:bg-rose-500' }}"></span>
+                                        </span>
+                                    @endif
+                                </td>
 
                                 <td class="px-3 py-2 whitespace-nowrap">
                                     <p class="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-100">{{ $equipamento->prefixo ?? '—' }}</p>
