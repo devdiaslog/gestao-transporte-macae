@@ -8,6 +8,7 @@ use App\Http\Controllers\JustificativaController;
 use App\Http\Controllers\ModeloEquipamentoController;
 use App\Http\Controllers\MotoristaController;
 use App\Http\Controllers\OcorrenciaController;
+use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\ResponsavelController;
 use App\Http\Controllers\SubDivisaoController;
 use App\Http\Controllers\TipoEquipamentoController;
@@ -55,6 +56,9 @@ Route::middleware('auth')->group(function () {
     Route::get('ocorrencias/veiculo/{equipamento}', [OcorrenciaController::class, 'veiculo'])->name('ocorrencias.veiculo');
     Route::patch('ocorrencias/{ocorrencia}/auditoria', [OcorrenciaController::class, 'auditar'])->name('ocorrencias.auditar');
     Route::resource('ocorrencias', OcorrenciaController::class)->except(['show'])->parameters(['ocorrencias' => 'ocorrencia']);
+
+    // Reportes
+    Route::resource('reportes', ReporteController::class)->only(['index', 'store', 'destroy'])->parameters(['reportes' => 'reporte']);
 
     // Usuários — apenas Administrador
     Route::middleware('can:manage-users')->group(function () {
