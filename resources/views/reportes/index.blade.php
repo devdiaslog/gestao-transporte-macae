@@ -350,7 +350,7 @@
                                   ' focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">' +
                 '</td>' +
                 '<td class="px-2 py-1.5">' +
-                    '<input type="text" name="itens[' + index + '][data_hora_previsao]" placeholder="Ex: 14:30"' +
+                    '<input type="datetime-local" name="itens[' + index + '][data_hora_previsao]"' +
                            ' class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm outline-none' +
                                   ' focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">' +
                 '</td>' +

@@ -131,7 +131,9 @@
                                 <td class="px-4 py-3 text-zinc-600">{{ $item->documento ?? '—' }}</td>
                                 <td class="px-4 py-3 text-zinc-600">{{ $item->status_operacional ?? '—' }}</td>
                                 <td class="px-4 py-3 text-zinc-600">{{ $item->tempo_parado ?? '—' }}</td>
-                                <td class="px-4 py-3 text-zinc-600">{{ $item->data_hora_previsao ?? '—' }}</td>
+                                <td class="px-4 py-3 text-zinc-600">
+                                    {{ $item->data_hora_previsao ? \Carbon\Carbon::parse($item->data_hora_previsao)->format('d/m/Y H:i') : '—' }}
+                                </td>
                                 <td class="px-4 py-3 text-zinc-600">{{ $item->primeiro_contato ?? '—' }}</td>
                                 <td class="px-4 py-3 text-zinc-600">{{ $item->segundo_contato ?? '—' }}</td>
                                 <td class="px-4 py-3 text-zinc-500">{{ $item->observacao ?? '—' }}</td>

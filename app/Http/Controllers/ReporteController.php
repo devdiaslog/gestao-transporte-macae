@@ -188,7 +188,7 @@ class ReporteController extends Controller
                 $i->documento ?? '',
                 $i->status_operacional ?? '',
                 $i->tempo_parado ?? '',
-                $i->data_hora_previsao ?? '',
+                $i->data_hora_previsao ? \Carbon\Carbon::parse($i->data_hora_previsao)->format('d/m/Y H:i') : '',
                 $i->primeiro_contato ?? '',
                 $i->segundo_contato ?? '',
                 $i->observacao ?? '',
