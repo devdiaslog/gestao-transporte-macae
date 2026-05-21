@@ -151,7 +151,8 @@
                                 <td class="px-4 py-3 text-right">
                                     @if($loop->last || $itens[$loop->index + 1]->reporte_id !== $item->reporte_id)
                                         <form action="{{ route('reportes.destroy', $reporte) }}" method="POST"
-                                              onsubmit="return confirm('Excluir o reporte {{ $reporte?->numero_reporte }}? Todos os itens serão removidos.')">
+                                              data-confirm="true"
+                                              data-user-name="o reporte {{ $reporte?->numero_reporte }} (todos os itens serão removidos)">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit"
