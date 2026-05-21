@@ -166,7 +166,7 @@
                                     @if($loop->last || $itens[$loop->index + 1]->reporte_id !== $item->reporte_id)
                                         <div class="flex items-center justify-end gap-1">
                                             <button type="button"
-                                                    onclick="openEditModal({{ $reporte->id }}, '{{ route('reportes.data', $reporte) }}', '{{ route('reportes.update', $reporte) }}', '{{ $reporte->numero_reporte }}')"
+                                                    onclick="openEditModal('{{ route('reportes.data', $reporte) }}', '{{ route('reportes.update', $reporte) }}', '{{ $reporte->numero_reporte }}')"
                                                     class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium
                                                            text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800">
                                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -423,7 +423,7 @@
             openModal();
         };
 
-        window.openEditModal = function (id, dataUrl, updateUrl, numero) {
+        window.openEditModal = function (dataUrl, updateUrl, numero) {
             fetch(dataUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {

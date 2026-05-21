@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasEncryptedRouteKey;
 use Database\Factories\TipoOcorrenciaFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class TipoOcorrencia extends Model
 {
     /** @use HasFactory<TipoOcorrenciaFactory> */
-    use HasFactory;
+    use HasEncryptedRouteKey, HasFactory;
 
     protected $table = 'tipos_ocorrencia';
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasEncryptedRouteKey;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Reporte extends Model
 {
-    use HasFactory;
+    use HasEncryptedRouteKey, HasFactory;
 
     protected $fillable = [
         'numero_reporte',

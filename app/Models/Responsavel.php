@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TipoResponsavel;
+use App\Traits\HasEncryptedRouteKey;
 use Database\Factories\ResponsavelFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Responsavel extends Model
 {
     /** @use HasFactory<ResponsavelFactory> */
-    use HasFactory;
+    use HasEncryptedRouteKey, HasFactory;
 
     protected $table = 'responsaveis';
 

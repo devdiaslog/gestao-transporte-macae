@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasEncryptedRouteKey;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Divisao extends Model
 {
-    use SoftDeletes;
+    use HasEncryptedRouteKey, SoftDeletes;
 
     protected $table = 'divisoes';
 

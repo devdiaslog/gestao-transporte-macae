@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\HasEncryptedRouteKey;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TipoEquipamento extends Model
 {
-    use SoftDeletes;
+    use HasEncryptedRouteKey, SoftDeletes;
 
     protected $table = 'tipos_equipamentos';
 

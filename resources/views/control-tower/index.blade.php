@@ -381,7 +381,7 @@
                                             <span class="text-[11px] text-zinc-300 dark:text-zinc-700">sem implemento</span>
                                         @endif
                                         <button type="button"
-                                                onclick="openImplementoModal({{ $equipamento->id }}, '{{ addslashes($equipamento->placa) }}', {{ $equipamento->implemento_id ?? 'null' }}, '{{ addslashes($equipamento->implemento_nome_override ?? '') }}')"
+                                                onclick="openImplementoModal('{{ route('control-tower.implemento', $equipamento) }}', {{ $equipamento->id }}, '{{ addslashes($equipamento->placa) }}', {{ $equipamento->implemento_id ?? 'null' }}, '{{ addslashes($equipamento->implemento_nome_override ?? '') }}')"
                                                 title="Vincular / alterar implemento"
                                                 class="rounded p-0.5 text-zinc-300 transition-colors hover:text-zinc-600
                                                        dark:text-zinc-700 dark:hover:text-zinc-400">
@@ -740,16 +740,15 @@
 
     // ─── Implemento modal ────────────────────────────────────────────────────
     var IMPLEMENTOS      = @json($implementos->values());
-    var PATCH_URL_TMPL   = '{{ route('control-tower.implemento', ['equipamento' => '__ID__']) }}';
     var _currentMotoId   = null;
     var _selectedImpId   = null;
 
-    function openImplementoModal(motoId, motoPlaca, currentImpId, currentNomeOverride) {
+    function openImplementoModal(patchUrl, motoId, motoPlaca, currentImpId, currentNomeOverride) {
         _currentMotoId = motoId;
         _selectedImpId = currentImpId;
 
         document.getElementById('modal-subtitle').textContent = motoPlaca;
-        document.getElementById('implemento-form').action = PATCH_URL_TMPL.replace('__ID__', motoId);
+        document.getElementById('implemento-form').action = patchUrl;
         document.getElementById('modal-nome-override').value = currentNomeOverride || '';
 
         var btnDesv = document.getElementById('modal-btn-desvincular');

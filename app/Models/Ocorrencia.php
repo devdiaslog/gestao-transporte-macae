@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\StatusAuditoria;
+use App\Traits\HasEncryptedRouteKey;
 use Database\Factories\OcorrenciaFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Ocorrencia extends Model
 {
     /** @use HasFactory<OcorrenciaFactory> */
-    use HasFactory;
+    use HasEncryptedRouteKey, HasFactory;
 
     protected $primaryKey = 'id_ocorrencia';
 
