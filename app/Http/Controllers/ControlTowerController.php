@@ -35,9 +35,11 @@ class ControlTowerController extends Controller
             ->when($request->filled('implemento_modelo_id'), fn ($q) => $q->whereHas('implemento', fn ($q) => $q->where('modelo_id', $request->implemento_modelo_id)))
             ->when($request->filled('motorista_id'), fn ($q) => $q->where('motorista_id', $request->motorista_id))
             ->orderByRaw("(
-                SELECT MAX(created_at) FROM equipamento_logs
-                WHERE equipamento_id = equipamentos.id
-                AND campo IN ('Status Operacional', 'Documento de Demanda')
+                SELECT MAX(r.data_hora_emissao)
+                FROM reporte_itens ri
+                JOIN reportes r ON r.id = ri.reporte_id
+                WHERE ri.prefixo = equipamentos.prefixo
+                AND r.status = 'publicado'
             ) ASC")
             ->orderBy('placa')
             ->paginate(100)
