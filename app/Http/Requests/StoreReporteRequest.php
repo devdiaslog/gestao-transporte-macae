@@ -25,6 +25,7 @@ class StoreReporteRequest extends FormRequest
             'salvar_como' => ['required', 'in:rascunho,publicado'],
             'itens' => ['required', 'array', 'min:1'],
             'itens.*.prefixo' => ['nullable', 'string', 'max:50'],
+            'itens.*.documento' => ['nullable', 'string', 'max:100'],
             'itens.*.status_operacional' => ['nullable', 'string', 'max:100'],
             'itens.*.tempo_parado' => ['nullable', 'string', 'max:20'],
             'itens.*.data_hora_previsao' => ['nullable', 'string', 'max:30'],

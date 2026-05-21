@@ -260,6 +260,7 @@
                             <thead>
                                 <tr class="bg-slate-50 dark:bg-zinc-800">
                                     <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-28">Prefixo</th>
+                                    <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-36">Documento</th>
                                     <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-48">Status Operacional</th>
                                     <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-28">Tempo Parado</th>
                                     <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-32">Previsão</th>
@@ -328,6 +329,11 @@
                 '<td class="px-2 py-1.5">' +
                     '<input type="text" name="itens[' + index + '][prefixo]" list="prefixos-motorizado" placeholder="Prefixo..."' +
                            ' autocomplete="off"' +
+                           ' class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm outline-none' +
+                                  ' focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">' +
+                '</td>' +
+                '<td class="px-2 py-1.5">' +
+                    '<input type="text" name="itens[' + index + '][documento]" placeholder="Nº documento..."' +
                            ' class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm outline-none' +
                                   ' focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">' +
                 '</td>' +
@@ -435,6 +441,7 @@
                         document.getElementById('itens-body').insertAdjacentHTML('beforeend', buildRow(idx));
                         var row = document.getElementById('itens-body').lastElementChild;
                         row.querySelector('[name="itens[' + idx + '][prefixo]"]').value             = item.prefixo || '';
+                        row.querySelector('[name="itens[' + idx + '][documento]"]').value            = item.documento || '';
                         row.querySelector('[name="itens[' + idx + '][status_operacional]"]').value   = item.status_operacional || '';
                         row.querySelector('[name="itens[' + idx + '][tempo_parado]"]').value         = item.tempo_parado || '';
                         row.querySelector('[name="itens[' + idx + '][data_hora_previsao]"]').value   = item.data_hora_previsao || '';

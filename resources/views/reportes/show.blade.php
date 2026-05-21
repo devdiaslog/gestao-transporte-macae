@@ -114,6 +114,7 @@
                         <tr class="border-b border-slate-200 bg-slate-50">
                             <th class="w-8 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">#</th>
                             <th class="w-24 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Prefixo</th>
+                            <th class="w-36 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Documento</th>
                             <th class="w-44 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Status Operacional</th>
                             <th class="w-28 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Tempo Parado</th>
                             <th class="w-32 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Previsão</th>
@@ -127,6 +128,7 @@
                             <tr class="{{ $loop->even ? 'bg-slate-50/50' : 'bg-white' }}">
                                 <td class="px-4 py-3 text-xs text-zinc-400">{{ $i + 1 }}</td>
                                 <td class="px-4 py-3 font-semibold text-zinc-800">{{ $item->prefixo ?? '—' }}</td>
+                                <td class="px-4 py-3 text-zinc-600">{{ $item->documento ?? '—' }}</td>
                                 <td class="px-4 py-3 text-zinc-600">{{ $item->status_operacional ?? '—' }}</td>
                                 <td class="px-4 py-3 text-zinc-600">{{ $item->tempo_parado ?? '—' }}</td>
                                 <td class="px-4 py-3 text-zinc-600">{{ $item->data_hora_previsao ?? '—' }}</td>
@@ -136,7 +138,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="px-4 py-8 text-center text-sm text-zinc-400">Nenhum item registrado.</td>
+                                <td colspan="9" class="px-4 py-8 text-center text-sm text-zinc-400">Nenhum item registrado.</td>
                             </tr>
                         @endforelse
                     </tbody>

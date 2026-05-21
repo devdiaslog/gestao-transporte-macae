@@ -15,6 +15,7 @@ class ReporteItem extends Model
     protected $fillable = [
         'reporte_id',
         'prefixo',
+        'documento',
         'status_operacional',
         'tempo_parado',
         'data_hora_previsao',

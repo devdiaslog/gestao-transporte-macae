@@ -71,6 +71,7 @@ class ReporteController extends Controller
             ->map(fn ($item) => [
                 'reporte_id' => $reporte->id,
                 'prefixo' => $item['prefixo'] ?? null,
+                'documento' => $item['documento'] ?? null,
                 'status_operacional' => $item['status_operacional'] ?? null,
                 'tempo_parado' => $item['tempo_parado'] ?? null,
                 'data_hora_previsao' => $item['data_hora_previsao'] ?? null,
@@ -114,6 +115,7 @@ class ReporteController extends Controller
             'numero' => $reporte->numero_reporte,
             'itens' => $reporte->itens->map(fn (ReporteItem $i) => [
                 'prefixo' => $i->prefixo,
+                'documento' => $i->documento,
                 'status_operacional' => $i->status_operacional,
                 'tempo_parado' => $i->tempo_parado,
                 'data_hora_previsao' => $i->data_hora_previsao,
@@ -142,6 +144,7 @@ class ReporteController extends Controller
             ->map(fn ($item) => [
                 'reporte_id' => $reporte->id,
                 'prefixo' => $item['prefixo'] ?? null,
+                'documento' => $item['documento'] ?? null,
                 'status_operacional' => $item['status_operacional'] ?? null,
                 'tempo_parado' => $item['tempo_parado'] ?? null,
                 'data_hora_previsao' => $item['data_hora_previsao'] ?? null,
@@ -176,12 +179,13 @@ class ReporteController extends Controller
     {
         $tz = config('app.timezone');
 
-        $rows = collect([['Nº Reporte', 'Nome', 'Status Reporte', 'Prefixo', 'Status Operacional', 'Tempo Parado', 'Previsão', '1º Contato', '2º Contato', 'Observação', 'Data/Hora Emissão', 'Emitido Por']])
+        $rows = collect([['Nº Reporte', 'Nome', 'Status Reporte', 'Prefixo', 'Documento', 'Status Operacional', 'Tempo Parado', 'Previsão', '1º Contato', '2º Contato', 'Observação', 'Data/Hora Emissão', 'Emitido Por']])
             ->concat($itens->map(fn (ReporteItem $i) => [
                 $i->reporte?->numero_reporte ?? '',
                 $i->reporte?->nome ?? '',
                 $i->reporte?->status ?? '',
                 $i->prefixo ?? '',
+                $i->documento ?? '',
                 $i->status_operacional ?? '',
                 $i->tempo_parado ?? '',
                 $i->data_hora_previsao ?? '',
