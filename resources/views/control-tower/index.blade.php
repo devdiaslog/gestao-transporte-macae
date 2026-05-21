@@ -258,9 +258,6 @@
                             <th class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Prefixo
                             </th>
-                            <th data-col="tempo" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
-                                Tp Atualização
-                            </th>
                             <th data-col="placa" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Placa
                             </th>
@@ -270,11 +267,11 @@
                             <th data-col="status-op" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Status
                             </th>
-                            <th data-col="rastreador" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
-                                Rastreador
-                            </th>
                             <th data-col="condutor" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Condutor
+                            </th>
+                            <th data-col="ultimo-reporte" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Último Reporte
                             </th>
                             <th data-col="documento" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Documento
@@ -345,32 +342,6 @@
                                     @endif
                                 </td>
 
-                                <td data-col="tempo" class="px-3 py-2 whitespace-nowrap">
-                                    @php
-                                        $ultimoLog = $equipamento->ultimoLogOperacional;
-                                    @endphp
-                                    @if($ultimoLog)
-                                        @php
-                                            $diff  = $ultimoLog->created_at->diffInMinutes(now());
-                                            $campo = $ultimoLog->campo === 'Status Operacional' ? 'S' : 'D';
-                                            $d     = intdiv($diff, 1440);
-                                            $h     = intdiv($diff % 1440, 60);
-                                            $m     = $diff % 60;
-                                            $hm    = sprintf('%02d:%02d', $h, $m);
-                                            $tempo = $d > 0 ? "{$d}d {$hm}" : $hm;
-                                        @endphp
-                                        <span title="Última alteração: {{ $ultimoLog->created_at->format('d/m/Y H:i') }} — {{ $ultimoLog->campo }}"
-                                              class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
-                                                     @if($d === 0 && $h < 1) bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400
-                                                     @elseif($d === 0 && $h < 8) bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400
-                                                     @else bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 @endif">
-                                            {{ $tempo }}
-                                            <span class="opacity-60">{{ $campo }}</span>
-                                        </span>
-                                    @else
-                                        <span class="text-zinc-300 dark:text-zinc-700">—</span>
-                                    @endif
-                                </td>
 
                                 <td data-col="placa" class="px-3 py-2 whitespace-nowrap">
                                     <p class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $equipamento->placa }}</p>
@@ -418,66 +389,6 @@
                                     @endif
                                 </td>
 
-                                <td data-col="rastreador" class="px-3 py-2 whitespace-nowrap">
-                                    @php
-                                        $trackerState = $posicao?->tracker_state;
-                                        $stateSince   = $posicao?->state_since;
-                                        $positionAt   = $posicao?->position_at;
-                                        $isStale      = $positionAt && $positionAt->diffInHours(now()) >= 1;
-
-                                        if ($trackerState && $stateSince) {
-                                            $mins  = (int) abs($stateSince->diffInMinutes(now()));
-                                            $d     = intdiv($mins, 1440);
-                                            $h     = intdiv($mins % 1440, 60);
-                                            $m     = $mins % 60;
-                                            $tempo = $d > 0 ? "{$d}d {$h}h {$m}m" : ($h > 0 ? "{$h}h {$m}m" : "{$m}m");
-                                        }
-                                    @endphp
-                                    @if($trackerState === 'Em Movimento')
-                                        @if($isStale)
-                                            <span title="Último sinal: {{ $positionAt->setTimezone(config('app.timezone'))->format('d/m H:i') }}"
-                                                  class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
-                                                         bg-zinc-100 text-zinc-400 ring-1 ring-zinc-200
-                                                         dark:bg-zinc-800 dark:text-zinc-500 dark:ring-zinc-700">
-                                                <span class="h-1.5 w-1.5 rounded-full bg-zinc-400"></span>
-                                                Em Mov. · {{ $tempo ?? '—' }}
-                                            </span>
-                                        @else
-                                            <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
-                                                         bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200
-                                                         dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-800/50">
-                                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                                                Em Mov. · {{ $tempo ?? '—' }}
-                                            </span>
-                                        @endif
-                                    @elseif($trackerState === 'Parado')
-                                        @if($isStale)
-                                            <span title="Último sinal: {{ $positionAt->setTimezone(config('app.timezone'))->format('d/m H:i') }}"
-                                                  class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
-                                                         bg-zinc-100 text-zinc-400 ring-1 ring-zinc-200
-                                                         dark:bg-zinc-800 dark:text-zinc-500 dark:ring-zinc-700">
-                                                <span class="h-1.5 w-1.5 rounded-full bg-zinc-400"></span>
-                                                Parado · {{ $tempo ?? '—' }}
-                                            </span>
-                                        @else
-                                            <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
-                                                         bg-red-50 text-red-700 ring-1 ring-red-200
-                                                         dark:bg-red-950/40 dark:text-red-400 dark:ring-red-800/50">
-                                                <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
-                                                Parado · {{ $tempo ?? '—' }}
-                                            </span>
-                                        @endif
-                                    @elseif($trackerState === 'Sem Sinal')
-                                        <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
-                                                     bg-zinc-100 text-zinc-500 ring-1 ring-zinc-200
-                                                     dark:bg-zinc-800 dark:text-zinc-500 dark:ring-zinc-700">
-                                            <span class="h-1.5 w-1.5 rounded-full bg-zinc-400"></span>
-                                            Sem Sinal
-                                        </span>
-                                    @else
-                                        <span class="text-zinc-300 dark:text-zinc-700">—</span>
-                                    @endif
-                                </td>
 
                                 <td data-col="condutor" class="px-3 py-2 whitespace-nowrap">
                                     @if($equipamento->motorista)
@@ -488,6 +399,26 @@
                                         @endif
                                     @else
                                         <span class="text-zinc-300 dark:text-zinc-700">—</span>
+                                    @endif
+                                </td>
+
+                                <td data-col="ultimo-reporte" class="px-3 py-2 whitespace-nowrap">
+                                    @if($ultimoReporte)
+                                        <a href="{{ route('reportes.show', $ultimoReporte->reporte) }}" target="_blank"
+                                           class="flex flex-col gap-0.5 group">
+                                            <span class="font-mono text-xs font-semibold text-zinc-600 underline decoration-dotted underline-offset-2
+                                                         group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-zinc-200">
+                                                {{ $ultimoReporte->reporte->numero_reporte }}
+                                            </span>
+                                            <span class="text-[11px] text-zinc-400 dark:text-zinc-600">
+                                                {{ $ultimoReporte->reporte->data_hora_emissao?->setTimezone(config('app.timezone'))->format('d/m/Y H:i') }}
+                                            </span>
+                                        </a>
+                                    @else
+                                        <span class="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-600
+                                                     ring-1 ring-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:ring-rose-800/40">
+                                            Sem reporte
+                                        </span>
                                     @endif
                                 </td>
 
@@ -1229,37 +1160,6 @@
         setTimeout(function () { _leafletMap.invalidateSize(); }, 150);
     }
 
-    function updateRastreadorCell(rowId, trackerState, duration) {
-        if (!rowId) { return; }
-        var row  = document.getElementById('row-' + rowId);
-        if (!row) { return; }
-        var cell = row.querySelector('[data-col="rastreador"]');
-        if (!cell) { return; }
-
-        var dot   = '<span class="h-1.5 w-1.5 rounded-full ';
-        var badge = '<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ';
-        var label, cls;
-
-        if (trackerState === 'Em Movimento') {
-            cls   = 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-800/50';
-            dot  += 'bg-emerald-500"></span>';
-            label = 'Em Mov.' + (duration ? ' · ' + duration : '');
-        } else if (trackerState === 'Parado') {
-            cls   = 'bg-red-50 text-red-700 ring-1 ring-red-200 dark:bg-red-950/40 dark:text-red-400 dark:ring-red-800/50';
-            dot  += 'bg-red-500"></span>';
-            label = 'Parado' + (duration ? ' · ' + duration : '');
-        } else if (trackerState === 'Sem Sinal') {
-            cls   = 'bg-zinc-100 text-zinc-500 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-500 dark:ring-zinc-700';
-            dot  += 'bg-zinc-400"></span>';
-            label = 'Sem Sinal';
-        } else {
-            cell.innerHTML = '<span class="text-zinc-300 dark:text-zinc-700">—</span>';
-            return;
-        }
-
-        cell.innerHTML = badge + cls + '">' + dot + label + '</span>';
-    }
-
     function _syncAndRender(label) {
         var btn  = document.getElementById('map-btn-refresh');
         var icon = document.getElementById('map-refresh-icon');
@@ -1277,7 +1177,6 @@
             }
             _renderMap(data.latitude, data.longitude, label);
             updateMapInfo(data.position_at, data.synced_at);
-            updateRastreadorCell(_currentRowId, data.tracker_state, data.state_duration);
         })
         .catch(function () {
             document.getElementById('map-position-info').textContent = 'Erro ao buscar localização.';
@@ -1325,7 +1224,6 @@
             if (!data.ok) { return; }
             _renderMap(data.latitude, data.longitude, label);
             updateMapInfo(data.position_at, data.synced_at);
-            updateRastreadorCell(_currentRowId, data.tracker_state, data.state_duration);
         })
         .finally(function () {
             btn.disabled = false;
