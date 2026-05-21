@@ -6,6 +6,7 @@ use App\Http\Requests\StoreReporteRequest;
 use App\Models\Reporte;
 use App\Models\ReporteItem;
 use App\Models\StatusOperacional;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -81,6 +82,62 @@ class ReporteController extends Controller
         $msg = $validated['salvar_como'] === 'rascunho'
             ? 'Rascunho salvo com sucesso.'
             : 'Reporte publicado com sucesso.';
+
+        return redirect()->route('reportes.index')->with('success', $msg);
+    }
+
+    public function data(Reporte $reporte): JsonResponse
+    {
+        $reporte->load('itens');
+
+        return response()->json([
+            'id' => $reporte->id,
+            'nome' => $reporte->nome,
+            'status' => $reporte->status,
+            'numero' => $reporte->numero_reporte,
+            'itens' => $reporte->itens->map(fn (ReporteItem $i) => [
+                'prefixo' => $i->prefixo,
+                'status_operacional' => $i->status_operacional,
+                'tempo_parado' => $i->tempo_parado,
+                'observacao' => $i->observacao,
+            ]),
+        ]);
+    }
+
+    public function update(StoreReporteRequest $request, Reporte $reporte): RedirectResponse
+    {
+        $validated = $request->validated();
+
+        $reporte->update([
+            'nome' => $validated['nome'],
+            'status' => $validated['salvar_como'],
+        ]);
+
+        $now = Carbon::now();
+
+        $reporte->itens()->delete();
+
+        $itens = collect($validated['itens'])
+            ->filter(fn ($item) => ! empty(array_filter($item)))
+            ->map(fn ($item) => [
+                'reporte_id' => $reporte->id,
+                'prefixo' => $item['prefixo'] ?? null,
+                'status_operacional' => $item['status_operacional'] ?? null,
+                'tempo_parado' => $item['tempo_parado'] ?? null,
+                'observacao' => $item['observacao'] ?? null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])
+            ->values()
+            ->all();
+
+        if (! empty($itens)) {
+            ReporteItem::insert($itens);
+        }
+
+        $msg = $validated['salvar_como'] === 'rascunho'
+            ? 'Rascunho atualizado com sucesso.'
+            : 'Reporte atualizado com sucesso.';
 
         return redirect()->route('reportes.index')->with('success', $msg);
     }

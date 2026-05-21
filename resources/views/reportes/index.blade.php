@@ -150,20 +150,31 @@
                                 <td class="px-4 py-3 text-zinc-600 dark:text-zinc-400">{{ $reporte?->creator?->name ?? '—' }}</td>
                                 <td class="px-4 py-3 text-right">
                                     @if($loop->last || $itens[$loop->index + 1]->reporte_id !== $item->reporte_id)
-                                        <form action="{{ route('reportes.destroy', $reporte) }}" method="POST"
-                                              data-confirm="true"
-                                              data-user-name="o reporte {{ $reporte?->numero_reporte }} (todos os itens serão removidos)">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit"
+                                        <div class="flex items-center justify-end gap-1">
+                                            <button type="button"
+                                                    onclick="openEditModal({{ $reporte->id }}, '{{ route('reportes.data', $reporte) }}', '{{ route('reportes.update', $reporte) }}', '{{ $reporte->numero_reporte }}')"
                                                     class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium
-                                                           text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30">
+                                                           text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800">
                                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/>
                                                 </svg>
-                                                Excluir
+                                                Editar
                                             </button>
-                                        </form>
+                                            <form action="{{ route('reportes.destroy', $reporte) }}" method="POST"
+                                                  data-confirm="true"
+                                                  data-user-name="o reporte {{ $reporte?->numero_reporte }} (todos os itens serão removidos)">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit"
+                                                        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium
+                                                               text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30">
+                                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                                                    </svg>
+                                                    Excluir
+                                                </button>
+                                            </form>
+                                        </div>
                                     @endif
                                 </td>
                             </tr>
@@ -207,7 +218,8 @@
             {{-- Form --}}
             <form id="create-form" action="{{ route('reportes.store') }}" method="POST" class="flex flex-1 flex-col overflow-hidden">
                 @csrf
-                <input type="hidden" name="salvar_como" id="salvar_como" value="publicado">
+                <input type="hidden" name="_method"    id="form-method"   value="POST">
+                <input type="hidden" name="salvar_como" id="salvar_como"  value="publicado">
 
                 {{-- Nome do reporte --}}
                 <div class="border-b border-slate-200 px-6 py-4 dark:border-zinc-800">
@@ -338,6 +350,12 @@
             document.getElementById('create-form').submit();
         };
 
+        function openModal() {
+            var modal = document.getElementById('create-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
         window.openCreateModal = function () {
             var now = new Date();
             var pad = function (n) { return String(n).padStart(2, '0'); };
@@ -348,14 +366,44 @@
                 ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
 
             document.getElementById('modal-numero').textContent = dateStr + '-???';
+            document.querySelector('[name="nome"]').value = '';
+            document.getElementById('create-form').action = '{{ route('reportes.store') }}';
+            document.getElementById('form-method').value = 'POST';
 
             document.getElementById('itens-body').innerHTML = '';
             rowIndex = 0;
             addRow();
 
-            var modal = document.getElementById('create-modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
+            openModal();
+        };
+
+        window.openEditModal = function (id, dataUrl, updateUrl, numero) {
+            fetch(dataUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    document.getElementById('modal-numero').textContent = numero;
+                    document.getElementById('modal-datetime').textContent = '—';
+                    document.querySelector('[name="nome"]').value = data.nome || '';
+                    document.getElementById('create-form').action = updateUrl;
+                    document.getElementById('form-method').value = 'PUT';
+
+                    document.getElementById('itens-body').innerHTML = '';
+                    rowIndex = 0;
+
+                    data.itens.forEach(function (item) {
+                        var idx = rowIndex++;
+                        document.getElementById('itens-body').insertAdjacentHTML('beforeend', buildRow(idx));
+                        var row = document.getElementById('itens-body').lastElementChild;
+                        row.querySelector('[name="itens[' + idx + '][prefixo]"]').value            = item.prefixo || '';
+                        row.querySelector('[name="itens[' + idx + '][status_operacional]"]').value  = item.status_operacional || '';
+                        row.querySelector('[name="itens[' + idx + '][tempo_parado]"]').value        = item.tempo_parado || '';
+                        row.querySelector('[name="itens[' + idx + '][observacao]"]').value          = item.observacao || '';
+                    });
+
+                    if (rowIndex === 0) { addRow(); }
+
+                    openModal();
+                });
         };
 
         window.closeCreateModal = function () {
@@ -363,6 +411,8 @@
             modal.classList.add('hidden');
             modal.classList.remove('flex');
             document.getElementById('itens-body').innerHTML = '';
+            document.getElementById('form-method').value = 'POST';
+            document.getElementById('create-form').action = '{{ route('reportes.store') }}';
             rowIndex = 0;
         };
     })();
