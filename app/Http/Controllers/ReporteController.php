@@ -41,7 +41,7 @@ class ReporteController extends Controller
             $this->export($query->get());
         }
 
-        $itens = $query->paginate(50)->withQueryString();
+        $itens = $query->paginate(10)->withQueryString();
         $statusOperacionais = StatusOperacional::where('status', true)->orderBy('nome')->get();
 
         return view('reportes.index', compact('itens', 'statusOperacionais'));
