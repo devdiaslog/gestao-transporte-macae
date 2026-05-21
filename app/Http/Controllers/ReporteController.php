@@ -88,6 +88,8 @@ class ReporteController extends Controller
 
     public function show(Reporte $reporte): View
     {
+        abort_if($reporte->status === 'rascunho', 403, 'Rascunhos não geram relatório.');
+
         $reporte->load(['itens', 'creator']);
 
         return view('reportes.show', compact('reporte'));

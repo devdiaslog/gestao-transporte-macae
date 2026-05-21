@@ -77,23 +77,18 @@
 
             <div class="text-right">
                 <p class="font-mono text-2xl font-bold text-zinc-800">{{ $reporte->numero_reporte }}</p>
-                @if($reporte->status === 'rascunho')
-                    <span class="mt-1 inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
-                        Rascunho
-                    </span>
-                @else
-                    <span class="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                        Publicado
-                    </span>
-                @endif
             </div>
         </div>
 
         {{-- Metadados --}}
-        <div class="mt-5 grid grid-cols-3 divide-x divide-slate-200 rounded-xl border border-slate-200 bg-slate-50">
+        <div class="mt-5 grid grid-cols-4 divide-x divide-slate-200 rounded-xl border border-slate-200 bg-slate-50">
             <div class="px-5 py-3">
-                <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Nome</p>
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Reporte</p>
                 <p class="mt-0.5 text-sm font-semibold text-zinc-800">{{ $reporte->nome ?? '—' }}</p>
+            </div>
+            <div class="px-5 py-3">
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Número</p>
+                <p class="mt-0.5 font-mono text-sm font-semibold text-zinc-800">{{ $reporte->numero_reporte }}</p>
             </div>
             <div class="px-5 py-3">
                 <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Data / Hora de Emissão</p>
