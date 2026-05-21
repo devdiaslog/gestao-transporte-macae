@@ -17,18 +17,20 @@
     <style>
         body { font-family: 'Inter', sans-serif; }
         @media print {
+            @page { size: A4 landscape; margin: 12mm; }
             .no-print { display: none !important; }
-            body { background: white !important; }
-            .print-shadow { box-shadow: none !important; }
+            body { background: white !important; padding: 0 !important; }
+            .print-shadow { box-shadow: none !important; border-radius: 0 !important; }
+            .print-container { max-width: 100% !important; padding: 0 !important; }
         }
     </style>
 </head>
-<body class="min-h-screen bg-slate-100 py-10 text-zinc-900 antialiased">
+<body class="min-h-screen bg-slate-100 py-10 text-zinc-900 antialiased print:bg-white">
 
     @php $tz = config('app.timezone'); @endphp
 
     {{-- Toolbar --}}
-    <div class="no-print mx-auto mb-6 flex max-w-4xl items-center justify-between px-4">
+    <div class="no-print mx-auto mb-6 flex print-container max-w-7xl items-center justify-between px-4">
         <a href="{{ route('reportes.index') }}"
            class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 shadow-xs hover:bg-slate-50">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -55,7 +57,7 @@
     </div>
 
     {{-- Documento --}}
-    <div class="print-shadow mx-auto max-w-4xl rounded-2xl bg-white px-10 py-10 shadow-lg">
+    <div class="print-shadow mx-auto print-container max-w-7xl rounded-2xl bg-white px-10 py-10 shadow-lg">
 
         {{-- Cabeçalho --}}
         <div class="flex items-start justify-between border-b border-slate-200 pb-6">
@@ -115,10 +117,10 @@
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-slate-200 bg-slate-50">
-                            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">#</th>
-                            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Prefixo</th>
-                            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Status Operacional</th>
-                            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Tempo Parado</th>
+                                <th class="w-8 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">#</th>
+                            <th class="w-24 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Prefixo</th>
+                            <th class="w-52 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Status Operacional</th>
+                            <th class="w-32 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Tempo Parado</th>
                             <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Observação</th>
                         </tr>
                     </thead>
