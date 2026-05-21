@@ -213,10 +213,10 @@
     </div>
 
     {{-- Modal de criação --}}
-    <div id="create-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <div id="create-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-2">
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeCreateModal()"></div>
 
-        <div class="relative z-10 flex max-h-[95vh] w-full max-w-6xl flex-col rounded-2xl bg-white shadow-2xl dark:bg-zinc-900">
+        <div class="relative z-10 flex h-full w-full max-h-[98vh] flex-col rounded-2xl bg-white shadow-2xl dark:bg-zinc-900">
 
             {{-- Header --}}
             <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-zinc-800">
