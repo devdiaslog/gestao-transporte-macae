@@ -86,6 +86,13 @@ class ReporteController extends Controller
         return redirect()->route('reportes.index')->with('success', $msg);
     }
 
+    public function show(Reporte $reporte): View
+    {
+        $reporte->load(['itens', 'creator']);
+
+        return view('reportes.show', compact('reporte'));
+    }
+
     public function data(Reporte $reporte): JsonResponse
     {
         $reporte->load('itens');
