@@ -90,20 +90,20 @@
         </div>
 
         {{-- Metadados --}}
-        <div class="mt-6 grid grid-cols-3 gap-4">
-            <div class="rounded-lg bg-slate-50 px-4 py-3">
-                <p class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Nome</p>
-                <p class="mt-1 text-sm font-semibold text-zinc-800">{{ $reporte->nome ?? '—' }}</p>
+        <div class="mt-5 grid grid-cols-3 divide-x divide-slate-200 rounded-xl border border-slate-200 bg-slate-50">
+            <div class="px-5 py-3">
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Nome</p>
+                <p class="mt-0.5 text-sm font-semibold text-zinc-800">{{ $reporte->nome ?? '—' }}</p>
             </div>
-            <div class="rounded-lg bg-slate-50 px-4 py-3">
-                <p class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Data / Hora de Emissão</p>
-                <p class="mt-1 text-sm font-semibold text-zinc-800">
+            <div class="px-5 py-3">
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Data / Hora de Emissão</p>
+                <p class="mt-0.5 text-sm font-semibold text-zinc-800">
                     {{ $reporte->data_hora_emissao?->setTimezone($tz)->format('d/m/Y H:i') ?? '—' }}
                 </p>
             </div>
-            <div class="rounded-lg bg-slate-50 px-4 py-3">
-                <p class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Emitido Por</p>
-                <p class="mt-1 text-sm font-semibold text-zinc-800">{{ $reporte->creator?->name ?? '—' }}</p>
+            <div class="px-5 py-3">
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Emitido Por</p>
+                <p class="mt-0.5 text-sm font-semibold text-zinc-800">{{ $reporte->creator?->name ?? '—' }}</p>
             </div>
         </div>
 
