@@ -21,6 +21,8 @@ class StoreReporteRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'nome' => ['required', 'string', 'max:150'],
+            'salvar_como' => ['required', 'in:rascunho,publicado'],
             'itens' => ['required', 'array', 'min:1'],
             'itens.*.prefixo' => ['nullable', 'string', 'max:50'],
             'itens.*.status_operacional' => ['nullable', 'string', 'max:100'],

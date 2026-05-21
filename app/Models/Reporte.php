@@ -13,6 +13,8 @@ class Reporte extends Model
 
     protected $fillable = [
         'numero_reporte',
+        'nome',
+        'status',
         'data_hora_emissao',
         'created_by',
     ];
