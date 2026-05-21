@@ -276,9 +276,6 @@
                             <th data-col="condutor" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Condutor
                             </th>
-                            <th data-col="reporte" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
-                                Último Reporte
-                            </th>
                             <th data-col="documento" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Documento
                             </th>
@@ -306,15 +303,20 @@
                                     ?? $equipamento->implemento?->modelo?->nome
                                     ?? $equipamento->implemento?->placa;
 
+                                $ultimoReporte = $ultimosReportes[$equipamento->prefixo] ?? null;
+                                $repDocumento  = $ultimoReporte?->documento;
+                                $repStatus     = $ultimoReporte?->status_operacional;
+                                $repObservacao = $ultimoReporte?->observacao;
+
                                 $searchText = implode(' ', array_filter([
                                     $equipamento->placa,
                                     $equipamento->prefixo,
                                     $equipamento->modelo?->nome,
                                     $equipamento->divisao?->nome,
-                                    $equipamento->status_operacional,
+                                    $repStatus ?? $equipamento->status_operacional,
                                     $equipamento->origem,
                                     $equipamento->destino,
-                                    $equipamento->documento_demanda,
+                                    $repDocumento ?? $equipamento->documento_demanda,
                                     $impNome,
                                     $equipamento->motorista?->nome,
                                 ]));
@@ -333,6 +335,14 @@
 
                                 <td class="px-3 py-2 whitespace-nowrap">
                                     <p class="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-100">{{ $equipamento->prefixo ?? '—' }}</p>
+                                    @if($ultimoReporte)
+                                        <a href="{{ route('reportes.show', $ultimoReporte->reporte) }}" target="_blank"
+                                           class="font-mono text-[10px] text-zinc-400 hover:text-zinc-600 dark:text-zinc-600 dark:hover:text-zinc-400 underline decoration-dotted">
+                                            {{ $ultimoReporte->reporte->numero_reporte }}
+                                        </a>
+                                    @else
+                                        <span class="text-[10px] font-medium text-rose-400 dark:text-rose-600">sem reporte</span>
+                                    @endif
                                 </td>
 
                                 <td data-col="tempo" class="px-3 py-2 whitespace-nowrap">
@@ -397,11 +407,11 @@
                                 </td>
 
                                 <td data-col="status-op" class="px-3 py-2 whitespace-nowrap">
-                                    @if($equipamento->status_operacional)
-                                        @php $cor = $statusCores[$equipamento->status_operacional] ?? '#71717A'; @endphp
+                                    @if($repStatus)
+                                        @php $cor = $statusCores[$repStatus] ?? '#71717A'; @endphp
                                         <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
                                               style="background-color: {{ $cor }}1A; color: {{ $cor }}; box-shadow: inset 0 0 0 1px {{ $cor }}33;">
-                                            {{ $equipamento->status_operacional }}
+                                            {{ $repStatus }}
                                         </span>
                                     @else
                                         <span class="text-zinc-300 dark:text-zinc-700">—</span>
@@ -481,47 +491,8 @@
                                     @endif
                                 </td>
 
-                                @php
-                                    $ultimoReporte = $ultimosReportes[$equipamento->prefixo] ?? null;
-                                    $tz = config('app.timezone');
-                                @endphp
-                                <td data-col="reporte" class="px-3 py-2 max-w-xs">
-                                    @if($ultimoReporte)
-                                        <div class="flex flex-col gap-0.5">
-                                            <a href="{{ route('reportes.show', $ultimoReporte->reporte) }}" target="_blank"
-                                               class="font-mono text-xs font-semibold text-zinc-500 underline decoration-dotted underline-offset-2
-                                                      hover:text-zinc-800 dark:text-zinc-500 dark:hover:text-zinc-300 whitespace-nowrap">
-                                                {{ $ultimoReporte->reporte->numero_reporte }}
-                                                · {{ $ultimoReporte->reporte->data_hora_emissao?->setTimezone($tz)->format('d/m H:i') }}
-                                            </a>
-                                            @if($ultimoReporte->documento)
-                                                <span class="text-xs font-medium text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
-                                                    {{ $ultimoReporte->documento }}
-                                                </span>
-                                            @endif
-                                            @if($ultimoReporte->status_operacional)
-                                                @php $cor = $statusCores[$ultimoReporte->status_operacional] ?? '#71717A'; @endphp
-                                                <span class="inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap"
-                                                      style="background-color:{{ $cor }}1A; color:{{ $cor }}; box-shadow:inset 0 0 0 1px {{ $cor }}33;">
-                                                    {{ $ultimoReporte->status_operacional }}
-                                                </span>
-                                            @endif
-                                            @if($ultimoReporte->observacao)
-                                                <span class="text-[11px] text-zinc-500 dark:text-zinc-500 line-clamp-2">
-                                                    {{ $ultimoReporte->observacao }}
-                                                </span>
-                                            @endif
-                                        </div>
-                                    @else
-                                        <span class="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-600
-                                                     ring-1 ring-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:ring-rose-800/40">
-                                            Sem reporte
-                                        </span>
-                                    @endif
-                                </td>
-
                                 <td data-col="documento" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
-                                    {{ $equipamento->documento_demanda ?? '—' }}
+                                    {{ $repDocumento ?? '—' }}
                                 </td>
 
                                 <td data-col="origem" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
@@ -533,7 +504,7 @@
                                 </td>
 
                                 <td data-col="obs" class="px-3 py-2 text-zinc-600 dark:text-zinc-400">
-                                    <span class="line-clamp-1 max-w-[180px] block">{{ $equipamento->observacao_operacional ?? '—' }}</span>
+                                    <span class="line-clamp-1 max-w-[180px] block">{{ $repObservacao ?? '—' }}</span>
                                 </td>
 
                                 <td data-col="divisao" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
