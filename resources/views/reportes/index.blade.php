@@ -263,9 +263,9 @@
                                     <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-36">Documento</th>
                                     <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-48">Status Operacional</th>
                                     <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-28">Tempo Parado</th>
-                                    <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-32">Previsão</th>
-                                    <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-36">1º Contato</th>
-                                    <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-36">2º Contato</th>
+                                    <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-36">Previsão</th>
+                                    <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-40">1º Contato</th>
+                                    <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 w-40">2º Contato</th>
                                     <th class="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Observação</th>
                                     <th class="px-3 py-2.5 w-8"></th>
                                 </tr>
