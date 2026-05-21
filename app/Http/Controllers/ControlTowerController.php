@@ -7,6 +7,7 @@ use App\Models\Equipamento;
 use App\Models\EquipamentoLog;
 use App\Models\ModeloEquipamento;
 use App\Models\Motorista;
+use App\Models\ReporteItem;
 use App\Models\StatusOperacional;
 use App\Models\TipoEquipamento;
 use App\Services\VfleetsService;
@@ -90,7 +91,19 @@ class ControlTowerController extends Controller
         $motoristaOcupado = Equipamento::whereNotNull('motorista_id')
             ->pluck('id', 'motorista_id'); // motorista_id => equipamento_id
 
-        return view('control-tower.index', compact('equipamentos', 'divisoes', 'modelos', 'modelosImplemento', 'implementos', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado'));
+        // Último reporte publicado por prefixo — keyed by prefixo
+        $prefixos = $equipamentos->pluck('prefixo')->filter()->values()->all();
+        $ultimosReportes = ReporteItem::query()
+            ->whereIn('prefixo', $prefixos)
+            ->whereHas('reporte', fn ($q) => $q->where('status', 'publicado'))
+            ->with('reporte')
+            ->get()
+            ->filter(fn ($item) => $item->reporte?->status === 'publicado')
+            ->sortByDesc(fn ($item) => $item->reporte?->data_hora_emissao)
+            ->groupBy('prefixo')
+            ->map(fn ($items) => $items->first());
+
+        return view('control-tower.index', compact('equipamentos', 'divisoes', 'modelos', 'modelosImplemento', 'implementos', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado', 'ultimosReportes'));
     }
 
     public function export(Request $request): Response

@@ -276,6 +276,9 @@
                             <th data-col="condutor" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Condutor
                             </th>
+                            <th data-col="reporte" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Último Reporte
+                            </th>
                             <th data-col="documento" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Documento
                             </th>
@@ -475,6 +478,30 @@
                                         @endif
                                     @else
                                         <span class="text-zinc-300 dark:text-zinc-700">—</span>
+                                    @endif
+                                </td>
+
+                                @php
+                                    $ultimoReporte = $ultimosReportes[$equipamento->prefixo] ?? null;
+                                    $tz = config('app.timezone');
+                                @endphp
+                                <td data-col="reporte" class="px-3 py-2 whitespace-nowrap">
+                                    @if($ultimoReporte)
+                                        <a href="{{ route('reportes.show', $ultimoReporte->reporte) }}" target="_blank"
+                                           class="group flex flex-col gap-0.5">
+                                            <span class="font-mono text-xs font-semibold text-zinc-700 underline decoration-dotted underline-offset-2
+                                                         hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100">
+                                                {{ $ultimoReporte->reporte->numero_reporte }}
+                                            </span>
+                                            <span class="text-[11px] text-zinc-400 dark:text-zinc-600">
+                                                {{ $ultimoReporte->reporte->data_hora_emissao?->setTimezone($tz)->format('d/m/Y H:i') }}
+                                            </span>
+                                        </a>
+                                    @else
+                                        <span class="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-600
+                                                     ring-1 ring-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:ring-rose-800/40">
+                                            Sem reporte
+                                        </span>
                                     @endif
                                 </td>
 
