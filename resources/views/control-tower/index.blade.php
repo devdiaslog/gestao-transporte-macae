@@ -463,142 +463,10 @@
                                             </svg>
                                             Logs
                                         </a>
-                                        <button type="button"
-                                                onclick="toggleEditRow({{ $equipamento->id }})"
-                                                title="Editar dados operacionais"
-                                                class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
-                                                       border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800
-                                                       dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-zinc-200">
-                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931zm0 0L19.5 7.125"/>
-                                            </svg>
-                                            Editar
-                                        </button>
                                     </div>
                                 </td>
                             </tr>
 
-                            {{-- ─── Edit row ───────────────────────────────── --}}
-                            <tr id="edit-row-{{ $equipamento->id }}" class="hidden border-t-0 bg-slate-50/80 dark:bg-zinc-800/20">
-                                <td colspan="12" class="px-3 pb-3 pt-2">
-                                    <form method="POST"
-                                          action="{{ route('equipamentos.operacional', $equipamento) }}"
-                                          class="flex flex-wrap items-end gap-2">
-                                        @csrf
-                                        @method('PATCH')
-
-                                        <div class="flex min-w-[180px] flex-1 flex-col gap-1">
-                                            <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Condutor</label>
-                                            <select name="motorista_id"
-                                                    class="rounded-lg border px-2.5 py-1.5 text-sm outline-none transition-all
-                                                           border-slate-200 bg-white text-zinc-700
-                                                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                                                           dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300
-                                                           dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                                                <option value="">— Sem condutor —</option>
-                                                @foreach($motoristas as $motorista)
-                                                    @php
-                                                        $isAtual   = $equipamento->motorista_id === $motorista->id;
-                                                        $isOcupado = $motoristaOcupado->has($motorista->id) && ! $isAtual;
-                                                    @endphp
-                                                    @if(! $isOcupado)
-                                                        <option value="{{ $motorista->id }}" @selected($isAtual)>
-                                                            {{ $motorista->nome }}
-                                                        </option>
-                                                    @endif
-                                                @endforeach
-                                            </select>
-                                        </div>
-
-                                        <div class="flex min-w-[180px] flex-1 flex-col gap-1">
-                                            <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Status Operacional</label>
-                                            <select name="status_operacional"
-                                                    class="rounded-lg border px-2.5 py-1.5 text-sm outline-none transition-all
-                                                           border-slate-200 bg-white text-zinc-700
-                                                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                                                           dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300
-                                                           dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                                                <option value="">— Selecione —</option>
-                                                @foreach($statusOperacionais as $statusOp)
-                                                    <option value="{{ $statusOp->nome }}"
-                                                            @selected(old('status_operacional', $equipamento->status_operacional) === $statusOp->nome)>
-                                                        {{ $statusOp->nome }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-
-                                        <div class="flex min-w-[150px] flex-1 flex-col gap-1">
-                                            <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Origem</label>
-                                            <input type="text" name="origem"
-                                                   value="{{ old('origem', $equipamento->origem) }}"
-                                                   placeholder="Origem"
-                                                   class="rounded-lg border px-2.5 py-1.5 text-sm outline-none transition-all
-                                                          border-slate-200 bg-white text-zinc-700 placeholder-zinc-300
-                                                          focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:placeholder-zinc-600
-                                                          dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                                        </div>
-
-                                        <div class="flex min-w-[150px] flex-1 flex-col gap-1">
-                                            <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Destino</label>
-                                            <input type="text" name="destino"
-                                                   value="{{ old('destino', $equipamento->destino) }}"
-                                                   placeholder="Destino"
-                                                   class="rounded-lg border px-2.5 py-1.5 text-sm outline-none transition-all
-                                                          border-slate-200 bg-white text-zinc-700 placeholder-zinc-300
-                                                          focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:placeholder-zinc-600
-                                                          dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                                        </div>
-
-                                        <div class="flex min-w-[160px] flex-1 flex-col gap-1">
-                                            <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Documento de Demanda</label>
-                                            <input type="text" name="documento_demanda"
-                                                   value="{{ old('documento_demanda', $equipamento->documento_demanda) }}"
-                                                   placeholder="Nº do documento"
-                                                   class="rounded-lg border px-2.5 py-1.5 text-sm outline-none transition-all
-                                                          border-slate-200 bg-white text-zinc-700 placeholder-zinc-300
-                                                          focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:placeholder-zinc-600
-                                                          dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                                        </div>
-
-                                        <div class="flex min-w-[200px] flex-[2] flex-col gap-1">
-                                            <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Observação</label>
-                                            <input type="text" name="observacao_operacional"
-                                                   value="{{ old('observacao_operacional', $equipamento->observacao_operacional) }}"
-                                                   placeholder="Observação operacional"
-                                                   class="rounded-lg border px-2.5 py-1.5 text-sm outline-none transition-all
-                                                          border-slate-200 bg-white text-zinc-700 placeholder-zinc-300
-                                                          focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:placeholder-zinc-600
-                                                          dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                                        </div>
-
-                                        <div class="flex items-center gap-1.5">
-                                            <button type="submit"
-                                                    class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors
-                                                           bg-zinc-900 text-white hover:bg-zinc-700
-                                                           dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300">
-                                                Salvar
-                                            </button>
-                                            <button type="button" onclick="toggleEditRow({{ $equipamento->id }})"
-                                                    class="rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors
-                                                           border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50
-                                                           dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700">
-                                                Cancelar
-                                            </button>
-                                            <button type="button" onclick="confirmLimparTudo('edit-row-{{ $equipamento->id }}')"
-                                                    class="rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors
-                                                           border-rose-200 bg-white text-rose-600 hover:bg-rose-50
-                                                           dark:border-rose-900 dark:bg-zinc-800 dark:text-rose-400 dark:hover:bg-rose-950/30">
-                                                Limpar Tudo
-                                            </button>
-                                        </div>
-                                    </form>
-                                </td>
-                            </tr>
                         @endforeach
 
                         {{-- Empty search state --}}
@@ -684,45 +552,6 @@
     </div>
 
     {{-- ═══════════════════════════════════════════════════════════════════════ --}}
-    {{-- ─── Confirmação limpar tudo ─────────────────────────────────────────── --}}
-    {{-- ═══════════════════════════════════════════════════════════════════════ --}}
-    <div id="confirm-backdrop"
-         onclick="closeConfirmModal()"
-         class="fixed inset-0 z-40 hidden bg-black/40 backdrop-blur-sm"></div>
-
-    <div id="confirm-modal"
-         class="fixed inset-x-4 top-1/2 z-50 hidden w-full max-w-sm -translate-y-1/2 overflow-hidden
-                rounded-2xl border shadow-2xl
-                border-slate-200 bg-white
-                dark:border-zinc-700 dark:bg-zinc-900
-                sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2">
-        <div class="p-6">
-            <div class="flex h-11 w-11 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-950/40">
-                <svg class="h-5 w-5 text-rose-600 dark:text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
-                </svg>
-            </div>
-            <h3 class="mt-4 text-base font-semibold text-zinc-900 dark:text-zinc-100">Limpar todos os campos?</h3>
-            <p class="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-                Status, documento, origem, destino e observação serão apagados. Esta ação não pode ser desfeita.
-            </p>
-            <div class="mt-5 flex justify-end gap-2">
-                <button type="button" onclick="closeConfirmModal()"
-                        class="rounded-lg border px-4 py-2 text-sm font-medium transition-colors
-                               border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50
-                               dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700">
-                    Cancelar
-                </button>
-                <button type="button" id="confirm-btn-ok"
-                        class="rounded-lg px-4 py-2 text-sm font-medium transition-colors
-                               bg-rose-600 text-white hover:bg-rose-700
-                               dark:bg-rose-700 dark:hover:bg-rose-600">
-                    Sim, limpar tudo
-                </button>
-            </div>
-        </div>
-    </div>
-
     {{-- ═══════════════════════════════════════════════════════════════════════ --}}
     {{-- ─── Implemento modal ───────────────────────────────────────────────── --}}
     {{-- ═══════════════════════════════════════════════════════════════════════ --}}
@@ -880,9 +709,6 @@
             allRows.forEach(function (row) {
                 var match = !q || row.dataset.search.indexOf(q) !== -1;
                 row.style.display = match ? '' : 'none';
-                // Also hide the paired edit row
-                var editRow = document.getElementById('edit-row-' + row.id.replace('row-', ''));
-                if (editRow) { editRow.style.display = match ? '' : 'none'; }
                 if (match) { visible++; }
             });
             noResults.style.display = visible === 0 ? '' : 'none';
@@ -890,47 +716,6 @@
         });
 
     })();
-
-    // ─── Limpar Tudo modal ───────────────────────────────────────────────────
-    var _limparRowId = null;
-
-    function confirmLimparTudo(editRowId) {
-        _limparRowId = editRowId;
-        document.getElementById('confirm-backdrop').classList.remove('hidden');
-        document.getElementById('confirm-modal').classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeConfirmModal() {
-        document.getElementById('confirm-backdrop').classList.add('hidden');
-        document.getElementById('confirm-modal').classList.add('hidden');
-        document.body.style.overflow = '';
-        _limparRowId = null;
-    }
-
-    document.getElementById('confirm-btn-ok').addEventListener('click', function () {
-        if (!_limparRowId) { return; }
-        var row = document.getElementById(_limparRowId);
-        // Clear all inputs and selects in the edit form
-        row.querySelectorAll('input[type="text"], select').forEach(function (el) {
-            el.value = '';
-        });
-        // Submit the form
-        row.querySelector('form').submit();
-        closeConfirmModal();
-    });
-
-    // ─── Inline edit rows ────────────────────────────────────────────────────
-    function toggleEditRow(id) {
-        var editRow = document.getElementById('edit-row-' + id);
-        var isHidden = editRow.classList.contains('hidden');
-        document.querySelectorAll('[id^="edit-row-"]').forEach(function (r) { r.classList.add('hidden'); });
-        if (isHidden) {
-            editRow.classList.remove('hidden');
-            var first = editRow.querySelector('input');
-            if (first) { first.focus(); }
-        }
-    }
 
     // ─── Implemento modal ────────────────────────────────────────────────────
     var IMPLEMENTOS      = @json($implementos->values());
