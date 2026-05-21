@@ -419,7 +419,7 @@
 
 
                                 <td data-col="obs" class="px-3 py-2 text-zinc-600 dark:text-zinc-400">
-                                    <span class="line-clamp-1 max-w-[180px] block">{{ $repObservacao ?? '—' }}</span>
+                                    <span class="line-clamp-2 min-w-[540px] block">{{ $repObservacao ?? '—' }}</span>
                                 </td>
 
                                 <td data-col="divisao" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
