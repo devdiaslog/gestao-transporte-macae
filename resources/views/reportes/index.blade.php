@@ -202,6 +202,13 @@
                     {{ $itens->links() }}
                 </div>
             @endif
+
+            {{-- Datalist de prefixos motorizados --}}
+            <datalist id="prefixos-motorizado">
+                @foreach($prefixosMotorizados as $eq)
+                    <option value="{{ $eq->prefixo }}">{{ $eq->prefixo }}{{ $eq->placa ? ' — ' . $eq->placa : '' }}</option>
+                @endforeach
+            </datalist>
         @endif
     </div>
 
@@ -319,7 +326,8 @@
 
             return '<tr class="hover:bg-slate-50 dark:hover:bg-zinc-800/40">' +
                 '<td class="px-2 py-1.5">' +
-                    '<input type="text" name="itens[' + index + '][prefixo]" placeholder="Ex: 1234R"' +
+                    '<input type="text" name="itens[' + index + '][prefixo]" list="prefixos-motorizado" placeholder="Prefixo..."' +
+                           ' autocomplete="off"' +
                            ' class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm outline-none' +
                                   ' focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">' +
                 '</td>' +

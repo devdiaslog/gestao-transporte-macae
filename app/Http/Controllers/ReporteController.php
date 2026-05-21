@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreReporteRequest;
+use App\Models\Equipamento;
 use App\Models\Reporte;
 use App\Models\ReporteItem;
 use App\Models\StatusOperacional;
@@ -43,8 +44,12 @@ class ReporteController extends Controller
 
         $itens = $query->paginate(10)->withQueryString();
         $statusOperacionais = StatusOperacional::where('status', true)->orderBy('nome')->get();
+        $prefixosMotorizados = Equipamento::where('tipo_id', 1)
+            ->whereNull('deleted_at')
+            ->orderBy('prefixo')
+            ->get(['prefixo', 'placa']);
 
-        return view('reportes.index', compact('itens', 'statusOperacionais'));
+        return view('reportes.index', compact('itens', 'statusOperacionais', 'prefixosMotorizados'));
     }
 
     public function store(StoreReporteRequest $request): RedirectResponse
