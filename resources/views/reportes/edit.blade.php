@@ -1,4 +1,6 @@
-<x-layouts.app title="Novo Reporte">
+<x-layouts.app title="Editar Reporte — {{ $reporte->numero_reporte }}">
+
+    @php $tz = config('app.timezone'); @endphp
 
     {{-- ─── Header ─────────────────────────────────────────────────────────── --}}
     <div class="mt-4 flex items-center gap-4">
@@ -13,14 +15,15 @@
             <span class="sr-only">Voltar</span>
         </a>
         <div>
-            <h2 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Novo Reporte</h2>
-            <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Preencha os dados e adicione os veículos do reporte.</p>
+            <p class="font-mono text-xs font-semibold uppercase tracking-widest text-zinc-400">{{ $reporte->numero_reporte }}</p>
+            <h2 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Editar Reporte</h2>
         </div>
     </div>
 
-    <form method="POST" action="{{ route('reportes.store') }}" id="reporte-form" novalidate>
+    <form method="POST" action="{{ route('reportes.update', $reporte) }}" id="reporte-form" novalidate>
         @csrf
-        <input type="hidden" name="salvar_como" id="salvar_como" value="publicado">
+        @method('PUT')
+        <input type="hidden" name="salvar_como" id="salvar_como" value="{{ old('salvar_como', $reporte->status) }}">
 
         {{-- ─── Dados do Reporte ───────────────────────────────────────────── --}}
         <div class="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -34,7 +37,7 @@
                     id="nome"
                     type="text"
                     name="nome"
-                    value="{{ old('nome') }}"
+                    value="{{ old('nome', $reporte->nome) }}"
                     autofocus
                     placeholder="Ex: Reporte Matutino 23/05"
                     class="mt-1.5 block w-full rounded-lg border px-3.5 py-2.5 text-sm shadow-xs outline-none transition-all duration-200
@@ -69,13 +72,11 @@
                 <p class="mb-3 text-sm text-red-500">{{ $message }}</p>
             @enderror
 
-            <div id="itens-container" class="space-y-4">
-                {{-- Cards adicionados via JS --}}
-            </div>
+            <div id="itens-container" class="space-y-4"></div>
 
             <button type="button" onclick="addItem()"
                     id="add-btn-bottom"
-                    class="mt-4 hidden w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-3
+                    class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-3
                            text-sm font-medium text-zinc-400 transition-colors
                            hover:border-zinc-300 hover:text-zinc-600
                            dark:border-zinc-800 dark:hover:border-zinc-600 dark:hover:text-zinc-400">
@@ -122,16 +123,25 @@
         @endforeach
     </datalist>
 
-    {{-- Status operacionais para o JS --}}
     @php $statusOpcoes = $statusOperacionais->pluck('nome')->all(); @endphp
 
     <script>
     (function () {
-        var statusOpcoes  = @json($statusOpcoes);
-        var oldItens      = @json(old('itens', []));
-        var container     = document.getElementById('itens-container');
-        var addBtnBottom  = document.getElementById('add-btn-bottom');
-        var itemIndex     = 0;
+        var statusOpcoes = @json($statusOpcoes);
+        var itensExist   = @json($reporte->itens->map(fn ($i) => [
+            'prefixo'            => $i->prefixo,
+            'status_operacional' => $i->status_operacional,
+            'primeiro_contato'   => $i->primeiro_contato,
+            'documento'          => $i->documento,
+            'tempo_parado'       => $i->tempo_parado,
+            'segundo_contato'    => $i->segundo_contato,
+            'data_hora_previsao' => $i->data_hora_previsao ? substr($i->data_hora_previsao, 0, 16) : null,
+            'observacao'         => $i->observacao,
+        ]));
+        var oldItens     = @json(old('itens', []));
+        var hasOld       = oldItens.length > 0;
+        var container    = document.getElementById('itens-container');
+        var itemIndex    = 0;
 
         function fieldClass(hasError) {
             var base = 'block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all duration-200 focus:ring-2 ';
@@ -146,46 +156,43 @@
 
         function buildStatusOptions(selected) {
             return statusOpcoes.map(function (s) {
-                var sel = selected && selected === s ? ' selected' : '';
-                return '<option value="' + s + '"' + sel + '>' + s + '</option>';
+                return '<option value="' + s + '"' + (selected === s ? ' selected' : '') + '>' + s + '</option>';
             }).join('');
         }
 
-        function buildCard(idx, data, errors) {
-            data    = data    || {};
-            errors  = errors  || {};
+        function esc(str) {
+            return str ? String(str).replace(/"/g, '&quot;') : '';
+        }
 
-            var eP  = errors['itens.' + idx + '.prefixo']            || '';
-            var eS  = errors['itens.' + idx + '.status_operacional']  || '';
-            var eC  = errors['itens.' + idx + '.primeiro_contato']    || '';
-            var eO  = errors['itens.' + idx + '.observacao']          || '';
+        function buildCard(idx, data, errors) {
+            data   = data   || {};
+            errors = errors || {};
+
+            var eP = errors['itens.' + idx + '.prefixo']            || '';
+            var eS = errors['itens.' + idx + '.status_operacional']  || '';
+            var eC = errors['itens.' + idx + '.primeiro_contato']    || '';
+            var eO = errors['itens.' + idx + '.observacao']          || '';
 
             return '<div id="item-' + idx + '" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">' +
 
-                {{-- Header do card --}}
                 '<div class="mb-4 flex items-center justify-between">' +
                     '<span class="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Veículo ' + (idx + 1) + '</span>' +
                     '<button type="button" onclick="removeItem(' + idx + ')" ' +
                             'class="inline-flex items-center gap-1 rounded-lg border border-red-100 px-2.5 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:hover:bg-red-950/30">' +
                         '<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">' +
                             '<path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>' +
-                        '</svg>' +
-                        'Remover' +
+                        '</svg>Remover' +
                     '</button>' +
                 '</div>' +
 
-                {{-- Linha 1: campos obrigatórios --}}
                 '<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">' +
-
                     '<div>' +
                         '<label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Prefixo <span class="text-red-500">*</span></label>' +
                         '<input type="text" name="itens[' + idx + '][prefixo]" list="prefixos-motorizado" autocomplete="off"' +
-                               ' value="' + (data.prefixo || '') + '"' +
-                               ' placeholder="Ex: CAV-001"' +
+                               ' value="' + esc(data.prefixo) + '" placeholder="Ex: CAV-001"' +
                                ' class="mt-1 ' + fieldClass(eP) + '">' +
                         errorHtml(eP) +
                     '</div>' +
-
                     '<div>' +
                         '<label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Status Operacional <span class="text-red-500">*</span></label>' +
                         '<select name="itens[' + idx + '][status_operacional]" class="mt-1 ' + fieldClass(eS) + '">' +
@@ -194,66 +201,50 @@
                         '</select>' +
                         errorHtml(eS) +
                     '</div>' +
-
                     '<div>' +
                         '<label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">1º Contato <span class="text-red-500">*</span></label>' +
                         '<input type="text" name="itens[' + idx + '][primeiro_contato]"' +
-                               ' value="' + (data.primeiro_contato || '') + '"' +
-                               ' placeholder="Nome do responsável"' +
+                               ' value="' + esc(data.primeiro_contato) + '" placeholder="Nome do responsável"' +
                                ' class="mt-1 ' + fieldClass(eC) + '">' +
                         errorHtml(eC) +
                     '</div>' +
-
                 '</div>' +
 
-                {{-- Linha 2: campos opcionais --}}
                 '<div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">' +
-
                     '<div>' +
                         '<label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Documento</label>' +
                         '<input type="text" name="itens[' + idx + '][documento]"' +
-                               ' value="' + (data.documento || '') + '"' +
-                               ' placeholder="Nº do documento"' +
+                               ' value="' + esc(data.documento) + '" placeholder="Nº do documento"' +
                                ' class="mt-1 ' + fieldClass('') + '">' +
                     '</div>' +
-
                     '<div>' +
                         '<label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Tempo Parado</label>' +
                         '<input type="text" name="itens[' + idx + '][tempo_parado]"' +
-                               ' value="' + (data.tempo_parado || '') + '"' +
-                               ' placeholder="Ex: 2h30"' +
+                               ' value="' + esc(data.tempo_parado) + '" placeholder="Ex: 2h30"' +
                                ' class="mt-1 ' + fieldClass('') + '">' +
                     '</div>' +
-
                     '<div>' +
                         '<label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">2º Contato</label>' +
                         '<input type="text" name="itens[' + idx + '][segundo_contato]"' +
-                               ' value="' + (data.segundo_contato || '') + '"' +
-                               ' placeholder="Nome do segundo responsável"' +
+                               ' value="' + esc(data.segundo_contato) + '" placeholder="Nome do segundo responsável"' +
                                ' class="mt-1 ' + fieldClass('') + '">' +
                     '</div>' +
-
                 '</div>' +
 
-                {{-- Linha 3: previsão + observação --}}
                 '<div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">' +
-
                     '<div>' +
                         '<label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Previsão</label>' +
                         '<input type="datetime-local" name="itens[' + idx + '][data_hora_previsao]"' +
-                               ' value="' + (data.data_hora_previsao || '') + '"' +
+                               ' value="' + esc(data.data_hora_previsao) + '"' +
                                ' class="mt-1 ' + fieldClass('') + '">' +
                     '</div>' +
-
                     '<div class="sm:col-span-2">' +
                         '<label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Observação <span class="text-red-500">*</span></label>' +
                         '<input type="text" name="itens[' + idx + '][observacao]"' +
-                               ' value="' + (data.observacao || '') + '"' +
-                               ' placeholder="Observações adicionais"' +
+                               ' value="' + esc(data.observacao) + '" placeholder="Observações adicionais"' +
                                ' class="mt-1 ' + fieldClass(eO) + '">' +
                         errorHtml(eO) +
                     '</div>' +
-
                 '</div>' +
             '</div>';
         }
@@ -261,39 +252,33 @@
         window.addItem = function () {
             container.insertAdjacentHTML('beforeend', buildCard(itemIndex, {}, {}));
             itemIndex++;
-            updateAddBtn();
         };
 
         window.removeItem = function (idx) {
             var card = document.getElementById('item-' + idx);
             if (card) { card.remove(); }
-            updateAddBtn();
         };
-
-        function updateAddBtn() {
-            var hasCards = container.children.length > 0;
-            addBtnBottom.classList.toggle('hidden', ! hasCards);
-            addBtnBottom.classList.toggle('flex', hasCards);
-        }
 
         window.submitAs = function (tipo) {
             document.getElementById('salvar_como').value = tipo;
             document.getElementById('reporte-form').submit();
         };
 
-        // ─── Restaurar itens após erro de validação ─────────────────────────
+        // ─── Carregar itens ──────────────────────────────────────────────────
+        var fonte = hasOld ? oldItens : itensExist;
         @if($errors->any())
-        (function () {
-            var erros = @json($errors->messages());
-            oldItens.forEach(function (data, idx) {
-                container.insertAdjacentHTML('beforeend', buildCard(idx, data, erros));
-                itemIndex = idx + 1;
-            });
-            updateAddBtn();
-        })();
+        var erros = @json($errors->messages());
+        fonte = oldItens;
         @else
-        addItem();
+        var erros = {};
         @endif
+
+        fonte.forEach(function (data, idx) {
+            container.insertAdjacentHTML('beforeend', buildCard(idx, data, erros));
+            itemIndex = idx + 1;
+        });
+
+        if (itemIndex === 0) { addItem(); }
     })();
     </script>
 

@@ -28,7 +28,7 @@ class CreateReporteRequest extends FormRequest
             'itens.*.tempo_parado' => ['nullable', 'string', 'max:20'],
             'itens.*.data_hora_previsao' => ['nullable', 'string', 'max:30'],
             'itens.*.segundo_contato' => ['nullable', 'string', 'max:100'],
-            'itens.*.observacao' => ['nullable', 'string', 'max:500'],
+            'itens.*.observacao' => ['required', 'string', 'max:500'],
         ];
     }
 
@@ -44,6 +44,7 @@ class CreateReporteRequest extends FormRequest
             'itens.*.prefixo.required' => 'O prefixo é obrigatório.',
             'itens.*.status_operacional.required' => 'O status operacional é obrigatório.',
             'itens.*.primeiro_contato.required' => 'O 1º contato é obrigatório.',
+            'itens.*.observacao.required' => 'A observação é obrigatória.',
         ];
     }
 }

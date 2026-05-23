@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateReporteRequest;
-use App\Http\Requests\StoreReporteRequest;
 use App\Models\Equipamento;
 use App\Models\Reporte;
 use App\Models\ReporteItem;
@@ -138,7 +137,19 @@ class ReporteController extends Controller
         ]);
     }
 
-    public function update(StoreReporteRequest $request, Reporte $reporte): RedirectResponse
+    public function edit(Reporte $reporte): View
+    {
+        $reporte->load('itens');
+        $statusOperacionais = StatusOperacional::where('status', true)->orderBy('nome')->get();
+        $prefixosMotorizados = Equipamento::where('tipo_id', 1)
+            ->whereNull('deleted_at')
+            ->orderBy('prefixo')
+            ->get(['prefixo', 'placa']);
+
+        return view('reportes.edit', compact('reporte', 'statusOperacionais', 'prefixosMotorizados'));
+    }
+
+    public function update(CreateReporteRequest $request, Reporte $reporte): RedirectResponse
     {
         $validated = $request->validated();
 

@@ -59,7 +59,7 @@ Route::middleware('auth')->group(function () {
 
     // Reportes
     Route::get('reportes/{reporte}/data', [ReporteController::class, 'data'])->name('reportes.data');
-    Route::resource('reportes', ReporteController::class)->only(['index', 'create', 'store', 'show', 'update', 'destroy'])->parameters(['reportes' => 'reporte']);
+    Route::resource('reportes', ReporteController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'])->parameters(['reportes' => 'reporte']);
 
     // Usuários — apenas Administrador
     Route::middleware('can:manage-users')->group(function () {
