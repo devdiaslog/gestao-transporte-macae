@@ -109,38 +109,38 @@
             </h2>
 
             <div class="overflow-hidden rounded-xl border border-slate-200">
-                <table class="w-full text-sm">
+                <table class="w-full text-xs">
                     <thead>
                         <tr class="border-b border-slate-200 bg-slate-50">
-                            <th class="w-8 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">#</th>
-                            <th class="w-24 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Prefixo</th>
-                            <th class="w-36 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Documento</th>
-                            <th class="w-44 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Status Operacional</th>
-                            <th class="w-28 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Tempo Parado</th>
-                            <th class="w-32 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Previsão</th>
-                            <th class="w-36 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">1º Contato</th>
-                            <th class="w-36 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">2º Contato</th>
-                            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Observação</th>
+                            <th class="w-6 px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400">#</th>
+                            <th class="w-20 px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Prefixo</th>
+                            <th class="w-28 px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Documento</th>
+                            <th class="w-36 px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Status Operacional</th>
+                            <th class="w-20 px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Tempo Parado</th>
+                            <th class="w-28 px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Previsão</th>
+                            <th class="w-28 px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400">1º Contato</th>
+                            <th class="w-28 px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400">2º Contato</th>
+                            <th class="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Observação</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         @forelse($reporte->itens as $i => $item)
                             <tr class="{{ $loop->even ? 'bg-slate-50/50' : 'bg-white' }}">
-                                <td class="px-4 py-3 text-xs text-zinc-400">{{ $i + 1 }}</td>
-                                <td class="px-4 py-3 font-semibold text-zinc-800">{{ $item->prefixo ?? '—' }}</td>
-                                <td class="px-4 py-3 text-zinc-600">{{ $item->documento ?? '—' }}</td>
-                                <td class="px-4 py-3 text-zinc-600">{{ $item->status_operacional ?? '—' }}</td>
-                                <td class="px-4 py-3 text-zinc-600">{{ $item->tempo_parado ?? '—' }}</td>
-                                <td class="px-4 py-3 text-zinc-600">
+                                <td class="whitespace-nowrap px-2 py-1.5 text-zinc-400">{{ $i + 1 }}</td>
+                                <td class="whitespace-nowrap px-2 py-1.5 font-semibold text-zinc-800">{{ $item->prefixo ?? '—' }}</td>
+                                <td class="whitespace-nowrap px-2 py-1.5 text-zinc-600">{{ $item->documento ?? '—' }}</td>
+                                <td class="whitespace-nowrap px-2 py-1.5 text-zinc-600">{{ $item->status_operacional ?? '—' }}</td>
+                                <td class="whitespace-nowrap px-2 py-1.5 text-zinc-600">{{ $item->tempo_parado ?? '—' }}</td>
+                                <td class="whitespace-nowrap px-2 py-1.5 text-zinc-600">
                                     {{ $item->data_hora_previsao ? \Carbon\Carbon::parse($item->data_hora_previsao)->format('d/m/Y H:i') : '—' }}
                                 </td>
-                                <td class="px-4 py-3 text-zinc-600">{{ $item->primeiro_contato ?? '—' }}</td>
-                                <td class="px-4 py-3 text-zinc-600">{{ $item->segundo_contato ?? '—' }}</td>
-                                <td class="px-4 py-3 text-zinc-500">{{ $item->observacao ?? '—' }}</td>
+                                <td class="whitespace-nowrap px-2 py-1.5 text-zinc-600">{{ $item->primeiro_contato ?? '—' }}</td>
+                                <td class="whitespace-nowrap px-2 py-1.5 text-zinc-600">{{ $item->segundo_contato ?? '—' }}</td>
+                                <td class="px-2 py-1.5 text-zinc-500">{{ $item->observacao ?? '—' }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="px-4 py-8 text-center text-sm text-zinc-400">Nenhum item registrado.</td>
+                                <td colspan="9" class="px-2 py-8 text-center text-zinc-400">Nenhum item registrado.</td>
                             </tr>
                         @endforelse
                     </tbody>
