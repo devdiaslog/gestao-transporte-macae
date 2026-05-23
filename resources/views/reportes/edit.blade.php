@@ -123,12 +123,9 @@
         @endforeach
     </datalist>
 
-    @php $statusOpcoes = $statusOperacionais->pluck('nome')->all(); @endphp
-
-    <script>
-    (function () {
-        var statusOpcoes = @json($statusOpcoes);
-        var itensExist   = @json($reporte->itens->map(fn ($i) => [
+    @php
+        $statusOpcoes = $statusOperacionais->pluck('nome')->all();
+        $itensExist   = $reporte->itens->map(fn ($i) => [
             'prefixo'            => $i->prefixo,
             'status_operacional' => $i->status_operacional,
             'primeiro_contato'   => $i->primeiro_contato,
@@ -137,7 +134,13 @@
             'segundo_contato'    => $i->segundo_contato,
             'data_hora_previsao' => $i->data_hora_previsao ? substr($i->data_hora_previsao, 0, 16) : null,
             'observacao'         => $i->observacao,
-        ]));
+        ]);
+    @endphp
+
+    <script>
+    (function () {
+        var statusOpcoes = @json($statusOpcoes);
+        var itensExist   = @json($itensExist);
         var oldItens     = @json(old('itens', []));
         var hasOld       = oldItens.length > 0;
         var container    = document.getElementById('itens-container');
