@@ -16,12 +16,11 @@
 
     <style>
         body { font-family: 'Inter', sans-serif; }
+        @page { size: A4 landscape; margin: 12mm; }
         @media print {
-            @page { size: A4 landscape; margin: 12mm; }
             .no-print { display: none !important; }
             body { background: white !important; padding: 0 !important; }
             .print-shadow { box-shadow: none !important; border-radius: 0 !important; }
-            .print-container { max-width: 100% !important; padding: 0 !important; }
         }
     </style>
 </head>
