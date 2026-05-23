@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CreateReporteRequest;
 use App\Http\Requests\StoreReporteRequest;
 use App\Models\Equipamento;
 use App\Models\Reporte;
@@ -52,7 +53,18 @@ class ReporteController extends Controller
         return view('reportes.index', compact('itens', 'statusOperacionais', 'prefixosMotorizados'));
     }
 
-    public function store(StoreReporteRequest $request): RedirectResponse
+    public function create(): View
+    {
+        $statusOperacionais = StatusOperacional::where('status', true)->orderBy('nome')->get();
+        $prefixosMotorizados = Equipamento::where('tipo_id', 1)
+            ->whereNull('deleted_at')
+            ->orderBy('prefixo')
+            ->get(['prefixo', 'placa']);
+
+        return view('reportes.create', compact('statusOperacionais', 'prefixosMotorizados'));
+    }
+
+    public function store(CreateReporteRequest $request): RedirectResponse
     {
         $validated = $request->validated();
         $now = Carbon::now();

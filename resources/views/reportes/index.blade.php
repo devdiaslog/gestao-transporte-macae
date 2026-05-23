@@ -26,14 +26,14 @@
                 </svg>
                 Exportar
             </a>
-            <button type="button" onclick="openCreateModal()"
+            <a href="{{ route('reportes.create') }}"
                     class="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold shadow-xs transition-all duration-200 active:scale-[0.98]
                            bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                 </svg>
                 Criar Reporte
-            </button>
+            </a>
         </div>
     </div>
 
@@ -112,11 +112,11 @@
                     {{ $hasFilters ? 'Nenhum resultado para os filtros aplicados.' : 'Nenhum reporte criado ainda.' }}
                 </p>
                 @if(! $hasFilters)
-                    <button type="button" onclick="openCreateModal()"
+                    <a href="{{ route('reportes.create') }}"
                             class="mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold
                                    bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900">
                         Criar primeiro reporte
-                    </button>
+                    </a>
                 @endif
             </div>
         @else
