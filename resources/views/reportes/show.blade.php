@@ -30,7 +30,7 @@
     @php $tz = config('app.timezone'); @endphp
 
     {{-- Toolbar --}}
-    <div class="no-print mx-auto mb-6 flex print-container max-w-7xl items-center justify-between px-4">
+    <div class="no-print mb-6 flex items-center justify-between px-4">
         <a href="{{ route('reportes.index') }}"
            class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 shadow-xs hover:bg-slate-50">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -57,7 +57,7 @@
     </div>
 
     {{-- Documento --}}
-    <div class="print-shadow mx-auto print-container max-w-7xl rounded-2xl bg-white px-10 py-10 shadow-lg">
+    <div class="print-shadow rounded-2xl bg-white px-10 py-10 shadow-lg">
 
         {{-- Cabeçalho --}}
         <div class="flex items-start justify-between border-b border-slate-200 pb-6">
