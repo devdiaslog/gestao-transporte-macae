@@ -140,15 +140,19 @@
                             @php $reporte = $item->reporte; @endphp
                             <tr class="transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/40">
                                 <td class="px-4 py-3">
-                                    <a href="{{ route('reportes.show', $reporte) }}" target="_blank"
-                                       class="font-mono text-xs font-semibold text-zinc-700 underline decoration-dotted underline-offset-2
-                                              hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100">
-                                        {{ $reporte?->numero_reporte ?? '—' }}
-                                    </a>
                                     @if($reporte?->status === 'rascunho')
+                                        <span class="font-mono text-xs font-semibold text-zinc-400 dark:text-zinc-500">
+                                            {{ $reporte?->numero_reporte ?? '—' }}
+                                        </span>
                                         <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:ring-amber-800/50">
                                             Rascunho
                                         </span>
+                                    @else
+                                        <a href="{{ route('reportes.show', $reporte) }}" target="_blank"
+                                           class="font-mono text-xs font-semibold text-zinc-700 underline decoration-dotted underline-offset-2
+                                                  hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100">
+                                            {{ $reporte?->numero_reporte ?? '—' }}
+                                        </a>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $reporte?->nome ?? '—' }}</td>
