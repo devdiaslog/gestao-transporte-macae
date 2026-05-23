@@ -236,7 +236,7 @@
                 '</div>' +
 
                 {{-- Linha 3: previsão + observação --}}
-                '<div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">' +
+                '<div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-4">' +
 
                     '<div>' +
                         '<label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Previsão</label>' +
@@ -245,7 +245,7 @@
                                ' class="mt-1 ' + fieldClass('') + '">' +
                     '</div>' +
 
-                    '<div class="sm:col-span-2">' +
+                    '<div class="sm:col-span-3">' +
                         '<label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Observação <span class="text-red-500">*</span></label>' +
                         '<input type="text" name="itens[' + idx + '][observacao]"' +
                                ' value="' + (data.observacao || '') + '"' +
