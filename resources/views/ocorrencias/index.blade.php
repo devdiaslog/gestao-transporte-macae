@@ -261,7 +261,7 @@
                                         <button type="button"
                                                 onclick="openEditModal(this)"
                                                 data-ocorrencia="{{ json_encode([
-                                                    'id'                   => $ocorrencia->id_ocorrencia,
+                                                    'id'                   => $ocorrencia->getRouteKey(),
                                                     'id_veiculo'           => $ocorrencia->id_veiculo,
                                                     'id_tipo'              => $ocorrencia->id_tipo,
                                                     'id_responsavel'       => $ocorrencia->id_responsavel,
