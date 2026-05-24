@@ -205,7 +205,7 @@
     @endif
 
     {{-- ─── Legenda HJ ─────────────────────────────────────────────────────── --}}
-    <div class="mb-2 flex items-center gap-4 px-1">
+    <div class="mb-2 mt-4 flex items-center gap-4 px-1">
         <span class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">HJ:</span>
         <span class="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
             <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/40">
