@@ -204,6 +204,31 @@
         </div>
     @endif
 
+    {{-- ─── Legenda HJ ─────────────────────────────────────────────────────── --}}
+    <div class="mb-2 flex items-center gap-4 px-1">
+        <span class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">HJ:</span>
+        <span class="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+            <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/40">
+                <svg class="h-2.5 w-2.5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+                </svg>
+            </span>
+            Menos de 12h
+        </span>
+        <span class="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+            <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-950/30">
+                <span class="h-1.5 w-1.5 rounded-full bg-amber-400 dark:bg-amber-500"></span>
+            </span>
+            Entre 12h e 24h
+        </span>
+        <span class="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+            <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950/30">
+                <span class="h-1.5 w-1.5 rounded-full bg-rose-400 dark:bg-rose-500"></span>
+            </span>
+            Mais de 24h ou sem reporte
+        </span>
+    </div>
+
     {{-- ─── Table card — fixed height + internal scroll ────────────────────── --}}
     <div id="table-wrapper"
          class="mt-3 overflow-hidden rounded-xl border shadow-sm
