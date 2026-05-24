@@ -322,6 +322,9 @@
                                 $horasDesdeReporte = $ultimoReporte
                                     ? $ultimoReporte->reporte->data_hora_emissao?->setTimezone($tz)->diffInHours(now())
                                     : null;
+                                $tempoReporteLabel = $horasDesdeReporte !== null
+                                    ? 'Último reporte: ' . intdiv($horasDesdeReporte, 24) . 'd ' . ($horasDesdeReporte % 24) . 'h'
+                                    : 'Sem reporte';
                             @endphp
 
                             {{-- ─── Data row ──────────────────────────────── --}}
@@ -333,7 +336,7 @@
                                 <td class="px-3 py-2 text-center">
                                     @if($horasDesdeReporte !== null && $horasDesdeReporte <= 12)
                                         {{-- Verde: reporte há menos de 12h --}}
-                                        <span title="Reporte há {{ $horasDesdeReporte }}h"
+                                        <span title="{{ $tempoReporteLabel }}"
                                               class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/40">
                                             <svg class="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
@@ -341,13 +344,13 @@
                                         </span>
                                     @elseif($horasDesdeReporte !== null && $horasDesdeReporte <= 24)
                                         {{-- Laranja: reporte entre 12h e 24h --}}
-                                        <span title="Reporte há {{ $horasDesdeReporte }}h"
+                                        <span title="{{ $tempoReporteLabel }}"
                                               class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-950/30">
                                             <span class="h-2 w-2 rounded-full bg-amber-400 dark:bg-amber-500"></span>
                                         </span>
                                     @else
                                         {{-- Vermelho: sem reporte ou há mais de 24h --}}
-                                        <span title="{{ $ultimoReporte ? 'Reporte há mais de 24h' : 'Sem reporte' }}"
+                                        <span title="{{ $tempoReporteLabel }}"
                                               class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950/30">
                                             <span class="h-2 w-2 rounded-full bg-rose-400 dark:bg-rose-500"></span>
                                         </span>
