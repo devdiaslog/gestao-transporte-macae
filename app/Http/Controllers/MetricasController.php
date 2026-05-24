@@ -62,7 +62,7 @@ class MetricasController extends Controller
             ->values();
 
         $evolucaoReportes = $reportes
-            ->groupBy(fn ($r) => $r->data_hora_emissao->format('d/m'))
+            ->groupBy(fn ($r) => $r->data_hora_emissao->format('Y-m-d'))
             ->map(fn ($g) => $g->count())
             ->sortKeys();
 
@@ -118,7 +118,7 @@ class MetricasController extends Controller
             ->keyBy('id_tipo');
 
         $evolucaoOcorrencias = $ocorrencias
-            ->groupBy(fn ($o) => $o->data_hora_inicio->format('d/m'))
+            ->groupBy(fn ($o) => $o->data_hora_inicio->format('Y-m-d'))
             ->map(fn ($g) => $g->count())
             ->sortKeys();
 

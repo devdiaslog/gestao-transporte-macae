@@ -185,7 +185,7 @@
                                     <span class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{{ $qtd }}</span>
                                     <div class="w-full rounded-t-md bg-zinc-900 dark:bg-zinc-300"
                                          style="height: {{ max(4, round(($qtd / $maxDia) * 80)) }}px"></div>
-                                    <span class="text-[10px] text-zinc-400 dark:text-zinc-600">{{ $dia }}</span>
+                                    <span class="text-[10px] text-zinc-400 dark:text-zinc-600">{{ \Carbon\Carbon::createFromFormat('Y-m-d', $dia)->format('d/m') }}</span>
                                 </div>
                             @endforeach
                         </div>
@@ -331,7 +331,7 @@
                                     <span class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{{ $qtd }}</span>
                                     <div class="w-full rounded-t-md bg-rose-500 dark:bg-rose-400"
                                          style="height: {{ max(4, round(($qtd / $maxDiaOcorr) * 80)) }}px"></div>
-                                    <span class="text-[10px] text-zinc-400 dark:text-zinc-600">{{ $dia }}</span>
+                                    <span class="text-[10px] text-zinc-400 dark:text-zinc-600">{{ \Carbon\Carbon::createFromFormat('Y-m-d', $dia)->format('d/m') }}</span>
                                 </div>
                             @endforeach
                         </div>
