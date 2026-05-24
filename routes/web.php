@@ -6,6 +6,7 @@ use App\Http\Controllers\ControlTowerController;
 use App\Http\Controllers\DivisaoController;
 use App\Http\Controllers\EquipamentoController;
 use App\Http\Controllers\JustificativaController;
+use App\Http\Controllers\MetricasController;
 use App\Http\Controllers\ModeloEquipamentoController;
 use App\Http\Controllers\MotoristaController;
 use App\Http\Controllers\OcorrenciaController;
@@ -60,6 +61,11 @@ Route::middleware('auth')->group(function () {
 
     // Bigcore (Elog)
     Route::get('bigcore/veiculo', [BigcoreController::class, 'veiculo'])->name('bigcore.veiculo');
+
+    // Métricas
+    Route::get('metricas/{periodo?}', [MetricasController::class, 'index'])
+        ->where('periodo', '7|30|90')
+        ->name('metricas.index');
 
     // Reportes
     Route::get('reportes/{reporte}/data', [ReporteController::class, 'data'])->name('reportes.data');
