@@ -135,21 +135,18 @@
         </div>
     </div>
 
-    {{-- Datalist de prefixos --}}
-    <datalist id="prefixos-motorizado">
-        @foreach($prefixosMotorizados as $eq)
-            <option value="{{ $eq->prefixo }}">{{ $eq->prefixo }}{{ $eq->placa ? ' — '.$eq->placa : '' }}</option>
-        @endforeach
-    </datalist>
-
     {{-- Status operacionais para o JS --}}
-    @php $statusOpcoes = $statusOperacionais->pluck('nome')->all(); @endphp
+    @php
+        $statusOpcoes  = $statusOperacionais->pluck('nome')->all();
+        $prefixosList  = $prefixosMotorizados->map(fn ($eq) => ['prefixo' => $eq->prefixo, 'placa' => $eq->placa])->values();
+    @endphp
 
     <script>
     (function () {
-        var statusOpcoes    = @json($statusOpcoes);
-        var prefixoToPlaca  = @json($prefixosMotorizados->pluck('placa', 'prefixo'));
-        var BIGCORE_URL     = '{{ route('bigcore.veiculo') }}';
+        var statusOpcoes   = @json($statusOpcoes);
+        var prefixosList   = @json($prefixosList);
+        var prefixoToPlaca = @json($prefixosMotorizados->pluck('placa', 'prefixo'));
+        var BIGCORE_URL    = '{{ route('bigcore.veiculo') }}';
         var oldItens        = @json(old('itens', []));
         var container     = document.getElementById('itens-container');
         var addBtnBottom  = document.getElementById('add-btn-bottom');
@@ -201,10 +198,16 @@
 
                     '<div>' +
                         '<label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Prefixo <span class="text-red-500">*</span></label>' +
-                        '<input type="text" name="itens[' + idx + '][prefixo]" list="prefixos-motorizado" autocomplete="off"' +
-                               ' value="' + (data.prefixo || '') + '"' +
-                               ' placeholder="Ex: CAV-001"' +
-                               ' class="mt-1 ' + fieldClass(eP) + '">' +
+                        '<div class="relative mt-1">' +
+                            '<input type="text" name="itens[' + idx + '][prefixo]" autocomplete="off"' +
+                                   ' id="prefixo-input-' + idx + '"' +
+                                   ' value="' + (data.prefixo || '') + '"' +
+                                   ' placeholder="Ex: 1803"' +
+                                   ' oninput="filtrarPrefixos(' + idx + ')"' +
+                                   ' onfocus="filtrarPrefixos(' + idx + ')"' +
+                                   ' class="' + fieldClass(eP) + '">' +
+                            '<div id="ac-' + idx + '" class="absolute z-30 mt-1 hidden max-h-52 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800"></div>' +
+                        '</div>' +
                         '<button type="button" id="btn-elog-' + idx + '" onclick="buscarElog(' + idx + ')"' +
                                 ' class="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-800 disabled:opacity-40 dark:text-blue-400 dark:hover:text-blue-300">' +
                             '<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 0Z"/></svg>' +
@@ -320,6 +323,44 @@
             m.classList.add('hidden');
             m.classList.remove('flex');
         };
+
+        window.filtrarPrefixos = function (idx) {
+            var input    = document.getElementById('prefixo-input-' + idx);
+            var dropdown = document.getElementById('ac-' + idx);
+            var val      = (input.value || '').toLowerCase().trim();
+
+            var matches = val
+                ? prefixosList.filter(function (p) {
+                    return p.prefixo.toLowerCase().includes(val) || (p.placa || '').toLowerCase().includes(val);
+                })
+                : prefixosList;
+
+            if (matches.length === 0) { dropdown.classList.add('hidden'); return; }
+
+            dropdown.innerHTML = matches.slice(0, 30).map(function (p) {
+                return '<div class="cursor-pointer px-3 py-2 text-sm text-zinc-800 hover:bg-slate-50 dark:text-zinc-200 dark:hover:bg-zinc-700/60"' +
+                       ' onmousedown="event.preventDefault(); selecionarPrefixo(' + idx + ', \'' + p.prefixo.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')">' +
+                       '<span class="font-semibold">' + p.prefixo + '</span>' +
+                       (p.placa ? '<span class="ml-2 text-xs text-zinc-400 dark:text-zinc-500">— ' + p.placa + '</span>' : '') +
+                       '</div>';
+            }).join('');
+
+            dropdown.classList.remove('hidden');
+        };
+
+        window.selecionarPrefixo = function (idx, prefixo) {
+            document.getElementById('prefixo-input-' + idx).value = prefixo;
+            document.getElementById('ac-' + idx).classList.add('hidden');
+        };
+
+        document.addEventListener('click', function (e) {
+            document.querySelectorAll('[id^="ac-"]').forEach(function (d) {
+                var input = document.getElementById('prefixo-input-' + d.id.replace('ac-', ''));
+                if (! d.contains(e.target) && e.target !== input) {
+                    d.classList.add('hidden');
+                }
+            });
+        });
 
         window.buscarElog = function (idx) {
             var card    = document.getElementById('item-' + idx);

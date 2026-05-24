@@ -116,15 +116,29 @@
         </div>
     </form>
 
-    {{-- Datalist de prefixos --}}
-    <datalist id="prefixos-motorizado">
-        @foreach($prefixosMotorizados as $eq)
-            <option value="{{ $eq->prefixo }}">{{ $eq->prefixo }}{{ $eq->placa ? ' — '.$eq->placa : '' }}</option>
-        @endforeach
-    </datalist>
+    {{-- Modal: veículo não localizado no Elog --}}
+    <div id="elog-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="fecharElogModal()"></div>
+        <div class="relative z-10 w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
+            <div class="flex flex-col items-center text-center">
+                <div class="flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:ring-amber-800/50">
+                    <svg class="h-7 w-7 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
+                    </svg>
+                </div>
+                <h3 class="mt-4 text-base font-semibold text-zinc-900 dark:text-zinc-100">Veículo não localizado</h3>
+                <p id="elog-modal-msg" class="mt-2 text-sm text-zinc-500 dark:text-zinc-400"></p>
+            </div>
+            <button type="button" onclick="fecharElogModal()"
+                    class="mt-6 w-full rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
+                Entendido
+            </button>
+        </div>
+    </div>
 
     @php
         $statusOpcoes = $statusOperacionais->pluck('nome')->all();
+        $prefixosList = $prefixosMotorizados->map(fn ($eq) => ['prefixo' => $eq->prefixo, 'placa' => $eq->placa])->values();
         $itensExist   = $reporte->itens->map(fn ($i) => [
             'prefixo'            => $i->prefixo,
             'status_operacional' => $i->status_operacional,
@@ -140,6 +154,7 @@
     <script>
     (function () {
         var statusOpcoes   = @json($statusOpcoes);
+        var prefixosList   = @json($prefixosList);
         var prefixoToPlaca = @json($prefixosMotorizados->pluck('placa', 'prefixo'));
         var BIGCORE_URL    = '{{ route('bigcore.veiculo') }}';
         var itensExist     = @json($itensExist);
@@ -193,9 +208,16 @@
                 '<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">' +
                     '<div>' +
                         '<label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Prefixo <span class="text-red-500">*</span></label>' +
-                        '<input type="text" name="itens[' + idx + '][prefixo]" list="prefixos-motorizado" autocomplete="off"' +
-                               ' value="' + esc(data.prefixo) + '" placeholder="Ex: CAV-001"' +
-                               ' class="mt-1 ' + fieldClass(eP) + '">' +
+                        '<div class="relative mt-1">' +
+                            '<input type="text" name="itens[' + idx + '][prefixo]" autocomplete="off"' +
+                                   ' id="prefixo-input-' + idx + '"' +
+                                   ' value="' + esc(data.prefixo) + '"' +
+                                   ' placeholder="Ex: 1803"' +
+                                   ' oninput="filtrarPrefixos(' + idx + ')"' +
+                                   ' onfocus="filtrarPrefixos(' + idx + ')"' +
+                                   ' class="' + fieldClass(eP) + '">' +
+                            '<div id="ac-' + idx + '" class="absolute z-30 mt-1 hidden max-h-52 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800"></div>' +
+                        '</div>' +
                         '<button type="button" id="btn-elog-' + idx + '" onclick="buscarElog(' + idx + ')"' +
                                 ' class="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-800 disabled:opacity-40 dark:text-blue-400 dark:hover:text-blue-300">' +
                             '<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 0Z"/></svg>' +
@@ -274,18 +296,69 @@
             document.getElementById('reporte-form').submit();
         };
 
+        function abrirElogModal(msg) {
+            document.getElementById('elog-modal-msg').textContent = msg;
+            var m = document.getElementById('elog-modal');
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+        }
+
+        window.fecharElogModal = function () {
+            var m = document.getElementById('elog-modal');
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        };
+
+        window.filtrarPrefixos = function (idx) {
+            var input    = document.getElementById('prefixo-input-' + idx);
+            var dropdown = document.getElementById('ac-' + idx);
+            var val      = (input.value || '').toLowerCase().trim();
+
+            var matches = val
+                ? prefixosList.filter(function (p) {
+                    return p.prefixo.toLowerCase().includes(val) || (p.placa || '').toLowerCase().includes(val);
+                })
+                : prefixosList;
+
+            if (matches.length === 0) { dropdown.classList.add('hidden'); return; }
+
+            dropdown.innerHTML = matches.slice(0, 30).map(function (p) {
+                return '<div class="cursor-pointer px-3 py-2 text-sm text-zinc-800 hover:bg-slate-50 dark:text-zinc-200 dark:hover:bg-zinc-700/60"' +
+                       ' onmousedown="event.preventDefault(); selecionarPrefixo(' + idx + ', \'' + p.prefixo.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')">' +
+                       '<span class="font-semibold">' + p.prefixo + '</span>' +
+                       (p.placa ? '<span class="ml-2 text-xs text-zinc-400 dark:text-zinc-500">— ' + p.placa + '</span>' : '') +
+                       '</div>';
+            }).join('');
+
+            dropdown.classList.remove('hidden');
+        };
+
+        window.selecionarPrefixo = function (idx, prefixo) {
+            document.getElementById('prefixo-input-' + idx).value = prefixo;
+            document.getElementById('ac-' + idx).classList.add('hidden');
+        };
+
+        document.addEventListener('click', function (e) {
+            document.querySelectorAll('[id^="ac-"]').forEach(function (d) {
+                var input = document.getElementById('prefixo-input-' + d.id.replace('ac-', ''));
+                if (! d.contains(e.target) && e.target !== input) {
+                    d.classList.add('hidden');
+                }
+            });
+        });
+
         window.buscarElog = function (idx) {
             var card    = document.getElementById('item-' + idx);
             var prefixo = card.querySelector('[name="itens[' + idx + '][prefixo]"]').value.trim();
 
             if (! prefixo) {
-                alert('Informe o prefixo antes de pesquisar.');
+                abrirElogModal('Informe o prefixo antes de pesquisar.');
                 return;
             }
 
             var placa = prefixoToPlaca[prefixo];
             if (! placa) {
-                alert('Prefixo "' + prefixo + '" não encontrado no cadastro.');
+                abrirElogModal('O prefixo "' + prefixo + '" não foi encontrado no cadastro de veículos.');
                 return;
             }
 
@@ -300,7 +373,7 @@
             .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
             .then(function (res) {
                 if (! res.ok) {
-                    alert(res.data.erro || 'Veículo não encontrado no Elog.');
+                    abrirElogModal(res.data.erro || 'Veículo não localizado no Elog para a placa ' + placa + '.');
                     return;
                 }
                 var d = res.data;
@@ -309,7 +382,7 @@
                 if (d.documento)          card.querySelector('[name="itens[' + idx + '][documento]"]').value          = d.documento;
                 if (d.observacao)         card.querySelector('[name="itens[' + idx + '][observacao]"]').value         = d.observacao;
             })
-            .catch(function () { alert('Erro ao conectar com o Elog.'); })
+            .catch(function () { abrirElogModal('Não foi possível conectar ao Elog. Tente novamente.'); })
             .finally(function () {
                 var svgSearch = '<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 0Z"/></svg>';
                 btn.disabled  = false;
