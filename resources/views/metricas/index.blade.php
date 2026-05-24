@@ -126,13 +126,13 @@
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="border-b border-slate-100 dark:border-zinc-800">
-                                    <th class="whitespace-nowrap px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Emissor</th>
+                                    <th class="sticky left-0 z-10 whitespace-nowrap border-r border-slate-100 bg-white px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-600">Emissor</th>
                                     @foreach($todosStatus as $status)
                                         <th class="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
                                             {{ $status }}
                                         </th>
                                     @endforeach
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Total</th>
+                                    <th class="sticky right-0 z-10 border-l border-slate-100 bg-white px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-600">Total</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
@@ -141,8 +141,8 @@
                                         $userStatus = $statusPorUser->get($row['user_id'], collect());
                                         $maxStatus  = $userStatus->max() ?: 1;
                                     @endphp
-                                    <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
-                                        <td class="whitespace-nowrap px-5 py-3 font-medium text-zinc-800 dark:text-zinc-200">
+                                    <tr class="group hover:bg-slate-50 dark:hover:bg-zinc-800/40">
+                                        <td class="sticky left-0 z-10 whitespace-nowrap border-r border-slate-100 bg-white px-5 py-3 font-medium text-zinc-800 group-hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:group-hover:bg-zinc-800/40">
                                             {{ $row['user'] }}
                                         </td>
                                         @foreach($todosStatus as $status)
@@ -160,7 +160,7 @@
                                                 @endif
                                             </td>
                                         @endforeach
-                                        <td class="px-4 py-3 text-center">
+                                        <td class="sticky right-0 z-10 border-l border-slate-100 bg-white px-4 py-3 text-center group-hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:group-hover:bg-zinc-800/40">
                                             <span class="text-sm font-bold text-zinc-900 dark:text-zinc-100">{{ $userStatus->sum() }}</span>
                                         </td>
                                     </tr>
@@ -275,20 +275,20 @@
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="border-b border-slate-100 dark:border-zinc-800">
-                                    <th class="whitespace-nowrap px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Emissor</th>
+                                    <th class="sticky left-0 z-10 whitespace-nowrap border-r border-slate-100 bg-white px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-600">Emissor</th>
                                     @foreach($todosTipos as $tipo)
                                         <th class="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
                                             {{ $tipo->descricao }}
                                         </th>
                                     @endforeach
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Total</th>
+                                    <th class="sticky right-0 z-10 border-l border-slate-100 bg-white px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-600">Total</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
                                 @foreach($tiposPorUser as $userId => $tiposUser)
                                     @php $maxTipo = $tiposUser->max() ?: 1; @endphp
-                                    <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
-                                        <td class="whitespace-nowrap px-5 py-3 font-medium text-zinc-800 dark:text-zinc-200">
+                                    <tr class="group hover:bg-slate-50 dark:hover:bg-zinc-800/40">
+                                        <td class="sticky left-0 z-10 whitespace-nowrap border-r border-slate-100 bg-white px-5 py-3 font-medium text-zinc-800 group-hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:group-hover:bg-zinc-800/40">
                                             {{ $nomesUsersOcorrencias->get($userId, 'Desconhecido') }}
                                         </td>
                                         @foreach($todosTipos as $tipoId => $tipo)
@@ -306,7 +306,7 @@
                                                 @endif
                                             </td>
                                         @endforeach
-                                        <td class="px-4 py-3 text-center">
+                                        <td class="sticky right-0 z-10 border-l border-slate-100 bg-white px-4 py-3 text-center group-hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:group-hover:bg-zinc-800/40">
                                             <span class="text-sm font-bold text-zinc-900 dark:text-zinc-100">{{ $tiposUser->sum() }}</span>
                                         </td>
                                     </tr>
