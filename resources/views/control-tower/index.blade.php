@@ -319,7 +319,9 @@
                                 $posicaoAt      = $posicao?->position_at?->setTimezone(config('app.timezone'))->format('d/m/Y H:i');
                                 $syncedAt       = $posicao?->synced_at?->setTimezone(config('app.timezone'))->format('d/m/Y H:i');
                                 $tz             = config('app.timezone');
-                                $reporteHoje    = $ultimoReporte && $ultimoReporte->reporte->data_hora_emissao?->setTimezone($tz)->isToday();
+                                $horasDesdeReporte = $ultimoReporte
+                                    ? $ultimoReporte->reporte->data_hora_emissao?->setTimezone($tz)->diffInHours(now())
+                                    : null;
                             @endphp
 
                             {{-- ─── Data row ──────────────────────────────── --}}
@@ -327,20 +329,27 @@
                                 data-search="{{ strtolower($searchText) }}"
                                 class="ct-row transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/30">
 
-                                {{-- Sinalizador reporte do dia --}}
+                                {{-- Sinalizador HJ --}}
                                 <td class="px-3 py-2 text-center">
-                                    @if($reporteHoje)
-                                        <span title="Reporte do dia feito"
+                                    @if($horasDesdeReporte !== null && $horasDesdeReporte <= 12)
+                                        {{-- Verde: reporte há menos de 12h --}}
+                                        <span title="Reporte há {{ $horasDesdeReporte }}h"
                                               class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/40">
                                             <svg class="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
                                             </svg>
                                         </span>
+                                    @elseif($horasDesdeReporte !== null && $horasDesdeReporte <= 24)
+                                        {{-- Laranja: reporte entre 12h e 24h --}}
+                                        <span title="Reporte há {{ $horasDesdeReporte }}h"
+                                              class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-950/30">
+                                            <span class="h-2 w-2 rounded-full bg-amber-400 dark:bg-amber-500"></span>
+                                        </span>
                                     @else
-                                        <span title="{{ $ultimoReporte ? 'Último reporte: ' . $ultimoReporte->reporte->data_hora_emissao?->setTimezone($tz)->format('d/m/Y') : 'Sem reporte' }}"
-                                              class="inline-flex h-6 w-6 items-center justify-center rounded-full
-                                                     {{ $ultimoReporte ? 'bg-amber-50 dark:bg-amber-950/30' : 'bg-rose-50 dark:bg-rose-950/30' }}">
-                                            <span class="h-2 w-2 rounded-full {{ $ultimoReporte ? 'bg-amber-400 dark:bg-amber-500' : 'bg-rose-400 dark:bg-rose-500' }}"></span>
+                                        {{-- Vermelho: sem reporte ou há mais de 24h --}}
+                                        <span title="{{ $ultimoReporte ? 'Reporte há mais de 24h' : 'Sem reporte' }}"
+                                              class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950/30">
+                                            <span class="h-2 w-2 rounded-full bg-rose-400 dark:bg-rose-500"></span>
                                         </span>
                                     @endif
                                 </td>
