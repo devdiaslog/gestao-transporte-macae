@@ -139,7 +139,7 @@
         </form>
 
         {{-- Métricas --}}
-        <a href="{{ route('metricas.index', 30) }}"
+        <a href="{{ route('metricas.index') }}"
            class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors
                   border-slate-200 bg-white text-zinc-700 hover:border-slate-300 hover:bg-slate-50
                   dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-900">

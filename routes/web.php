@@ -64,7 +64,7 @@ Route::middleware('auth')->group(function () {
 
     // Métricas
     Route::get('metricas/{periodo?}', [MetricasController::class, 'index'])
-        ->where('periodo', '7|30|90')
+        ->where('periodo', 'hoje|7|30|90')
         ->name('metricas.index');
 
     // Reportes

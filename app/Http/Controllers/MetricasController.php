@@ -11,11 +11,11 @@ use Illuminate\View\View;
 
 class MetricasController extends Controller
 {
-    public function index(Request $request, int $periodo = 30): View
+    public function index(Request $request, string $periodo = 'hoje'): View
     {
-        $periodo = in_array($periodo, [7, 30, 90]) ? $periodo : 30;
+        $periodo = in_array($periodo, ['hoje', '7', '30', '90']) ? $periodo : 'hoje';
 
-        $inicio = now()->subDays($periodo)->startOfDay();
+        $inicio = $periodo === 'hoje' ? now()->startOfDay() : now()->subDays((int) $periodo)->startOfDay();
         $fim = now()->endOfDay();
 
         // ── Reportes ──────────────────────────────────────────────────────────

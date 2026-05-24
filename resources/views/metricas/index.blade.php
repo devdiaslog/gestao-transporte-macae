@@ -8,10 +8,10 @@
         </div>
         {{-- Filtro de período --}}
         <div class="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-            @foreach([7 => '7 dias', 30 => '30 dias', 90 => '90 dias'] as $dias => $label)
-                <a href="{{ route('metricas.index', $dias) }}"
+            @foreach(['hoje' => 'Hoje', '7' => '7 dias', '30' => '30 dias', '90' => '90 dias'] as $valor => $label)
+                <a href="{{ route('metricas.index', $valor) }}"
                    class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition-all
-                          {{ $periodo == $dias
+                          {{ $periodo === $valor
                               ? 'bg-zinc-900 text-white shadow-xs dark:bg-white dark:text-zinc-900'
                               : 'text-zinc-500 hover:bg-slate-50 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-300' }}">
                     {{ $label }}
