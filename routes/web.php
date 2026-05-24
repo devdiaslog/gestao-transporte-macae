@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BigcoreController;
 use App\Http\Controllers\ControlTowerController;
 use App\Http\Controllers\DivisaoController;
 use App\Http\Controllers\EquipamentoController;
@@ -56,6 +57,9 @@ Route::middleware('auth')->group(function () {
     Route::get('ocorrencias/veiculo/{equipamento}', [OcorrenciaController::class, 'veiculo'])->name('ocorrencias.veiculo');
     Route::patch('ocorrencias/{ocorrencia}/auditoria', [OcorrenciaController::class, 'auditar'])->name('ocorrencias.auditar');
     Route::resource('ocorrencias', OcorrenciaController::class)->except(['show'])->parameters(['ocorrencias' => 'ocorrencia']);
+
+    // Bigcore (Elog)
+    Route::get('bigcore/veiculo', [BigcoreController::class, 'veiculo'])->name('bigcore.veiculo');
 
     // Reportes
     Route::get('reportes/{reporte}/data', [ReporteController::class, 'data'])->name('reportes.data');

@@ -35,6 +35,13 @@ return [
         ],
     ],
 
+    'bigcore' => [
+        'endpoint' => env('TMS_API_ENDPOINT', 'https://api-elog.bigcore.com.br/api/ControlTower'),
+        'token' => env('API_TMS_TOKEN'),
+        'tenant' => env('API_TMS_TENANT'),
+        'subscription' => env('API_TMS_SUBSCRIPTION'),
+    ],
+
     'vfleets' => [
         'token_url' => 'https://idp.vfleets.com.br/realms/integration/protocol/openid-connect/token',
         'api_url' => 'https://api.vfleets.com.br/ws.integracao/positions/v1',
