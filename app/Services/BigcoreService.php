@@ -11,11 +11,11 @@ class BigcoreService
     {
         $response = Http::withHeaders([
             'Authorization' => config('services.bigcore.token'),
+            'TenantId' => config('services.bigcore.tenant'),
+            'SubscriptionId' => config('services.bigcore.subscription'),
         ])->get(config('services.bigcore.endpoint'), [
             'Telemetry' => 'true',
             'Rows' => 500,
-            'TenantId' => config('services.bigcore.tenant'),
-            'SubscriptionId' => config('services.bigcore.subscription'),
         ]);
 
         if (! $response->successful()) {
@@ -43,7 +43,7 @@ class BigcoreService
             return null;
         }
 
-        $totalHoras = Carbon::parse($stateStart)->diffInHours(now());
+        $totalHoras = (int) Carbon::parse($stateStart)->diffInHours(now());
         $dias = intdiv($totalHoras, 24);
         $horas = $totalHoras % 24;
 
