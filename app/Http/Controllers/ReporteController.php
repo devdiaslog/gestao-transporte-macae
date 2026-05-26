@@ -232,8 +232,12 @@ class ReporteController extends Controller
     private function gerarNumero(Carbon $now): string
     {
         $prefix = $now->format('Ymd');
-        $count = Reporte::whereDate('data_hora_emissao', $now->toDateString())->count();
 
-        return $prefix.'-'.str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+        $ultimo = Reporte::where('numero_reporte', 'like', $prefix.'-%')
+            ->max('numero_reporte');
+
+        $seq = $ultimo ? ((int) substr($ultimo, -3)) + 1 : 1;
+
+        return $prefix.'-'.str_pad($seq, 3, '0', STR_PAD_LEFT);
     }
 }
