@@ -851,6 +851,11 @@
             </div>
         </div>
 
+        {{-- Faixa de alterações recentes --}}
+        <div id="mapa-geral-recentes" style="flex-shrink:0; display:none;"
+             class="border-b border-slate-200 dark:border-zinc-800 px-4 py-1.5 overflow-x-auto whitespace-nowrap">
+        </div>
+
         {{-- Container do mapa geral --}}
         <div id="leaflet-map-geral" style="flex:1;"></div>
     </div>
@@ -1922,6 +1927,36 @@
 
                 info.textContent = veiculos.length + ' veículo(s) com posição registrada';
                 setTimeout(function () { _leafletMapGeral.invalidateSize(); }, 200);
+
+                // Faixa de alterações recentes (últimos 15 min)
+                var recentes = veiculos
+                    .filter(function (v) { return v.state_since_mins !== null && v.state_since_mins <= 15; })
+                    .sort(function (a, b) { return a.state_since_mins - b.state_since_mins; });
+
+                var faixaEl = document.getElementById('mapa-geral-recentes');
+                if (recentes.length > 0) {
+                    var pills = '<span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#a1a1aa;margin-right:6px;vertical-align:middle">⚡ Recentes:</span>';
+                    recentes.forEach(function (v) {
+                        var emoji = v.tracker_state === 'Em Movimento' ? '🟢' : (v.tracker_state === 'Parado' ? '🔴' : '⚫');
+                        var dur   = v.state_since_mins < 60
+                            ? v.state_since_mins + 'm'
+                            : Math.floor(v.state_since_mins / 60) + 'h ' + (v.state_since_mins % 60) + 'm';
+                        var bg    = v.tracker_state === 'Em Movimento' ? 'background:#f0fdf4;color:#15803d;box-shadow:inset 0 0 0 1px #bbf7d0'
+                                  : (v.tracker_state === 'Parado'      ? 'background:#fff1f2;color:#be123c;box-shadow:inset 0 0 0 1px #fecdd3'
+                                  :                                       'background:#f4f4f5;color:#52525b;box-shadow:inset 0 0 0 1px #e4e4e7');
+                        pills += '<span style="display:inline-flex;align-items:center;gap:5px;border-radius:9999px;padding:3px 10px;font-size:11px;font-weight:500;margin-right:6px;vertical-align:middle;cursor:pointer;' + bg + '"'
+                            + ' onclick="navegarMapaGeral(' + JSON.stringify(v.prefixo || v.placa) + ')"'
+                            + ' title="' + _escHtml(v.tracker_state) + ' — há ' + dur + '">'
+                            + emoji + ' <strong>' + _escHtml(v.prefixo || v.placa) + '</strong>'
+                            + ' <span style="opacity:.6">há ' + dur + '</span>'
+                            + '</span>';
+                    });
+                    faixaEl.innerHTML   = pills;
+                    faixaEl.style.display = '';
+                } else {
+                    faixaEl.style.display = 'none';
+                    faixaEl.innerHTML     = '';
+                }
             })
             .catch(function () {
                 document.getElementById('mapa-geral-info').textContent = 'Erro ao carregar posições.';

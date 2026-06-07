@@ -247,6 +247,7 @@ class ControlTowerController extends Controller
                     'speed' => (int) $e->posicao->speed,
                     'tracker_state' => $e->posicao->tracker_state,
                     'state_duration' => $duration,
+                    'state_since_mins' => $mins,
                     'position_at' => $e->posicao->position_at?->setTimezone($tz)->format('d/m/Y H:i'),
                     'synced_at' => $e->posicao->synced_at?->setTimezone($tz)->format('d/m/Y H:i'),
                 ];
