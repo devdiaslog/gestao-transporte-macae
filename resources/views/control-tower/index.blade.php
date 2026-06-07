@@ -765,6 +765,27 @@
             </div>
         </div>
 
+        {{-- Busca rápida --}}
+        <div style="flex-shrink:0;" class="border-b px-4 py-2 border-slate-200 dark:border-zinc-800">
+            <div class="relative">
+                <svg class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
+                     fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+                </svg>
+                <input id="mapa-geral-search" type="text" autocomplete="off"
+                       placeholder="Ir para prefixo ou placa…"
+                       oninput="filtrarMapaGeral()"
+                       onkeydown="if(event.key==='Enter') navegarMapaGeralPrimeiro(); if(event.key==='Escape') document.getElementById('mapa-geral-search-dropdown').classList.add('hidden');"
+                       class="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-sm outline-none
+                              placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 focus:ring-zinc-900/10
+                              dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500">
+                <div id="mapa-geral-search-dropdown"
+                     class="absolute left-0 right-0 top-full z-50 mt-1 hidden max-h-52 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg
+                            dark:border-zinc-700 dark:bg-zinc-800">
+                </div>
+            </div>
+        </div>
+
         {{-- Container do mapa geral --}}
         <div id="leaflet-map-geral" style="flex:1;"></div>
     </div>
@@ -1431,6 +1452,60 @@
     var _leafletMapGeral        = null;
     var _leafletLayerGeral      = null;
     var _mapaGeralIsFullscreen  = false;
+    var _mapaGeralIndex         = []; // [{prefixo, placa, lat, lng, marker}]
+
+    window.filtrarMapaGeral = function () {
+        var q        = (document.getElementById('mapa-geral-search').value || '').trim().toLowerCase();
+        var dropdown = document.getElementById('mapa-geral-search-dropdown');
+
+        if (! q) { dropdown.classList.add('hidden'); return; }
+
+        var matches = _mapaGeralIndex.filter(function (v) {
+            return v.prefixo.includes(q) || v.placa.includes(q);
+        });
+
+        if (matches.length === 0) {
+            dropdown.innerHTML = '<div class="px-3 py-2.5 text-xs text-zinc-400 dark:text-zinc-500">Nenhum veículo encontrado</div>';
+            dropdown.classList.remove('hidden');
+            return;
+        }
+
+        dropdown.innerHTML = matches.slice(0, 12).map(function (v) {
+            return '<div class="cursor-pointer px-3 py-2 text-sm text-zinc-800 hover:bg-slate-50 dark:text-zinc-200 dark:hover:bg-zinc-700/60"'
+                + ' onmousedown="event.preventDefault(); navegarMapaGeral(' + JSON.stringify(v.label) + ')">'
+                + '<span class="font-semibold">' + _escHtml(v.label) + '</span>'
+                + (v.placa_orig && v.placa_orig !== v.label ? '<span class="ml-2 text-xs text-zinc-400 dark:text-zinc-500">— ' + _escHtml(v.placa_orig) + '</span>' : '')
+                + '</div>';
+        }).join('');
+
+        dropdown.classList.remove('hidden');
+    };
+
+    window.navegarMapaGeral = function (label) {
+        var v = _mapaGeralIndex.find(function (v) { return v.label === label; });
+        if (! v || ! _leafletMapGeral) { return; }
+
+        document.getElementById('mapa-geral-search').value = label;
+        document.getElementById('mapa-geral-search-dropdown').classList.add('hidden');
+
+        _leafletMapGeral.flyTo([v.lat, v.lng], 17, { duration: 0.7 });
+        setTimeout(function () { v.marker.openPopup(); }, 750);
+    };
+
+    window.navegarMapaGeralPrimeiro = function () {
+        var q = (document.getElementById('mapa-geral-search').value || '').trim().toLowerCase();
+        if (! q) { return; }
+        var v = _mapaGeralIndex.find(function (v) { return v.prefixo.includes(q) || v.placa.includes(q); });
+        if (v) { navegarMapaGeral(v.label); }
+    };
+
+    document.addEventListener('click', function (e) {
+        var wrapper = document.getElementById('mapa-geral-search');
+        var drop    = document.getElementById('mapa-geral-search-dropdown');
+        if (wrapper && drop && ! wrapper.contains(e.target) && ! drop.contains(e.target)) {
+            drop.classList.add('hidden');
+        }
+    });
     var _mapaGeralUrl           = '{{ route("control-tower.mapa-geral") }}';
     var _sincronizarUrl         = '{{ route("control-tower.sincronizar-posicoes") }}';
     var _csrfToken              = '{{ csrf_token() }}';
@@ -1631,8 +1706,9 @@
                     _leafletLayerGeral = L.layerGroup().addTo(_leafletMapGeral);
                 }
 
-                // Limpa marcadores anteriores
+                // Limpa marcadores e índice anteriores
                 _leafletLayerGeral.clearLayers();
+                _mapaGeralIndex = [];
 
                 var bounds = [];
 
@@ -1652,7 +1728,7 @@
                                      : '⚫ Sem Sinal');
                     var popup = '<div style="min-width:190px;font-size:12px;line-height:1.75">'
                         + '<p style="font-weight:700;font-size:13px;margin:0 0 5px">' + _escHtml(v.prefixo) + ' <span style="font-weight:400;color:#71717a">' + _escHtml(v.placa) + '</span></p>'
-                        + (v.status ? '<p style="margin:0">Status: <strong>' + _escHtml(v.status) + '</strong></p>' : '')
+                        + (v.status ? '<p style="margin:0">Último Reporte: <strong>' + _escHtml(v.status) + '</strong></p>' : '')
                         + '<p style="margin:0">' + trackerLabel + (v.state_duration ? ' <span style="color:#6b7280">há ' + _escHtml(v.state_duration) + '</span>' : ' <span style="color:#d1d5db">— aguardando sync</span>') + '</p>'
                         + '<p style="margin:0">Motor: ' + (v.ignition ? '🔵 <strong>Ligado</strong>' : '⚪ <strong>Desligado</strong>') + '</p>'
                         + '<p style="margin:0">Velocidade: <strong>' + (v.speed || 0) + ' km/h</strong></p>'
@@ -1660,9 +1736,18 @@
                         + (v.position_at ? '<p style="color:#9ca3af;font-size:11px;margin:5px 0 0">Posição: ' + _escHtml(v.position_at) + '</p>' : '')
                         + '</div>';
 
-                    L.marker([v.lat, v.lng], { icon: icon })
+                    var marker = L.marker([v.lat, v.lng], { icon: icon })
                         .bindPopup(popup)
                         .addTo(_leafletLayerGeral);
+
+                    _mapaGeralIndex.push({
+                        prefixo: (v.prefixo || '').toLowerCase(),
+                        placa:   (v.placa   || '').toLowerCase(),
+                        label:   v.prefixo || v.placa,
+                        placa_orig: v.placa || '',
+                        lat: v.lat, lng: v.lng,
+                        marker: marker,
+                    });
 
                     bounds.push([v.lat, v.lng]);
                 });
@@ -1723,6 +1808,8 @@
         _mapaGeralIsFullscreen = true;
         _applyMapaGeralSize(true);
         document.getElementById('mapa-geral-overlay').style.display = 'flex';
+        document.getElementById('mapa-geral-search').value = '';
+        document.getElementById('mapa-geral-search-dropdown').classList.add('hidden');
         document.body.style.overflow = 'hidden';
         sincronizarERecarregar();
     }
