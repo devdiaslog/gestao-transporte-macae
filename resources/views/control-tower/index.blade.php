@@ -1538,10 +1538,12 @@
     });
 
     // ─── Modo Interativo ─────────────────────────────────────────────────────
-    var _miAtivo  = false;
-    var _miTimer  = null;
-    var _miOrdem  = []; // índice ordenado por proximidade
-    var _miIdx    = 0;
+    var _miAtivo         = false;
+    var _miTimer         = null;
+    var _miRefreshTimer  = null;
+    var _miOrdem         = []; // índice ordenado por proximidade
+    var _miIdx           = 0;
+    var _MI_REFRESH_MS   = 6 * 60 * 1000; // 6 minutos
 
     function _haversineKm(lat1, lon1, lat2, lon2) {
         var R    = 6371;
@@ -1609,9 +1611,20 @@
             btn.style.borderColor = '#16a34a';
             btn.style.color       = '#16a34a';
             _miAvancar();
+            // Recarrega posições do banco a cada 6 minutos sem parar o loop
+            _miRefreshTimer = setInterval(function () {
+                if (! _miAtivo) { return; }
+                _fetchEPlotarMarcadores().then(function () {
+                    // Re-ordena mantendo o mesmo ponto de referência
+                    _miOrdem = _nearestNeighborSort(_mapaGeralIndex.slice());
+                    _miIdx   = _miIdx % (_miOrdem.length || 1);
+                });
+            }, _MI_REFRESH_MS);
         } else {
             clearTimeout(_miTimer);
+            clearInterval(_miRefreshTimer);
             _miTimer        = null;
+            _miRefreshTimer = null;
             select.disabled     = false;
             selectZoom.disabled = false;
             dot.style.background  = '';
@@ -1931,7 +1944,7 @@
     }
 
     function closeMapaGeral() {
-        if (_miAtivo) { toggleModoInterativo(); } // desliga modo interativo ao fechar
+        if (_miAtivo) { toggleModoInterativo(); } // desliga modo interativo e refresh ao fechar
         document.getElementById('mapa-geral-overlay').style.display  = 'none';
         document.getElementById('mapa-geral-backdrop').style.display = 'none';
         document.body.style.overflow = '';
