@@ -115,6 +115,34 @@ class ReporteController extends Controller
         return view('reportes.show', compact('reporte'));
     }
 
+    public function ultimoPorPrefixo(Request $request): JsonResponse
+    {
+        $prefixo = $request->input('prefixo');
+
+        if (! $prefixo) {
+            return response()->json(['erro' => 'Prefixo não informado.'], 422);
+        }
+
+        $item = ReporteItem::query()
+            ->whereHas('reporte', fn ($q) => $q->where('status', 'publicado'))
+            ->where('prefixo', $prefixo)
+            ->latest('id')
+            ->first();
+
+        if (! $item) {
+            return response()->json(['erro' => 'Nenhum reporte publicado encontrado para o prefixo "'.$prefixo.'".'], 404);
+        }
+
+        return response()->json([
+            'status_operacional' => $item->status_operacional,
+            'documento' => $item->documento,
+            'primeiro_contato' => $item->primeiro_contato,
+            'segundo_contato' => $item->segundo_contato,
+            'data_hora_previsao' => $item->data_hora_previsao,
+            'observacao' => $item->observacao,
+        ]);
+    }
+
     public function data(Reporte $reporte): JsonResponse
     {
         $reporte->load('itens');

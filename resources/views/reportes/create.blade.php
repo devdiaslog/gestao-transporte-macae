@@ -146,7 +146,8 @@
         var statusOpcoes   = @json($statusOpcoes);
         var prefixosList   = @json($prefixosList);
         var prefixoToPlaca = @json($prefixosMotorizados->pluck('placa', 'prefixo'));
-        var BIGCORE_URL    = '{{ route('bigcore.veiculo') }}';
+        var BIGCORE_URL         = '{{ route('bigcore.veiculo') }}';
+        var REPORTE_PREFIXO_URL = '{{ route('reportes.ultimo-por-prefixo') }}';
         var oldItens        = @json(old('itens', []));
         var container     = document.getElementById('itens-container');
         var addBtnBottom  = document.getElementById('add-btn-bottom');
@@ -212,6 +213,11 @@
                                 ' class="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-800 disabled:opacity-40 dark:text-blue-400 dark:hover:text-blue-300">' +
                             '<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 0Z"/></svg>' +
                             'Pesquisar no Elog' +
+                        '</button>' +
+                        '<button type="button" id="btn-reporte-' + idx + '" onclick="buscarReporte(' + idx + ')"' +
+                                ' class="ml-3 mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 hover:text-emerald-800 disabled:opacity-40 dark:text-emerald-400 dark:hover:text-emerald-300">' +
+                            '<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 0Z"/></svg>' +
+                            'Pesquisar no Reporte' +
                         '</button>' +
                         errorHtml(eP) +
                     '</div>' +
@@ -402,6 +408,45 @@
                 var svgSearch = '<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 0Z"/></svg>';
                 btn.disabled  = false;
                 btn.innerHTML = svgSearch + ' Pesquisar no Elog';
+            });
+        };
+
+        window.buscarReporte = function (idx) {
+            var card    = document.getElementById('item-' + idx);
+            var prefixo = card.querySelector('[name="itens[' + idx + '][prefixo]"]').value.trim();
+
+            if (! prefixo) {
+                abrirElogModal('Informe o prefixo antes de pesquisar.');
+                return;
+            }
+
+            var btn     = document.getElementById('btn-reporte-' + idx);
+            var svgBusy = '<svg class="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>';
+            btn.disabled  = true;
+            btn.innerHTML = svgBusy + ' Buscando...';
+
+            fetch(REPORTE_PREFIXO_URL + '?prefixo=' + encodeURIComponent(prefixo), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            })
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+            .then(function (res) {
+                if (! res.ok) {
+                    abrirElogModal(res.data.erro || 'Nenhum reporte encontrado para o prefixo "' + prefixo + '".');
+                    return;
+                }
+                var d = res.data;
+                if (d.status_operacional) card.querySelector('[name="itens[' + idx + '][status_operacional]"]').value    = d.status_operacional;
+                if (d.documento)          card.querySelector('[name="itens[' + idx + '][documento]"]').value             = d.documento;
+                if (d.primeiro_contato)   card.querySelector('[name="itens[' + idx + '][primeiro_contato]"]').value      = d.primeiro_contato;
+                if (d.segundo_contato)    card.querySelector('[name="itens[' + idx + '][segundo_contato]"]').value        = d.segundo_contato;
+                if (d.data_hora_previsao) card.querySelector('[name="itens[' + idx + '][data_hora_previsao]"]').value     = d.data_hora_previsao;
+                if (d.observacao)         card.querySelector('[name="itens[' + idx + '][observacao]"]').value             = d.observacao;
+            })
+            .catch(function () { abrirElogModal('Não foi possível buscar o último reporte. Tente novamente.'); })
+            .finally(function () {
+                var svgSearch = '<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 0Z"/></svg>';
+                btn.disabled  = false;
+                btn.innerHTML = svgSearch + ' Pesquisar no Reporte';
             });
         };
 

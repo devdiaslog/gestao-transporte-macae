@@ -71,6 +71,7 @@ Route::middleware('auth')->group(function () {
         ->name('metricas.index');
 
     // Reportes
+    Route::get('reportes/ultimo-por-prefixo', [ReporteController::class, 'ultimoPorPrefixo'])->name('reportes.ultimo-por-prefixo');
     Route::get('reportes/{reporte}/data', [ReporteController::class, 'data'])->name('reportes.data');
     Route::resource('reportes', ReporteController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'])->parameters(['reportes' => 'reporte']);
 
