@@ -797,6 +797,14 @@
                     <option value="45000">45s</option>
                     <option value="60000">60s</option>
                 </select>
+                <select id="mi-zoom"
+                        class="rounded-lg border border-slate-200 bg-white py-1.5 px-2 text-xs text-zinc-500 outline-none
+                               focus:border-zinc-400 focus:ring-2 focus:ring-zinc-900/10
+                               dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+                    @for($z = 14; $z <= 25; $z++)
+                        <option value="{{ $z }}" @selected($z === 18)>zoom {{ $z }}</option>
+                    @endfor
+                </select>
                 <button type="button" id="btn-modo-interativo" onclick="toggleModoInterativo()"
                         title="Modo Interativo — percorre todos os veículos automaticamente"
                         class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors
@@ -1571,7 +1579,8 @@
         document.getElementById('mi-label').textContent =
             'Interativo (' + (_miIdx) + '/' + _miOrdem.length + ')';
 
-        _leafletMapGeral.flyTo([v.lat, v.lng], 21, { duration: 0.8 });
+        var zoom = parseInt(document.getElementById('mi-zoom').value, 10) || 18;
+        _leafletMapGeral.flyTo([v.lat, v.lng], zoom, { duration: 0.8 });
         setTimeout(function () {
             if (_miAtivo) { v.marker.openPopup(); }
         }, 850);
@@ -1586,13 +1595,15 @@
         var label = document.getElementById('mi-label');
         var btn   = document.getElementById('btn-modo-interativo');
 
-        var select = document.getElementById('mi-intervalo');
+        var select     = document.getElementById('mi-intervalo');
+        var selectZoom = document.getElementById('mi-zoom');
 
         if (_miAtivo) {
             // Ordena por proximidade e inicia
-            _miOrdem        = _nearestNeighborSort(_mapaGeralIndex.slice());
-            _miIdx          = 0;
-            select.disabled = true;
+            _miOrdem             = _nearestNeighborSort(_mapaGeralIndex.slice());
+            _miIdx               = 0;
+            select.disabled      = true;
+            selectZoom.disabled  = true;
             dot.style.background  = '#16a34a';
             dot.style.animation   = 'spin 2s linear infinite';
             btn.style.borderColor = '#16a34a';
@@ -1601,7 +1612,8 @@
         } else {
             clearTimeout(_miTimer);
             _miTimer        = null;
-            select.disabled = false;
+            select.disabled     = false;
+            selectZoom.disabled = false;
             dot.style.background  = '';
             dot.style.animation   = '';
             btn.style.borderColor = '';
