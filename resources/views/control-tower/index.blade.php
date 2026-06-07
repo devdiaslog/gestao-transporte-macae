@@ -1526,10 +1526,6 @@
                 return;
             }
             closeReporteRapidoModal();
-            // Redirecionar para o reporte publicado, ou recarregar a página
-            if (res.data.reporte_url) {
-                window.open(res.data.reporte_url, '_blank');
-            }
             window.location.reload();
         })
         .catch(function () {
