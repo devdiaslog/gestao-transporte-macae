@@ -98,47 +98,55 @@
         </div>
 
         {{-- ─── Mapa / Polígono ─────────────────────────────────────────────── --}}
-        <div class="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-zinc-800">
-                <div>
-                    <h3 class="text-sm font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Polígono no Mapa</h3>
-                    <p id="poligono-status" class="mt-0.5 text-xs text-zinc-400 dark:text-zinc-600">Nenhum vértice adicionado</p>
+        <div id="map-card" class="relative mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+
+            {{-- Mapa --}}
+            <div id="cerca-map" style="height: 420px;"></div>
+
+            {{-- Overlay de controles — flutua sobre o mapa --}}
+            <div id="map-overlay" class="pointer-events-none absolute inset-x-0 top-0 z-[1000] flex items-start justify-between gap-3 p-3">
+
+                {{-- Status vértices --}}
+                <div class="pointer-events-auto rounded-lg border border-slate-200 bg-white/90 px-3 py-2 shadow backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-900/90">
+                    <p class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Polígono</p>
+                    <p id="poligono-status" class="mt-0.5 text-xs text-zinc-600 dark:text-zinc-300">Nenhum vértice adicionado</p>
                 </div>
-                <div class="flex flex-wrap items-center gap-2">
+
+                {{-- Botões --}}
+                <div class="pointer-events-auto flex flex-wrap items-center justify-end gap-2">
                     <button type="button" id="btn-minha-loc"
-                            class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all
-                                   border-slate-200 text-zinc-600 hover:border-slate-300 hover:bg-slate-50
-                                   dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-800">
+                            class="inline-flex items-center gap-1.5 rounded-lg border bg-white/90 px-3 py-1.5 text-xs font-medium shadow backdrop-blur-sm transition-all
+                                   border-slate-200 text-zinc-600 hover:bg-white dark:border-zinc-700 dark:bg-zinc-900/90 dark:text-zinc-300 dark:hover:bg-zinc-800">
                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
                         Minha localização
                     </button>
-                    <button type="button" id="btn-desfazer"
-                            disabled
-                            class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-40
-                                   border-slate-200 text-zinc-600 hover:border-slate-300 hover:bg-slate-50
-                                   dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-800">
+                    <button type="button" id="btn-desfazer" disabled
+                            class="inline-flex items-center gap-1.5 rounded-lg border bg-white/90 px-3 py-1.5 text-xs font-medium shadow backdrop-blur-sm transition-all disabled:opacity-40
+                                   border-slate-200 text-zinc-600 hover:bg-white dark:border-zinc-700 dark:bg-zinc-900/90 dark:text-zinc-300 dark:hover:bg-zinc-800">
                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"/></svg>
                         Desfazer
                     </button>
-                    <button type="button" id="btn-limpar"
-                            disabled
-                            class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-40
-                                   border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50
-                                   dark:border-red-900/50 dark:text-red-400 dark:hover:border-red-800 dark:hover:bg-red-950/40">
+                    <button type="button" id="btn-limpar" disabled
+                            class="inline-flex items-center gap-1.5 rounded-lg border bg-white/90 px-3 py-1.5 text-xs font-medium shadow backdrop-blur-sm transition-all disabled:opacity-40
+                                   border-red-200 text-red-600 hover:bg-white dark:border-red-900/50 dark:bg-zinc-900/90 dark:text-red-400 dark:hover:bg-zinc-800">
                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
                         Limpar
+                    </button>
+                    <button type="button" id="btn-fullscreen"
+                            class="inline-flex items-center gap-1.5 rounded-lg border bg-white/90 px-3 py-1.5 text-xs font-medium shadow backdrop-blur-sm transition-all
+                                   border-slate-200 text-zinc-600 hover:bg-white dark:border-zinc-700 dark:bg-zinc-900/90 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                        <svg id="icon-expand" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg>
+                        <svg id="icon-shrink" class="h-3.5 w-3.5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25"/></svg>
+                        <span id="label-fullscreen">Tela cheia</span>
                     </button>
                 </div>
             </div>
 
             {{-- Instrução --}}
-            <div id="map-instrucao" class="flex items-center gap-2 border-b border-slate-100 bg-blue-50 px-6 py-2.5 text-xs text-blue-700 dark:border-zinc-800 dark:bg-blue-950/30 dark:text-blue-400">
-                <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>
-                <span>Clique no mapa para adicionar vértices do polígono. O polígono fecha automaticamente com 3 ou mais pontos.</span>
+            <div id="map-instrucao" class="pointer-events-none absolute inset-x-0 bottom-0 z-[1000] flex items-center gap-2 bg-gradient-to-t from-black/40 to-transparent px-4 py-3 text-xs text-white">
+                <svg class="h-3.5 w-3.5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>
+                <span class="opacity-90">Clique no mapa para adicionar vértices. O polígono fecha automaticamente com 3 ou mais pontos.</span>
             </div>
-
-            {{-- Mapa --}}
-            <div id="cerca-map" style="height: 420px; border-radius: 0 0 1rem 1rem;"></div>
         </div>
 
         {{-- ─── Ações ──────────────────────────────────────────────────────── --}}
@@ -195,13 +203,23 @@
             }
             btnDesfazer.disabled = n === 0;
             btnLimpar.disabled   = n === 0;
-            inputPoligono.value  = n >= 3 ? JSON.stringify(vertices) : '';
+            var sorted = ordenarVertices(vertices);
+            inputPoligono.value = n >= 3 ? JSON.stringify(sorted) : '';
+        }
+
+        function ordenarVertices(pts) {
+            if (pts.length < 3) { return pts; }
+            var cx = pts.reduce(function (s, p) { return s + p[0]; }, 0) / pts.length;
+            var cy = pts.reduce(function (s, p) { return s + p[1]; }, 0) / pts.length;
+            return pts.slice().sort(function (a, b) {
+                return Math.atan2(a[0] - cx, a[1] - cy) - Math.atan2(b[0] - cx, b[1] - cy);
+            });
         }
 
         function redesenharPoligono() {
             if (polygon) { map.removeLayer(polygon); polygon = null; }
             if (vertices.length >= 3) {
-                polygon = L.polygon(vertices, {
+                polygon = L.polygon(ordenarVertices(vertices), {
                     color: '#3b82f6',
                     weight: 2,
                     fillColor: '#3b82f6',
@@ -249,6 +267,41 @@
             navigator.geolocation.getCurrentPosition(function (pos) {
                 map.flyTo([pos.coords.latitude, pos.coords.longitude], 15, { duration: 1 });
             });
+        });
+
+        var mapEl      = document.getElementById('cerca-map');
+        var mapCard    = document.getElementById('map-card');
+        var iconExpand = document.getElementById('icon-expand');
+        var iconShrink = document.getElementById('icon-shrink');
+        var labelFs    = document.getElementById('label-fullscreen');
+        var mapaFs     = false;
+
+        function entrarFs() {
+            mapaFs = true;
+            mapCard.style.cssText = 'position:fixed;inset:0;z-index:9999;border-radius:0;margin:0;';
+            mapEl.style.cssText   = 'height:100%;width:100%;';
+            iconExpand.classList.add('hidden');
+            iconShrink.classList.remove('hidden');
+            labelFs.textContent = 'Sair';
+            setTimeout(function () { map.invalidateSize(); }, 50);
+        }
+
+        function sairFs() {
+            mapaFs = false;
+            mapCard.style.cssText = '';
+            mapEl.style.cssText   = 'height:420px;';
+            iconExpand.classList.remove('hidden');
+            iconShrink.classList.add('hidden');
+            labelFs.textContent = 'Tela cheia';
+            setTimeout(function () { map.invalidateSize(); }, 50);
+        }
+
+        document.getElementById('btn-fullscreen').addEventListener('click', function () {
+            mapaFs ? sairFs() : entrarFs();
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && mapaFs) { sairFs(); }
         });
 
         // Restaurar vértices após erro de validação
