@@ -765,24 +765,37 @@
             </div>
         </div>
 
-        {{-- Busca rápida --}}
+        {{-- Busca rápida + Modo Interativo --}}
         <div style="flex-shrink:0;" class="border-b px-4 py-2 border-slate-200 dark:border-zinc-800">
-            <div class="relative">
-                <svg class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
-                     fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
-                </svg>
-                <input id="mapa-geral-search" type="text" autocomplete="off"
-                       placeholder="Ir para prefixo ou placa…"
-                       oninput="filtrarMapaGeral()"
-                       onkeydown="if(event.key==='Enter') navegarMapaGeralPrimeiro(); if(event.key==='Escape') document.getElementById('mapa-geral-search-dropdown').classList.add('hidden');"
-                       class="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-sm outline-none
-                              placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 focus:ring-zinc-900/10
-                              dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500">
-                <div id="mapa-geral-search-dropdown"
-                     class="absolute left-0 right-0 top-full z-50 mt-1 hidden max-h-52 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg
-                            dark:border-zinc-700 dark:bg-zinc-800">
+            <div class="flex items-center gap-2">
+                {{-- Input de busca --}}
+                <div class="relative flex-1">
+                    <svg class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
+                         fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+                    </svg>
+                    <input id="mapa-geral-search" type="text" autocomplete="off"
+                           placeholder="Ir para prefixo ou placa…"
+                           oninput="filtrarMapaGeral()"
+                           onkeydown="if(event.key==='Enter') navegarMapaGeralPrimeiro(); if(event.key==='Escape') document.getElementById('mapa-geral-search-dropdown').classList.add('hidden');"
+                           class="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-sm outline-none
+                                  placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 focus:ring-zinc-900/10
+                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500">
+                    <div id="mapa-geral-search-dropdown"
+                         class="absolute left-0 right-0 top-full z-50 mt-1 hidden max-h-52 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg
+                                dark:border-zinc-700 dark:bg-zinc-800">
+                    </div>
                 </div>
+
+                {{-- Modo Interativo --}}
+                <button type="button" id="btn-modo-interativo" onclick="toggleModoInterativo()"
+                        title="Modo Interativo — percorre todos os veículos automaticamente a cada 30s"
+                        class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors
+                               border-slate-200 bg-white text-zinc-500 hover:border-slate-300 hover:bg-slate-50
+                               dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600">
+                    <span id="mi-dot" class="h-2 w-2 rounded-full bg-zinc-300 dark:bg-zinc-600 transition-colors"></span>
+                    <span id="mi-label">Modo Interativo</span>
+                </button>
             </div>
         </div>
 
@@ -1506,6 +1519,84 @@
             drop.classList.add('hidden');
         }
     });
+
+    // ─── Modo Interativo ─────────────────────────────────────────────────────
+    var _miAtivo    = false;
+    var _miTimer    = null;
+    var _miOrdem    = []; // índice ordenado por proximidade
+    var _miIdx      = 0;
+    var _MI_PAUSA   = 30000; // 30 segundos
+
+    function _haversineKm(lat1, lon1, lat2, lon2) {
+        var R    = 6371;
+        var dLat = (lat2 - lat1) * Math.PI / 180;
+        var dLon = (lon2 - lon1) * Math.PI / 180;
+        var a    = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+                 * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function _nearestNeighborSort(veiculos) {
+        if (veiculos.length === 0) { return []; }
+        var restantes = veiculos.slice();
+        var resultado = [restantes.splice(0, 1)[0]];
+        while (restantes.length > 0) {
+            var atual      = resultado[resultado.length - 1];
+            var menorDist  = Infinity;
+            var menorIdx   = 0;
+            for (var i = 0; i < restantes.length; i++) {
+                var d = _haversineKm(atual.lat, atual.lng, restantes[i].lat, restantes[i].lng);
+                if (d < menorDist) { menorDist = d; menorIdx = i; }
+            }
+            resultado.push(restantes.splice(menorIdx, 1)[0]);
+        }
+        return resultado;
+    }
+
+    function _miAvancar() {
+        if (! _miAtivo || _miOrdem.length === 0) { return; }
+        var v = _miOrdem[_miIdx];
+        _miIdx = (_miIdx + 1) % _miOrdem.length;
+
+        // Atualiza contador no botão
+        document.getElementById('mi-label').textContent =
+            'Interativo (' + (_miIdx) + '/' + _miOrdem.length + ')';
+
+        _leafletMapGeral.flyTo([v.lat, v.lng], 16, { duration: 0.8 });
+        setTimeout(function () {
+            if (_miAtivo) { v.marker.openPopup(); }
+        }, 850);
+
+        _miTimer = setTimeout(_miAvancar, _MI_PAUSA);
+    }
+
+    window.toggleModoInterativo = function () {
+        _miAtivo = ! _miAtivo;
+        var dot   = document.getElementById('mi-dot');
+        var label = document.getElementById('mi-label');
+        var btn   = document.getElementById('btn-modo-interativo');
+
+        if (_miAtivo) {
+            // Ordena por proximidade e inicia
+            _miOrdem = _nearestNeighborSort(_mapaGeralIndex.slice());
+            _miIdx   = 0;
+            dot.style.background   = '#16a34a';
+            dot.style.animation    = 'spin 2s linear infinite';
+            btn.style.borderColor  = '#16a34a';
+            btn.style.color        = '#16a34a';
+            _miAvancar();
+        } else {
+            clearTimeout(_miTimer);
+            _miTimer = null;
+            dot.style.background  = '';
+            dot.style.animation   = '';
+            btn.style.borderColor = '';
+            btn.style.color       = '';
+            label.textContent     = 'Modo Interativo';
+            if (_leafletMapGeral) { _leafletMapGeral.closePopup(); }
+        }
+    };
     var _mapaGeralUrl           = '{{ route("control-tower.mapa-geral") }}';
     var _sincronizarUrl         = '{{ route("control-tower.sincronizar-posicoes") }}';
     var _csrfToken              = '{{ csrf_token() }}';
@@ -1815,6 +1906,7 @@
     }
 
     function closeMapaGeral() {
+        if (_miAtivo) { toggleModoInterativo(); } // desliga modo interativo ao fechar
         document.getElementById('mapa-geral-overlay').style.display  = 'none';
         document.getElementById('mapa-geral-backdrop').style.display = 'none';
         document.body.style.overflow = '';
