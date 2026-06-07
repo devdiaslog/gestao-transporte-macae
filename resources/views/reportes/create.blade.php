@@ -18,6 +18,8 @@
         </div>
     </div>
 
+    <div id="draft-banner" class="mt-4"></div>
+
     <form method="POST" action="{{ route('reportes.store') }}" id="reporte-form" novalidate>
         @csrf
         <input type="hidden" name="salvar_como" id="salvar_como" value="publicado">
@@ -152,6 +154,63 @@
         var container     = document.getElementById('itens-container');
         var addBtnBottom  = document.getElementById('add-btn-bottom');
         var itemIndex     = 0;
+
+        // ─── Rascunho Local (localStorage) ──────────────────────────────────
+        var DRAFT_KEY = 'reporte_draft_create';
+
+        function coletarDadosFormulario() {
+            var nome  = document.getElementById('nome').value;
+            var itens = [];
+            container.querySelectorAll('[id^="item-"]').forEach(function (card) {
+                var idx = card.id.replace('item-', '');
+                itens.push({
+                    prefixo:             (card.querySelector('[name="itens[' + idx + '][prefixo]"]') || {}).value || '',
+                    status_operacional:  (card.querySelector('[name="itens[' + idx + '][status_operacional]"]') || {}).value || '',
+                    primeiro_contato:    (card.querySelector('[name="itens[' + idx + '][primeiro_contato]"]') || {}).value || '',
+                    documento:           (card.querySelector('[name="itens[' + idx + '][documento]"]') || {}).value || '',
+                    tempo_parado:        (card.querySelector('[name="itens[' + idx + '][tempo_parado]"]') || {}).value || '',
+                    segundo_contato:     (card.querySelector('[name="itens[' + idx + '][segundo_contato]"]') || {}).value || '',
+                    data_hora_previsao:  (card.querySelector('[name="itens[' + idx + '][data_hora_previsao]"]') || {}).value || '',
+                    observacao:          (card.querySelector('[name="itens[' + idx + '][observacao]"]') || {}).value || '',
+                });
+            });
+            return { nome: nome, itens: itens, savedAt: Date.now() };
+        }
+
+        function salvarRascunhoLocal() {
+            try { localStorage.setItem(DRAFT_KEY, JSON.stringify(coletarDadosFormulario())); } catch (e) {}
+        }
+
+        window.limparRascunhoLocal = function () {
+            try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+            var banner = document.getElementById('draft-banner');
+            if (banner) { banner.innerHTML = ''; }
+        };
+
+        function formatarHora(ts) {
+            var d = new Date(ts);
+            return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function exibirBannerRascunho(savedAt) {
+            var banner = document.getElementById('draft-banner');
+            if (! banner) { return; }
+            banner.innerHTML =
+                '<div class="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm dark:border-amber-800/40 dark:bg-amber-950/30">' +
+                    '<div class="flex items-center gap-2 text-amber-800 dark:text-amber-300">' +
+                        '<svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>' +
+                        '<span>Rascunho local recuperado — salvo às <strong>' + formatarHora(savedAt) + '</strong></span>' +
+                    '</div>' +
+                    '<button type="button" onclick="limparRascunhoLocal()" class="ml-4 shrink-0 text-xs font-medium text-amber-700 underline hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200">Descartar</button>' +
+                '</div>';
+        }
+
+        // Salva a cada mudança no formulário
+        document.getElementById('reporte-form').addEventListener('input', salvarRascunhoLocal);
+        document.getElementById('reporte-form').addEventListener('change', salvarRascunhoLocal);
+
+        // Salva automaticamente a cada 30 segundos
+        setInterval(salvarRascunhoLocal, 30000);
 
         function fieldClass(hasError) {
             var base = 'block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all duration-200 focus:ring-2 ';
@@ -313,6 +372,7 @@
         }
 
         window.submitAs = function (tipo) {
+            limparRascunhoLocal();
             document.getElementById('salvar_como').value = tipo;
             document.getElementById('reporte-form').submit();
         };
@@ -450,7 +510,7 @@
             });
         };
 
-        // ─── Restaurar itens após erro de validação ─────────────────────────
+        // ─── Restaurar itens (erro de validação do servidor ou rascunho local) ──
         @if($errors->any())
         (function () {
             var erros = @json($errors->messages());
@@ -461,7 +521,23 @@
             updateAddBtn();
         })();
         @else
-        addItem();
+        (function () {
+            var restored = false;
+            try {
+                var draft = JSON.parse(localStorage.getItem(DRAFT_KEY));
+                if (draft && draft.itens && draft.itens.length > 0) {
+                    document.getElementById('nome').value = draft.nome || '';
+                    draft.itens.forEach(function (data, idx) {
+                        container.insertAdjacentHTML('beforeend', buildCard(idx, data, {}));
+                        itemIndex = idx + 1;
+                    });
+                    updateAddBtn();
+                    exibirBannerRascunho(draft.savedAt);
+                    restored = true;
+                }
+            } catch (e) {}
+            if (! restored) { addItem(); }
+        })();
         @endif
     })();
     </script>
