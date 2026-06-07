@@ -1571,7 +1571,7 @@
         document.getElementById('mi-label').textContent =
             'Interativo (' + (_miIdx) + '/' + _miOrdem.length + ')';
 
-        _leafletMapGeral.flyTo([v.lat, v.lng], 16, { duration: 0.8 });
+        _leafletMapGeral.flyTo([v.lat, v.lng], 21, { duration: 0.8 });
         setTimeout(function () {
             if (_miAtivo) { v.marker.openPopup(); }
         }, 850);
