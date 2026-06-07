@@ -108,7 +108,19 @@ class ControlTowerController extends Controller
             ->groupBy('prefixo')
             ->map(fn ($items) => $items->first());
 
-        return view('control-tower.index', compact('equipamentos', 'divisoes', 'modelos', 'modelosImplemento', 'implementos', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado', 'ultimosReportes'));
+        // Veículos que mudaram de estado nos últimos 15 min — "linha do tempo viva"
+        $recentementeAlterados = Equipamento::query()
+            ->with('posicao')
+            ->where('status', true)
+            ->when($tipoMotorizado, fn ($q) => $q->where('tipo_id', $tipoMotorizado->id))
+            ->whereHas('posicao', fn ($q) => $q->whereNotNull('state_since')
+                ->where('state_since', '>=', now()->subMinutes(15)))
+            ->get()
+            ->filter(fn ($e) => $e->posicao?->state_since?->isPast())
+            ->sortByDesc(fn ($e) => $e->posicao->state_since)
+            ->values();
+
+        return view('control-tower.index', compact('equipamentos', 'divisoes', 'modelos', 'modelosImplemento', 'implementos', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado', 'ultimosReportes', 'recentementeAlterados'));
     }
 
     public function export(Request $request): Response

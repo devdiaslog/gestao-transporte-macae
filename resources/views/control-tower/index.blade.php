@@ -272,6 +272,41 @@
         </span>
     </div>
 
+    {{-- ─── Alterações Recentes (últimos 15 min) ──────────────────────────── --}}
+    @if($recentementeAlterados->isNotEmpty())
+        <div class="mt-2 flex items-center gap-2 overflow-x-auto pb-1 px-0.5">
+            <span class="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
+                ⚡ Recentes:
+            </span>
+            @foreach($recentementeAlterados as $eqR)
+                @php
+                    $posR   = $eqR->posicao;
+                    $minsR  = (int) $posR->state_since->diffInMinutes(now());
+                    $stateR = $posR->tracker_state;
+                    if ($stateR === 'Em Movimento') {
+                        $emojiR = '🟢';
+                        $clsR   = 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:ring-emerald-800/40';
+                    } elseif ($stateR === 'Parado') {
+                        $emojiR = '🔴';
+                        $clsR   = 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:ring-rose-800/40';
+                    } else {
+                        $emojiR = '⚫';
+                        $clsR   = 'bg-zinc-100 text-zinc-500 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-700';
+                    }
+                    $durR = $minsR < 60
+                        ? $minsR.'m'
+                        : intdiv($minsR, 60).'h '.($minsR % 60).'m';
+                @endphp
+                <span title="{{ $stateR }} — há {{ $durR }}"
+                      class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset {{ $clsR }}">
+                    {{ $emojiR }}
+                    <span class="font-semibold">{{ $eqR->prefixo ?? $eqR->placa }}</span>
+                    <span class="opacity-60">há {{ $durR }}</span>
+                </span>
+            @endforeach
+        </div>
+    @endif
+
     {{-- ─── Table card — fixed height + internal scroll ────────────────────── --}}
     <div id="table-wrapper"
          class="mt-3 overflow-hidden rounded-xl border shadow-sm
