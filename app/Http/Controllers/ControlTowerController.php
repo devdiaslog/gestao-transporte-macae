@@ -178,6 +178,69 @@ class ControlTowerController extends Controller
         ]);
     }
 
+    public function sincronizarPosicoes(VfleetsService $vfleets): JsonResponse
+    {
+        try {
+            $total = $vfleets->sincronizar();
+        } catch (Throwable $e) {
+            $status = str_contains($e->getMessage(), '429') ? 429 : 500;
+
+            return response()->json(['ok' => false, 'erro' => $e->getMessage()], $status);
+        }
+
+        return response()->json(['ok' => true, 'total' => $total]);
+    }
+
+    public function mapaGeral(): JsonResponse
+    {
+        $tz = config('app.timezone');
+        $tipoMotorizado = TipoEquipamento::where('nome', 'Motorizado')->first();
+
+        $veiculos = Equipamento::query()
+            ->with(['posicao', 'motorista'])
+            ->where('status', true)
+            ->when($tipoMotorizado, fn ($q) => $q->where('tipo_id', $tipoMotorizado->id))
+            ->get()
+            ->filter(fn ($e) => $e->posicao?->latitude && $e->posicao?->longitude)
+            ->map(function ($e) use ($tz) {
+                $stateSince = $e->posicao->state_since;
+
+                // state_since no futuro indica dado com timezone incorreto no banco
+                // (UTC gravado como se fosse BRT, lido 3h à frente). Nesses casos
+                // não exibimos duração — a migration corrige os registros existentes.
+                $mins = ($stateSince && $stateSince->isPast())
+                    ? (int) $stateSince->diffInMinutes(now())
+                    : null;
+
+                if ($mins !== null) {
+                    $d = intdiv($mins, 1440);
+                    $h = intdiv($mins % 1440, 60);
+                    $m = $mins % 60;
+                    $duration = $d > 0 ? "{$d}d {$h}h {$m}m" : ($h > 0 ? "{$h}h {$m}m" : "{$m}m");
+                } else {
+                    $duration = null;
+                }
+
+                return [
+                    'prefixo' => $e->prefixo,
+                    'placa' => $e->placa,
+                    'lat' => (float) $e->posicao->latitude,
+                    'lng' => (float) $e->posicao->longitude,
+                    'status' => $e->status_operacional,
+                    'motorista' => $e->motorista?->nome,
+                    'ignition' => (bool) $e->posicao->ignition,
+                    'speed' => (int) $e->posicao->speed,
+                    'tracker_state' => $e->posicao->tracker_state,
+                    'state_duration' => $duration,
+                    'position_at' => $e->posicao->position_at?->setTimezone($tz)->format('d/m/Y H:i'),
+                    'synced_at' => $e->posicao->synced_at?->setTimezone($tz)->format('d/m/Y H:i'),
+                ];
+            })
+            ->values();
+
+        return response()->json(['veiculos' => $veiculos]);
+    }
+
     public function posicao(string $plate, VfleetsService $vfleets): JsonResponse
     {
         try {
@@ -204,6 +267,8 @@ class ControlTowerController extends Controller
             'synced_at' => $pos->synced_at?->setTimezone(config('app.timezone'))->format('d/m/Y H:i'),
             'tracker_state' => $pos->tracker_state,
             'state_duration' => $duration,
+            'ignition' => (bool) $pos->ignition,
+            'speed' => (int) $pos->speed,
         ]);
     }
 

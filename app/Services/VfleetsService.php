@@ -86,6 +86,17 @@ class VfleetsService
     }
 
     /**
+     * Converte um timestamp UTC enviado pela API para o timezone da aplicação.
+     * A API envia timestamps em UTC sem marcador de fuso; armazenamos em BRT para
+     * que o Eloquent (que assume o app.timezone ao ler strings do banco) interprete
+     * os valores corretamente em comparações e cálculos de duração.
+     */
+    private function parseApiDatetime(string $value): Carbon
+    {
+        return Carbon::parse($value, 'UTC')->setTimezone(config('app.timezone'));
+    }
+
+    /**
      * Monta o array de atributos comuns para updateOrCreate.
      *
      * @param  array<string, mixed>  $pos
@@ -95,7 +106,7 @@ class VfleetsService
         return [
             'prefix' => $pos['prefix'] ?? null,
             'chassis' => $pos['chassis'] ?? null,
-            'position_at' => isset($pos['dateTime']) ? Carbon::parse($pos['dateTime'], 'UTC') : null,
+            'position_at' => isset($pos['dateTime']) ? $this->parseApiDatetime($pos['dateTime']) : null,
             'latitude' => $pos['latitude'] ?? null,
             'longitude' => $pos['longitude'] ?? null,
             'speed' => $pos['speed'] ?? null,
@@ -141,7 +152,7 @@ class VfleetsService
             }
 
             $existing = PosicaoVeiculo::where('license_plate', $plate)->first();
-            $positionAt = isset($pos['dateTime']) ? Carbon::parse($pos['dateTime'], 'UTC') : null;
+            $positionAt = isset($pos['dateTime']) ? $this->parseApiDatetime($pos['dateTime']) : null;
             $stateFields = $this->resolveStateFields($pos['speed'] ?? null, $existing, $syncedAt, $positionAt);
 
             return PosicaoVeiculo::updateOrCreate(
@@ -191,7 +202,7 @@ class VfleetsService
                 continue;
             }
 
-            $positionAt = isset($pos['dateTime']) ? Carbon::parse($pos['dateTime'], 'UTC') : null;
+            $positionAt = isset($pos['dateTime']) ? $this->parseApiDatetime($pos['dateTime']) : null;
             $stateFields = $this->resolveStateFields($pos['speed'] ?? null, $existing->get($plate), $syncedAt, $positionAt);
 
             PosicaoVeiculo::updateOrCreate(

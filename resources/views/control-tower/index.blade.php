@@ -149,6 +149,17 @@
             Métricas
         </a>
 
+        {{-- Mapa Geral --}}
+        <button type="button" onclick="openMapaGeral()"
+                class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors
+                       border-slate-200 bg-white text-zinc-700 hover:border-slate-300 hover:bg-slate-50
+                       dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-900">
+            <svg class="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"/>
+            </svg>
+            Mapa Geral
+        </button>
+
         {{-- Column picker --}}
         <div class="relative ml-auto" id="col-picker-wrapper">
             <button type="button" id="col-picker-btn" onclick="toggleColPicker()"
@@ -354,6 +365,28 @@
                                 $mapLabel       = trim(($equipamento->prefixo ?? '') . ' ' . $equipamento->placa);
                                 $posicaoAt      = $posicao?->position_at?->setTimezone(config('app.timezone'))->format('d/m/Y H:i');
                                 $syncedAt       = $posicao?->synced_at?->setTimezone(config('app.timezone'))->format('d/m/Y H:i');
+
+                                $stateSinceRaw  = $posicao?->state_since;
+                                $stateMins      = ($stateSinceRaw && $stateSinceRaw->isPast())
+                                    ? (int) $stateSinceRaw->diffInMinutes(now())
+                                    : null;
+                                if ($stateMins !== null) {
+                                    $sd = intdiv($stateMins, 1440);
+                                    $sh = intdiv($stateMins % 1440, 60);
+                                    $sm = $stateMins % 60;
+                                    $stateDuration = $sd > 0 ? "{$sd}d {$sh}h {$sm}m" : ($sh > 0 ? "{$sh}h {$sm}m" : "{$sm}m");
+                                } else {
+                                    $stateDuration = null;
+                                }
+
+                                $mapInfo = [
+                                    'status'         => $equipamento->status_operacional,
+                                    'tracker_state'  => $posicao?->tracker_state,
+                                    'state_duration' => $stateDuration,
+                                    'ignition'       => (bool) ($posicao?->ignition ?? false),
+                                    'speed'          => (int) ($posicao?->speed ?? 0),
+                                    'motorista'      => $equipamento->motorista?->nome,
+                                ];
                                 $tz             = config('app.timezone');
                                 $horasDesdeReporte = $ultimoReporte
                                     ? $ultimoReporte->reporte->data_hora_emissao?->setTimezone($tz)->diffInHours(now())
@@ -501,7 +534,8 @@
                                 <td class="px-3 py-2 text-right whitespace-nowrap">
                                     <div class="inline-flex items-center gap-1">
                                         <button type="button"
-                                                onclick="openMapModal({{ $hasLocation ? $posicao->latitude : 'null' }}, {{ $hasLocation ? $posicao->longitude : 'null' }}, '{{ addslashes($mapLabel) }}', '{{ addslashes($equipamento->id_rastreador) }}', '{{ $posicaoAt ?? '' }}', '{{ $syncedAt ?? '' }}', {{ $equipamento->id }})"
+                                                data-map-info='@json($mapInfo, JSON_HEX_APOS)'
+                                                onclick="openMapModal({{ $hasLocation ? $posicao->latitude : 'null' }}, {{ $hasLocation ? $posicao->longitude : 'null' }}, '{{ addslashes($mapLabel) }}', '{{ addslashes($equipamento->id_rastreador) }}', '{{ $posicaoAt ?? '' }}', '{{ $syncedAt ?? '' }}', {{ $equipamento->id }}, JSON.parse(this.dataset.mapInfo))"
                                                 title="{{ $hasLocation ? 'Ver localização no mapa' : 'Sincronizar e ver localização no mapa' }}"
                                                 class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
                                                        border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700
@@ -618,6 +652,57 @@
 
         {{-- Container do mapa --}}
         <div id="leaflet-map" style="height:400px;"></div>
+    </div>
+
+    {{-- ─── Mapa Geral ─────────────────────────────────────────────────────── --}}
+
+    <div id="mapa-geral-backdrop"
+         onclick="closeMapaGeral()"
+         style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:9998; background:rgba(0,0,0,0.5); backdrop-filter:blur(2px);"></div>
+
+    <div id="mapa-geral-overlay"
+         style="display:none; position:fixed; z-index:9999; flex-direction:column; overflow:hidden;"
+         class="bg-white dark:bg-zinc-900">
+
+        {{-- Cabeçalho --}}
+        <div style="flex-shrink:0;"
+             class="flex items-center justify-between border-b px-5 py-3.5 border-slate-200 dark:border-zinc-800">
+            <div>
+                <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Mapa Geral</h3>
+                <p id="mapa-geral-info" class="text-xs text-zinc-500 dark:text-zinc-400">Carregando…</p>
+            </div>
+            <div class="flex items-center gap-2">
+                {{-- Recarregar posições --}}
+                <button type="button" id="mapa-geral-btn-refresh" onclick="sincronizarERecarregar()" title="Sincronizar posições com a API"
+                        class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700
+                               dark:hover:bg-zinc-800 dark:hover:text-zinc-300">
+                    <svg id="mapa-geral-refresh-icon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                    </svg>
+                </button>
+                {{-- Expandir / comprimir --}}
+                <button type="button" id="mapa-geral-btn-fs" onclick="toggleMapaGeralFullscreen()" title="Expandir mapa"
+                        class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700
+                               dark:hover:bg-zinc-800 dark:hover:text-zinc-300">
+                    <svg id="mapa-geral-icon-expand" style="display:block;" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/>
+                    </svg>
+                    <svg id="mapa-geral-icon-compress" style="display:none;" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25"/>
+                    </svg>
+                </button>
+                <button type="button" onclick="closeMapaGeral()" title="Fechar"
+                        class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700
+                               dark:hover:bg-zinc-800 dark:hover:text-zinc-300">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        {{-- Container do mapa geral --}}
+        <div id="leaflet-map-geral" style="flex:1;"></div>
     </div>
 
     {{-- ═══════════════════════════════════════════════════════════════════════ --}}
@@ -918,7 +1003,34 @@
     var _mapIsFullscreen = false;
     var _currentMapPlate = null;
     var _currentRowId    = null;
+    var _currentMapInfo  = {};
     var _posicaoBaseUrl  = '{{ url("torre-de-controle/posicao") }}';
+
+    function _buildMapPopup(label, info) {
+        info = info || {};
+        var trackerLabel = info.tracker_state === 'Em Movimento' ? '🟢 Em Movimento'
+                         : (info.tracker_state === 'Parado'      ? '🔴 Parado'
+                         : (info.tracker_state               ? '⚫ Sem Sinal' : ''));
+        var html = '<div style="min-width:190px;font-size:12px;line-height:1.75">'
+            + '<p style="font-weight:700;font-size:13px;margin:0 0 5px">' + label + '</p>';
+        if (info.status) {
+            html += '<p style="margin:0">Status: <strong>' + info.status + '</strong></p>';
+        }
+        if (trackerLabel) {
+            html += '<p style="margin:0">' + trackerLabel
+                + (info.state_duration
+                    ? ' <span style="color:#6b7280">há ' + info.state_duration + '</span>'
+                    : ' <span style="color:#d1d5db">— aguardando sync</span>')
+                + '</p>';
+        }
+        html += '<p style="margin:0">Motor: ' + (info.ignition ? '🔵 <strong>Ligado</strong>' : '⚪ <strong>Desligado</strong>') + '</p>';
+        html += '<p style="margin:0">Velocidade: <strong>' + (info.speed || 0) + ' km/h</strong></p>';
+        if (info.motorista) {
+            html += '<p style="margin:0">Condutor: <strong>' + info.motorista + '</strong></p>';
+        }
+        html += '</div>';
+        return html;
+    }
 
     function _applyMapSize(fullscreen) {
         var overlay  = document.getElementById('map-overlay');
@@ -975,12 +1087,14 @@
 
             var layerRua = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-                maxZoom: 19
+                maxZoom: 21,
+                maxNativeZoom: 19
             });
 
             var layerSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 attribution: 'Tiles &copy; Esri &mdash; Source: Esri, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-                maxZoom: 19
+                maxZoom: 21,
+                maxNativeZoom: 19
             });
 
             layerRua.addTo(_leafletMap);
@@ -988,12 +1102,12 @@
 
             _leafletMarker = L.marker([lat, lng])
                 .addTo(_leafletMap)
-                .bindPopup('<strong>' + label + '</strong>')
+                .bindPopup(_buildMapPopup(label, _currentMapInfo))
                 .openPopup();
         } else {
             _leafletMap.setView([lat, lng], 15);
             _leafletMarker.setLatLng([lat, lng])
-                .setPopupContent('<strong>' + label + '</strong>')
+                .setPopupContent(_buildMapPopup(label, _currentMapInfo))
                 .openPopup();
         }
 
@@ -1015,6 +1129,12 @@
                 document.getElementById('map-position-info').textContent = 'Sem localização disponível para este veículo.';
                 return;
             }
+            _currentMapInfo = Object.assign({}, _currentMapInfo, {
+                tracker_state:  data.tracker_state,
+                state_duration: data.state_duration,
+                ignition:       data.ignition,
+                speed:          data.speed,
+            });
             _renderMap(data.latitude, data.longitude, label);
             updateMapInfo(data.position_at, data.synced_at);
         })
@@ -1027,9 +1147,10 @@
         });
     }
 
-    function openMapModal(lat, lng, label, plate, posicaoAt, syncedAt, rowId) {
+    function openMapModal(lat, lng, label, plate, posicaoAt, syncedAt, rowId, info) {
         _currentMapPlate = plate;
         _currentRowId    = rowId || null;
+        _currentMapInfo  = info || {};
         _mapIsFullscreen = false;
         _applyMapSize(false);
         document.getElementById('map-overlay').style.display = 'flex';
@@ -1062,6 +1183,12 @@
         .then(function (r) { return r.json(); })
         .then(function (data) {
             if (!data.ok) { return; }
+            _currentMapInfo = Object.assign({}, _currentMapInfo, {
+                tracker_state:  data.tracker_state,
+                state_duration: data.state_duration,
+                ignition:       data.ignition,
+                speed:          data.speed,
+            });
             _renderMap(data.latitude, data.longitude, label);
             updateMapInfo(data.position_at, data.synced_at);
         })
@@ -1085,6 +1212,199 @@
         document.body.style.overflow = '';
         _mapIsFullscreen  = false;
         _currentMapPlate  = null;
+    }
+
+    // ─── Mapa Geral (todas as frotas) ───────────────────────────────────────
+    var _leafletMapGeral        = null;
+    var _leafletLayerGeral      = null;
+    var _mapaGeralIsFullscreen  = false;
+    var _mapaGeralUrl           = '{{ route("control-tower.mapa-geral") }}';
+    var _sincronizarUrl         = '{{ route("control-tower.sincronizar-posicoes") }}';
+    var _csrfToken              = '{{ csrf_token() }}';
+
+    function _escHtml(str) {
+        return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function _applyMapaGeralSize(fullscreen) {
+        var overlay  = document.getElementById('mapa-geral-overlay');
+        var mapDiv   = document.getElementById('leaflet-map-geral');
+        var backdrop = document.getElementById('mapa-geral-backdrop');
+        var iconExp  = document.getElementById('mapa-geral-icon-expand');
+        var iconCmp  = document.getElementById('mapa-geral-icon-compress');
+        var btn      = document.getElementById('mapa-geral-btn-fs');
+
+        if (fullscreen) {
+            overlay.style.top          = '0';
+            overlay.style.left         = '0';
+            overlay.style.right        = '0';
+            overlay.style.bottom       = '0';
+            overlay.style.width        = '';
+            overlay.style.maxWidth     = '';
+            overlay.style.transform    = 'none';
+            overlay.style.borderRadius = '0';
+            overlay.style.boxShadow    = 'none';
+            mapDiv.style.height        = 'calc(100vh - 57px)';
+            backdrop.style.display     = 'none';
+            iconExp.style.display      = 'none';
+            iconCmp.style.display      = 'block';
+            btn.title                  = 'Sair da tela cheia';
+        } else {
+            overlay.style.top          = '50%';
+            overlay.style.left         = '50%';
+            overlay.style.right        = '';
+            overlay.style.bottom       = '';
+            overlay.style.width        = '860px';
+            overlay.style.maxWidth     = 'calc(100vw - 2rem)';
+            overlay.style.transform    = 'translate(-50%, -50%)';
+            overlay.style.borderRadius = '1rem';
+            overlay.style.boxShadow    = '0 25px 50px -12px rgba(0,0,0,.35)';
+            mapDiv.style.height        = '520px';
+            backdrop.style.display     = 'block';
+            iconExp.style.display      = 'block';
+            iconCmp.style.display      = 'none';
+            btn.title                  = 'Expandir mapa';
+        }
+
+        if (_leafletMapGeral) {
+            setTimeout(function () { _leafletMapGeral.invalidateSize(); }, 150);
+        }
+    }
+
+    function _fetchEPlotarMarcadores() {
+        var info = document.getElementById('mapa-geral-info');
+        info.textContent = 'Atualizando mapa…';
+
+        return fetch(_mapaGeralUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var veiculos = data.veiculos || [];
+
+                // Inicializa o mapa na primeira chamada
+                if (!_leafletMapGeral) {
+                    _leafletMapGeral = L.map('leaflet-map-geral').setView([-22.409748797155576, -41.86951960989981], 12);
+
+                    var layerRua = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                        maxZoom: 21,
+                        maxNativeZoom: 19
+                    });
+                    var layerSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        attribution: 'Tiles &copy; Esri',
+                        maxZoom: 21,
+                        maxNativeZoom: 19
+                    });
+                    layerRua.addTo(_leafletMapGeral);
+                    L.control.layers({ 'Mapa': layerRua, 'Satélite': layerSatelite }, {}, { position: 'topright' }).addTo(_leafletMapGeral);
+                    _leafletLayerGeral = L.layerGroup().addTo(_leafletMapGeral);
+                }
+
+                // Limpa marcadores anteriores
+                _leafletLayerGeral.clearLayers();
+
+                var bounds = [];
+
+                veiculos.forEach(function (v) {
+                    var bgColor = v.tracker_state === 'Em Movimento' ? '#16a34a' : (v.tracker_state === 'Parado' ? '#b91c1c' : '#3f3f46');
+                    var icon = L.divIcon({
+                        html: '<div style="width:60px;display:flex;justify-content:center;align-items:center;">'
+                              + '<span style="background:' + bgColor + ';color:#fff;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.4)">'
+                              + _escHtml(v.prefixo || v.placa) + '</span></div>',
+                        className: '',
+                        iconSize: [60, 22],
+                        iconAnchor: [30, 11]
+                    });
+
+                    var trackerLabel = v.tracker_state === 'Em Movimento' ? '🟢 Em Movimento'
+                                     : (v.tracker_state === 'Parado'      ? '🔴 Parado'
+                                     : '⚫ Sem Sinal');
+                    var popup = '<div style="min-width:190px;font-size:12px;line-height:1.75">'
+                        + '<p style="font-weight:700;font-size:13px;margin:0 0 5px">' + _escHtml(v.prefixo) + ' <span style="font-weight:400;color:#71717a">' + _escHtml(v.placa) + '</span></p>'
+                        + (v.status ? '<p style="margin:0">Status: <strong>' + _escHtml(v.status) + '</strong></p>' : '')
+                        + '<p style="margin:0">' + trackerLabel + (v.state_duration ? ' <span style="color:#6b7280">há ' + _escHtml(v.state_duration) + '</span>' : ' <span style="color:#d1d5db">— aguardando sync</span>') + '</p>'
+                        + '<p style="margin:0">Motor: ' + (v.ignition ? '🔵 <strong>Ligado</strong>' : '⚪ <strong>Desligado</strong>') + '</p>'
+                        + '<p style="margin:0">Velocidade: <strong>' + (v.speed || 0) + ' km/h</strong></p>'
+                        + (v.motorista ? '<p style="margin:0">Condutor: <strong>' + _escHtml(v.motorista) + '</strong></p>' : '')
+                        + (v.position_at ? '<p style="color:#9ca3af;font-size:11px;margin:5px 0 0">Posição: ' + _escHtml(v.position_at) + '</p>' : '')
+                        + '</div>';
+
+                    L.marker([v.lat, v.lng], { icon: icon })
+                        .bindPopup(popup)
+                        .addTo(_leafletLayerGeral);
+
+                    bounds.push([v.lat, v.lng]);
+                });
+
+                if (bounds.length > 0) {
+                    _leafletMapGeral.fitBounds(bounds, { padding: [40, 40] });
+                }
+
+                info.textContent = veiculos.length + ' veículo(s) com posição registrada';
+                setTimeout(function () { _leafletMapGeral.invalidateSize(); }, 200);
+            })
+            .catch(function () {
+                document.getElementById('mapa-geral-info').textContent = 'Erro ao carregar posições.';
+            });
+    }
+
+    function sincronizarERecarregar() {
+        var btn  = document.getElementById('mapa-geral-btn-refresh');
+        var icon = document.getElementById('mapa-geral-refresh-icon');
+        var info = document.getElementById('mapa-geral-info');
+        btn.disabled         = true;
+        icon.style.animation = 'spin 1s linear infinite';
+        info.textContent     = 'Sincronizando com a API…';
+
+        fetch(_sincronizarUrl, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': _csrfToken,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(function (response) {
+            if (response.status === 429) {
+                info.textContent = 'Limite da API atingido — exibindo última sincronização salva.';
+                return _fetchEPlotarMarcadores();
+            }
+            return response.json().then(function (data) {
+                if (!data.ok) {
+                    info.textContent = 'Limite da API atingido — exibindo última sincronização salva.';
+                    return _fetchEPlotarMarcadores();
+                }
+                info.textContent = 'Sincronizados ' + data.total + ' veículo(s). Atualizando mapa…';
+                return _fetchEPlotarMarcadores();
+            });
+        })
+        .catch(function () {
+            info.textContent = 'Erro ao sincronizar — exibindo última sincronização salva.';
+            _fetchEPlotarMarcadores();
+        })
+        .finally(function () {
+            btn.disabled         = false;
+            icon.style.animation = '';
+        });
+    }
+
+    function openMapaGeral() {
+        _mapaGeralIsFullscreen = true;
+        _applyMapaGeralSize(true);
+        document.getElementById('mapa-geral-overlay').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        sincronizarERecarregar();
+    }
+
+    function closeMapaGeral() {
+        document.getElementById('mapa-geral-overlay').style.display  = 'none';
+        document.getElementById('mapa-geral-backdrop').style.display = 'none';
+        document.body.style.overflow = '';
+        _mapaGeralIsFullscreen = false;
+    }
+
+    function toggleMapaGeralFullscreen() {
+        _mapaGeralIsFullscreen = !_mapaGeralIsFullscreen;
+        _applyMapaGeralSize(_mapaGeralIsFullscreen);
     }
     </script>
 
