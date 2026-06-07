@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BigcoreController;
+use App\Http\Controllers\CercaController;
 use App\Http\Controllers\ControlTowerController;
 use App\Http\Controllers\DivisaoController;
 use App\Http\Controllers\EquipamentoController;
@@ -83,6 +84,7 @@ Route::middleware('auth')->group(function () {
 
     // Cadastros — Administrador e Supervisor
     Route::middleware('can:manage-cadastros')->group(function () {
+        Route::resource('cercas', CercaController::class)->except(['show'])->parameters(['cercas' => 'cerca']);
         Route::resource('divisoes', DivisaoController::class)->except(['show'])->parameters(['divisoes' => 'divisao']);
         Route::get('divisoes-export', [DivisaoController::class, 'export'])->name('divisoes.export');
         Route::resource('subdivisoes', SubDivisaoController::class)->except(['show'])->parameters(['subdivisoes' => 'subDivisao']);
