@@ -567,6 +567,17 @@
                                 <td class="px-3 py-2 text-right whitespace-nowrap">
                                     <div class="inline-flex items-center gap-1">
                                         <button type="button"
+                                                onclick="openReporteRapidoModal({{ $equipamento->id }}, '{{ addslashes($equipamento->prefixo ?? '') }}', '{{ addslashes($equipamento->placa) }}', '{{ route('control-tower.reporte-rapido', $equipamento) }}')"
+                                                title="Criar reporte rápido"
+                                                class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
+                                                       border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700
+                                                       dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300">
+                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                                            </svg>
+                                            Reporte
+                                        </button>
+                                        <button type="button"
                                                 data-map-info='@json($mapInfo, JSON_HEX_APOS)'
                                                 onclick="openMapModal({{ $hasLocation ? $posicao->latitude : 'null' }}, {{ $hasLocation ? $posicao->longitude : 'null' }}, '{{ addslashes($mapLabel) }}', '{{ addslashes($equipamento->id_rastreador) }}', '{{ $posicaoAt ?? '' }}', '{{ $syncedAt ?? '' }}', {{ $equipamento->id }}, JSON.parse(this.dataset.mapInfo))"
                                                 title="{{ $hasLocation ? 'Ver localização no mapa' : 'Sincronizar e ver localização no mapa' }}"
@@ -821,6 +832,154 @@
         </div>
     </div>
 
+    {{-- ─── Modal: Reporte Rápido ─────────────────────────────────────────── --}}
+    <div id="reporte-rapido-backdrop" onclick="closeReporteRapidoModal()"
+         class="fixed inset-0 z-40 hidden bg-black/40 backdrop-blur-sm"></div>
+
+    <div id="reporte-rapido-modal"
+         class="fixed inset-x-4 top-1/2 z-50 hidden max-h-[92vh] w-full max-w-xl -translate-y-1/2 overflow-hidden
+                rounded-2xl border shadow-2xl
+                border-slate-200 bg-white
+                dark:border-zinc-700 dark:bg-zinc-900
+                sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2">
+
+        {{-- Header --}}
+        <div class="flex items-center justify-between border-b px-5 py-3.5 border-slate-200 dark:border-zinc-800">
+            <div>
+                <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Novo Reporte</h3>
+                <p id="rr-subtitle" class="text-xs text-zinc-500 dark:text-zinc-400"></p>
+            </div>
+            <button type="button" onclick="closeReporteRapidoModal()"
+                    class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700
+                           dark:hover:bg-zinc-800 dark:hover:text-zinc-300">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        {{-- Body --}}
+        <div class="overflow-y-auto px-5 py-4 space-y-4" style="max-height: calc(92vh - 130px)">
+
+            {{-- Erros --}}
+            <div id="rr-errors" class="hidden rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700
+                                       dark:border-rose-800/50 dark:bg-rose-950/40 dark:text-rose-400"></div>
+
+            {{-- Nome --}}
+            <div>
+                <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Nome do Reporte <span class="text-red-500">*</span></label>
+                <input id="rr-nome" type="text" placeholder="Ex: Reporte Interno 2021"
+                       class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
+                              border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                              dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+            </div>
+
+            {{-- Status + 1º Contato --}}
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Status Operacional <span class="text-red-500">*</span></label>
+                    <select id="rr-status"
+                            class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
+                                   border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                   dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                        <option value="">— Selecione —</option>
+                        @foreach($statusOperacionais as $statusOp)
+                            <option value="{{ $statusOp->nome }}">{{ $statusOp->nome }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">1º Contato <span class="text-red-500">*</span></label>
+                    <input id="rr-primeiro-contato" type="text" placeholder="Nome do responsável"
+                           class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
+                                  border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                </div>
+            </div>
+
+            {{-- Documento (+ Elog) + Tempo Parado --}}
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Documento</label>
+                    <input id="rr-documento" type="text" placeholder="Nº do documento"
+                           class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
+                                  border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                    <button type="button" id="btn-elog-rapido" onclick="buscarElogRapido()"
+                            class="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-blue-600
+                                   hover:text-blue-800 disabled:opacity-40 dark:text-blue-400 dark:hover:text-blue-300">
+                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 0Z"/>
+                        </svg>
+                        Pesquisar no Elog
+                    </button>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Tempo Parado</label>
+                    <input id="rr-tempo-parado" type="text" placeholder="Ex: 2h30"
+                           class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
+                                  border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                </div>
+            </div>
+
+            {{-- 2º Contato + Previsão --}}
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">2º Contato</label>
+                    <input id="rr-segundo-contato" type="text" placeholder="Nome do segundo responsável"
+                           class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
+                                  border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Previsão</label>
+                    <input id="rr-previsao" type="datetime-local"
+                           class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
+                                  border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                </div>
+            </div>
+
+            {{-- Observação --}}
+            <div>
+                <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Observação <span class="text-red-500">*</span></label>
+                <input id="rr-observacao" type="text" placeholder="Observações adicionais"
+                       class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
+                              border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                              dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+            </div>
+        </div>
+
+        {{-- Footer --}}
+        <div class="flex items-center justify-end gap-3 border-t px-5 py-3.5 border-slate-200 dark:border-zinc-800">
+            <button type="button" onclick="closeReporteRapidoModal()"
+                    class="inline-flex items-center rounded-lg border px-4 py-2 text-sm font-medium transition-all
+                           border-slate-200 text-zinc-700 hover:border-slate-300 hover:bg-slate-50
+                           dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800">
+                Cancelar
+            </button>
+            <button type="button" onclick="submitReporteRapido('rascunho')"
+                    class="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all
+                           border-zinc-300 bg-white text-zinc-700 hover:bg-slate-50
+                           dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                </svg>
+                Rascunho
+            </button>
+            <button type="button" onclick="submitReporteRapido('publicado')"
+                    class="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-all
+                           hover:bg-zinc-700 active:scale-[0.98]
+                           dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                </svg>
+                Publicar
+            </button>
+        </div>
+    </div>
+
     {{-- ─── Scripts ─────────────────────────────────────────────────────────── --}}
     <script>
     (function () {
@@ -1022,6 +1181,7 @@
             closeImplementoModal();
             closeConfirmModal();
             closeMapModal();
+            closeReporteRapidoModal();
         }
     });
     </script>
@@ -1047,7 +1207,7 @@
         var html = '<div style="min-width:190px;font-size:12px;line-height:1.75">'
             + '<p style="font-weight:700;font-size:13px;margin:0 0 5px">' + label + '</p>';
         if (info.status) {
-            html += '<p style="margin:0">Status: <strong>' + info.status + '</strong></p>';
+            html += '<p style="margin:0">Último Reporte: <strong>' + info.status + '</strong></p>';
         }
         if (trackerLabel) {
             html += '<p style="margin:0">' + trackerLabel
@@ -1254,6 +1414,129 @@
     var _mapaGeralUrl           = '{{ route("control-tower.mapa-geral") }}';
     var _sincronizarUrl         = '{{ route("control-tower.sincronizar-posicoes") }}';
     var _csrfToken              = '{{ csrf_token() }}';
+    var _BIGCORE_URL            = '{{ route("bigcore.veiculo") }}';
+
+    // ─── Reporte Rápido ─────────────────────────────────────────────────────
+    var _rrUrl   = null;
+    var _rrPlaca = null;
+
+    window.openReporteRapidoModal = function (equipamentoId, prefixo, placa, url) {
+        _rrUrl   = url;
+        _rrPlaca = placa;
+
+        document.getElementById('rr-subtitle').textContent = 'Veículo: ' + (prefixo ? prefixo + ' / ' + placa : placa);
+        document.getElementById('rr-nome').value            = 'Reporte Interno ' + (prefixo || placa);
+        document.getElementById('rr-status').value          = '';
+        document.getElementById('rr-primeiro-contato').value = '';
+        document.getElementById('rr-observacao').value      = '';
+        document.getElementById('rr-documento').value       = '';
+        document.getElementById('rr-tempo-parado').value    = '';
+        document.getElementById('rr-segundo-contato').value = '';
+        document.getElementById('rr-previsao').value        = '';
+
+        var errEl = document.getElementById('rr-errors');
+        errEl.classList.add('hidden');
+        errEl.textContent = '';
+
+        document.getElementById('reporte-rapido-backdrop').classList.remove('hidden');
+        document.getElementById('reporte-rapido-modal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        document.getElementById('rr-nome').focus();
+    };
+
+    window.closeReporteRapidoModal = function () {
+        document.getElementById('reporte-rapido-backdrop').classList.add('hidden');
+        document.getElementById('reporte-rapido-modal').classList.add('hidden');
+        document.body.style.overflow = '';
+    };
+
+    window.buscarElogRapido = function () {
+        if (! _rrPlaca) { return; }
+        var btn     = document.getElementById('btn-elog-rapido');
+        var svgBusy = '<svg class="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>';
+        btn.disabled  = true;
+        btn.innerHTML = svgBusy + ' Buscando…';
+
+        fetch(_BIGCORE_URL + '?placa=' + encodeURIComponent(_rrPlaca), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (res) {
+            if (! res.ok) {
+                var errEl = document.getElementById('rr-errors');
+                errEl.textContent = res.data.erro || 'Veículo não localizado no Elog.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            var d = res.data;
+            if (d.tempo_parado)       { document.getElementById('rr-tempo-parado').value    = d.tempo_parado; }
+            if (d.status_operacional) { document.getElementById('rr-status').value          = d.status_operacional; }
+            if (d.documento)          { document.getElementById('rr-documento').value       = d.documento; }
+            if (d.observacao)         { document.getElementById('rr-observacao').value      = d.observacao; }
+        })
+        .catch(function () {
+            var errEl = document.getElementById('rr-errors');
+            errEl.textContent = 'Não foi possível conectar ao Elog. Tente novamente.';
+            errEl.classList.remove('hidden');
+        })
+        .finally(function () {
+            var svgSearch = '<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 0Z"/></svg>';
+            btn.disabled  = false;
+            btn.innerHTML = svgSearch + ' Pesquisar no Elog';
+        });
+    };
+
+    window.submitReporteRapido = function (salvarComo) {
+        if (! _rrUrl) { return; }
+
+        var errEl = document.getElementById('rr-errors');
+        errEl.classList.add('hidden');
+        errEl.textContent = '';
+
+        var body = JSON.stringify({
+            nome:               document.getElementById('rr-nome').value.trim(),
+            salvar_como:        salvarComo,
+            status_operacional: document.getElementById('rr-status').value,
+            primeiro_contato:   document.getElementById('rr-primeiro-contato').value.trim(),
+            observacao:         document.getElementById('rr-observacao').value.trim(),
+            documento:          document.getElementById('rr-documento').value.trim() || null,
+            tempo_parado:       document.getElementById('rr-tempo-parado').value.trim() || null,
+            segundo_contato:    document.getElementById('rr-segundo-contato').value.trim() || null,
+            data_hora_previsao: document.getElementById('rr-previsao').value || null,
+        });
+
+        fetch(_rrUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': _csrfToken,
+            },
+            body: body,
+        })
+        .then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); })
+        .then(function (res) {
+            if (! res.data.ok) {
+                var msgs = res.data.errors
+                    ? Object.values(res.data.errors).flat().join(' ')
+                    : (res.data.message || 'Erro ao salvar reporte.');
+                errEl.textContent = msgs;
+                errEl.classList.remove('hidden');
+                return;
+            }
+            closeReporteRapidoModal();
+            // Redirecionar para o reporte publicado, ou recarregar a página
+            if (res.data.reporte_url) {
+                window.open(res.data.reporte_url, '_blank');
+            }
+            window.location.reload();
+        })
+        .catch(function () {
+            errEl.textContent = 'Erro de conexão. Tente novamente.';
+            errEl.classList.remove('hidden');
+        });
+    };
 
     function _escHtml(str) {
         return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

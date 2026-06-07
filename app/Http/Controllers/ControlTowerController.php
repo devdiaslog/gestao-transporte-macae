@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreReporteRapidoRequest;
 use App\Models\Divisao;
 use App\Models\Equipamento;
 use App\Models\EquipamentoLog;
 use App\Models\ModeloEquipamento;
 use App\Models\Motorista;
+use App\Models\Reporte;
 use App\Models\ReporteItem;
 use App\Models\StatusOperacional;
 use App\Models\TipoEquipamento;
@@ -15,6 +17,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 use Throwable;
 
@@ -293,6 +296,63 @@ class ControlTowerController extends Controller
             ->withQueryString();
 
         return view('control-tower.historico', compact('equipamento', 'logs', 'campos'));
+    }
+
+    public function reporteRapido(StoreReporteRapidoRequest $request, Equipamento $equipamento): JsonResponse
+    {
+        $validated = $request->validated();
+        $now = Carbon::now();
+
+        $prefix = $now->format('Ymd');
+        $ultimo = Reporte::where('numero_reporte', 'like', $prefix.'-%')->max('numero_reporte');
+        $seq = $ultimo ? ((int) substr($ultimo, -3)) + 1 : 1;
+        $numero = $prefix.'-'.str_pad($seq, 3, '0', STR_PAD_LEFT);
+
+        $reporte = Reporte::create([
+            'numero_reporte' => $numero,
+            'nome' => $validated['nome'],
+            'status' => $validated['salvar_como'],
+            'data_hora_emissao' => $now,
+            'created_by' => auth()->id(),
+        ]);
+
+        ReporteItem::create([
+            'reporte_id' => $reporte->id,
+            'prefixo' => $equipamento->prefixo,
+            'status_operacional' => $validated['status_operacional'],
+            'primeiro_contato' => $validated['primeiro_contato'],
+            'observacao' => $validated['observacao'],
+            'documento' => $validated['documento'] ?? null,
+            'tempo_parado' => $validated['tempo_parado'] ?? null,
+            'segundo_contato' => $validated['segundo_contato'] ?? null,
+            'data_hora_previsao' => $validated['data_hora_previsao'] ?? null,
+        ]);
+
+        $statusAnterior = $equipamento->status_operacional;
+        $novoStatus = $validated['status_operacional'];
+
+        if ($statusAnterior !== $novoStatus) {
+            EquipamentoLog::create([
+                'equipamento_id' => $equipamento->id,
+                'user_id' => auth()->id(),
+                'campo' => 'Status Operacional',
+                'valor_anterior' => $statusAnterior,
+                'valor_novo' => $novoStatus,
+            ]);
+        }
+
+        $equipamento->update(['status_operacional' => $novoStatus]);
+
+        $reporteUrl = $validated['salvar_como'] === 'publicado'
+            ? route('reportes.show', $reporte)
+            : null;
+
+        return response()->json([
+            'ok' => true,
+            'numero' => $reporte->numero_reporte,
+            'status' => $novoStatus,
+            'reporte_url' => $reporteUrl,
+        ]);
     }
 
     public function updateImplemento(Request $request, Equipamento $equipamento): RedirectResponse
