@@ -195,6 +195,7 @@
                         ['col' => 'placa',           'label' => 'Placa'],
                         ['col' => 'modelo',          'label' => 'Modelo / Implemento'],
                         ['col' => 'status-op',       'label' => 'Status'],
+                        ['col' => 'tempo-status',    'label' => 'Tempo Status'],
                         ['col' => 'condutor',        'label' => 'Condutor'],
                         ['col' => 'ultimo-reporte',  'label' => 'Último Reporte'],
                         ['col' => 'documento',       'label' => 'Documento'],
@@ -314,6 +315,9 @@
                             </th>
                             <th data-col="status-op" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Status
+                            </th>
+                            <th data-col="tempo-status" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Tempo Status
                             </th>
                             <th data-col="condutor" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Condutor
@@ -485,6 +489,35 @@
                                     @endif
                                 </td>
 
+
+                                <td data-col="tempo-status" class="px-3 py-2 whitespace-nowrap">
+                                    @if($posicao && $posicao->tracker_state)
+                                        @php
+                                            $tsState = $posicao->tracker_state;
+                                            if ($tsState === 'Em Movimento') {
+                                                $tsEmoji  = '🟢';
+                                                $tsColor  = 'text-emerald-600 dark:text-emerald-400';
+                                                $tsDurColor = 'text-emerald-500/70 dark:text-emerald-500/60';
+                                            } elseif ($tsState === 'Parado') {
+                                                $tsEmoji  = '🔴';
+                                                $tsColor  = 'text-rose-600 dark:text-rose-400';
+                                                $tsDurColor = 'text-rose-500/70 dark:text-rose-500/60';
+                                            } else {
+                                                $tsEmoji  = '⚫';
+                                                $tsColor  = 'text-zinc-400 dark:text-zinc-500';
+                                                $tsDurColor = 'text-zinc-400 dark:text-zinc-500';
+                                            }
+                                        @endphp
+                                        <p class="text-xs font-medium {{ $tsColor }}">{{ $tsEmoji }} {{ $tsState }}</p>
+                                        @if($stateDuration)
+                                            <p class="text-[11px] {{ $tsDurColor }}">há {{ $stateDuration }}</p>
+                                        @else
+                                            <p class="text-[11px] text-zinc-300 dark:text-zinc-700">— aguardando sync</p>
+                                        @endif
+                                    @else
+                                        <span class="text-zinc-300 dark:text-zinc-700">—</span>
+                                    @endif
+                                </td>
 
                                 <td data-col="condutor" class="px-3 py-2 whitespace-nowrap">
                                     @if($equipamento->motorista)
