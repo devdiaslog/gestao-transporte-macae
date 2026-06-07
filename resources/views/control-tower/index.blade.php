@@ -788,8 +788,17 @@
                 </div>
 
                 {{-- Modo Interativo --}}
+                <select id="mi-intervalo"
+                        class="rounded-lg border border-slate-200 bg-white py-1.5 px-2 text-xs text-zinc-500 outline-none
+                               focus:border-zinc-400 focus:ring-2 focus:ring-zinc-900/10
+                               dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+                    <option value="15000" selected>15s</option>
+                    <option value="30000">30s</option>
+                    <option value="45000">45s</option>
+                    <option value="60000">60s</option>
+                </select>
                 <button type="button" id="btn-modo-interativo" onclick="toggleModoInterativo()"
-                        title="Modo Interativo — percorre todos os veículos automaticamente a cada 30s"
+                        title="Modo Interativo — percorre todos os veículos automaticamente"
                         class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors
                                border-slate-200 bg-white text-zinc-500 hover:border-slate-300 hover:bg-slate-50
                                dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600">
@@ -1521,11 +1530,10 @@
     });
 
     // ─── Modo Interativo ─────────────────────────────────────────────────────
-    var _miAtivo    = false;
-    var _miTimer    = null;
-    var _miOrdem    = []; // índice ordenado por proximidade
-    var _miIdx      = 0;
-    var _MI_PAUSA   = 30000; // 30 segundos
+    var _miAtivo  = false;
+    var _miTimer  = null;
+    var _miOrdem  = []; // índice ordenado por proximidade
+    var _miIdx    = 0;
 
     function _haversineKm(lat1, lon1, lat2, lon2) {
         var R    = 6371;
@@ -1568,7 +1576,8 @@
             if (_miAtivo) { v.marker.openPopup(); }
         }, 850);
 
-        _miTimer = setTimeout(_miAvancar, _MI_PAUSA);
+        var pausa = parseInt(document.getElementById('mi-intervalo').value, 10) || 15000;
+        _miTimer = setTimeout(_miAvancar, pausa);
     }
 
     window.toggleModoInterativo = function () {
@@ -1577,18 +1586,22 @@
         var label = document.getElementById('mi-label');
         var btn   = document.getElementById('btn-modo-interativo');
 
+        var select = document.getElementById('mi-intervalo');
+
         if (_miAtivo) {
             // Ordena por proximidade e inicia
-            _miOrdem = _nearestNeighborSort(_mapaGeralIndex.slice());
-            _miIdx   = 0;
-            dot.style.background   = '#16a34a';
-            dot.style.animation    = 'spin 2s linear infinite';
-            btn.style.borderColor  = '#16a34a';
-            btn.style.color        = '#16a34a';
+            _miOrdem        = _nearestNeighborSort(_mapaGeralIndex.slice());
+            _miIdx          = 0;
+            select.disabled = true;
+            dot.style.background  = '#16a34a';
+            dot.style.animation   = 'spin 2s linear infinite';
+            btn.style.borderColor = '#16a34a';
+            btn.style.color       = '#16a34a';
             _miAvancar();
         } else {
             clearTimeout(_miTimer);
-            _miTimer = null;
+            _miTimer        = null;
+            select.disabled = false;
             dot.style.background  = '';
             dot.style.animation   = '';
             btn.style.borderColor = '';
