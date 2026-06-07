@@ -826,7 +826,7 @@
     (function () {
         // ─── Column visibility (localStorage) ──────────────────────────────
         var STORE_KEY = 'ct_hidden_cols';
-        var ALL_COLS  = ['placa', 'tempo', 'status-op', 'condutor', 'documento', 'origem', 'destino', 'obs', 'modelo', 'divisao'];
+        var ALL_COLS  = ['placa', 'modelo', 'status-op', 'tempo-status', 'condutor', 'ultimo-reporte', 'documento', 'obs', 'divisao'];
 
         function hiddenCols() {
             try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch (e) { return []; }
