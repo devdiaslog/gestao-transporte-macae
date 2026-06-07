@@ -160,6 +160,14 @@
                               {{ request()->routeIs('motoristas.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Motoristas
                     </a>
+
+                    {{-- Cercas --}}
+                    <a href="{{ route('cercas.index') }}"
+                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
+                              transition-all duration-200
+                              {{ request()->routeIs('cercas.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                        Cercas
+                    </a>
                     @endif
                 </div>
             </div>
