@@ -272,7 +272,7 @@
         </span>
     </div>
 
-    {{-- ─── Alterações Recentes (últimos 15 min) ──────────────────────────── --}}
+    {{-- ─── Alterações Recentes (últimos 60 min) ──────────────────────────── --}}
     @if($recentementeAlterados->isNotEmpty())
         <div class="mt-2 flex items-center gap-2 overflow-x-auto pb-1 px-0.5">
             <span class="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
@@ -827,6 +827,8 @@
                         class="rounded-lg border border-slate-200 bg-white py-1.5 px-2 text-xs text-zinc-500 outline-none
                                focus:border-zinc-400 focus:ring-2 focus:ring-zinc-900/10
                                dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+                    <option value="5000">5s</option>
+                    <option value="10000">10s</option>
                     <option value="15000" selected>15s</option>
                     <option value="30000">30s</option>
                     <option value="45000">45s</option>
@@ -1583,7 +1585,7 @@
     var _miRefreshTimer  = null;
     var _miOrdem         = []; // índice ordenado por proximidade
     var _miIdx           = 0;
-    var _MI_REFRESH_MS   = 6 * 60 * 1000; // 6 minutos
+    var _MI_REFRESH_MS   = 5 * 60 * 1000; // 5 minutos
 
     function _haversineKm(lat1, lon1, lat2, lon2) {
         var R    = 6371;
@@ -1930,7 +1932,7 @@
 
                 // Faixa de alterações recentes (últimos 15 min)
                 var recentes = veiculos
-                    .filter(function (v) { return v.state_since_mins !== null && v.state_since_mins <= 15; })
+                    .filter(function (v) { return v.state_since_mins !== null && v.state_since_mins <= 60; })
                     .sort(function (a, b) { return a.state_since_mins - b.state_since_mins; });
 
                 var faixaEl = document.getElementById('mapa-geral-recentes');

@@ -114,7 +114,7 @@ class ControlTowerController extends Controller
             ->where('status', true)
             ->when($tipoMotorizado, fn ($q) => $q->where('tipo_id', $tipoMotorizado->id))
             ->whereHas('posicao', fn ($q) => $q->whereNotNull('state_since')
-                ->where('state_since', '>=', now()->subMinutes(15)))
+                ->where('state_since', '>=', now()->subMinutes(60)))
             ->get()
             ->filter(fn ($e) => $e->posicao?->state_since?->isPast())
             ->sortByDesc(fn ($e) => $e->posicao->state_since)
