@@ -1534,6 +1534,52 @@
         '#14b8a6','#e11d48',
     ];
 
+    var _cercasData = []; // [{nome, atividade, poligono}] — preenchido na 1ª carga
+
+    /** Ray casting — retorna true se [lat, lng] está dentro do polígono [[lat,lng],...] */
+    function _pontoDentro(lat, lng, poligono) {
+        var dentro = false;
+        var n = poligono.length;
+        for (var i = 0, j = n - 1; i < n; j = i++) {
+            var xi = poligono[i][0], yi = poligono[i][1];
+            var xj = poligono[j][0], yj = poligono[j][1];
+            if (((yi > lng) !== (yj > lng)) && (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi)) {
+                dentro = !dentro;
+            }
+        }
+        return dentro;
+    }
+
+    /** Distância Haversine em km entre dois pontos */
+    function _haversineKm(lat1, lng1, lat2, lng2) {
+        var R = 6371, dLat = (lat2 - lat1) * Math.PI / 180, dLng = (lng2 - lng1) * Math.PI / 180;
+        var a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    /** Centroide do polígono */
+    function _centroide(poligono) {
+        var n = poligono.length, sumLat = 0, sumLng = 0;
+        poligono.forEach(function (p) { sumLat += p[0]; sumLng += p[1]; });
+        return [sumLat / n, sumLng / n];
+    }
+
+    /** Retorna {dentroDeAlguma, nome, atividade, distKm} para a cerca mais relevante */
+    function _cercaParaVeiculo(lat, lng) {
+        if (!_cercasData.length) { return null; }
+        var melhor = null, melhorDist = Infinity;
+        for (var i = 0; i < _cercasData.length; i++) {
+            var c = _cercasData[i];
+            if (_pontoDentro(lat, lng, c.poligono)) {
+                return { dentro: true, nome: c.nome, atividade: c.atividade, distKm: 0 };
+            }
+            var centro = _centroide(c.poligono);
+            var dist = _haversineKm(lat, lng, centro[0], centro[1]);
+            if (dist < melhorDist) { melhorDist = dist; melhor = c; }
+        }
+        return melhor ? { dentro: false, nome: melhor.nome, atividade: melhor.atividade, distKm: melhorDist } : null;
+    }
+
     window.filtrarMapaGeral = function () {
         var q        = (document.getElementById('mapa-geral-search').value || '').trim().toLowerCase();
         var dropdown = document.getElementById('mapa-geral-search-dropdown');
@@ -1890,6 +1936,11 @@
                     ).addTo(_leafletMapGeral);
                 }
 
+                // Guarda cercas para uso no popup dos veículos
+                if (!_cercasDesenhadas && data.cercas && data.cercas.length) {
+                    _cercasData = data.cercas;
+                }
+
                 // Desenha cercas apenas uma vez (não mudam em tempo real)
                 if (!_cercasDesenhadas && data.cercas && data.cercas.length) {
                     _cercasDesenhadas = true;
@@ -1929,6 +1980,23 @@
                     var trackerLabel = v.tracker_state === 'Em Movimento' ? '🟢 Em Movimento'
                                      : (v.tracker_state === 'Parado'      ? '🔴 Parado'
                                      : '⚫ Sem Sinal');
+
+                    var cercaInfo = _cercaParaVeiculo(v.lat, v.lng);
+                    var cercaHtml = '';
+                    if (cercaInfo) {
+                        var distStr = cercaInfo.distKm < 1
+                            ? Math.round(cercaInfo.distKm * 1000) + ' m'
+                            : cercaInfo.distKm.toFixed(1) + ' km';
+                        if (cercaInfo.dentro) {
+                            cercaHtml = '<p style="margin:0">📍 Cerca: <strong>' + _escHtml(cercaInfo.nome) + '</strong>'
+                                      + (cercaInfo.atividade ? ' <span style="color:#6b7280">(' + _escHtml(cercaInfo.atividade) + ')</span>' : '')
+                                      + ' <span style="background:#16a34a;color:#fff;font-size:10px;padding:1px 5px;border-radius:4px;vertical-align:middle">Dentro</span></p>';
+                        } else {
+                            cercaHtml = '<p style="margin:0">📍 Cerca mais próxima: <strong>' + _escHtml(cercaInfo.nome) + '</strong>'
+                                      + ' <span style="color:#6b7280">~' + distStr + '</span></p>';
+                        }
+                    }
+
                     var popup = '<div style="min-width:190px;font-size:12px;line-height:1.75">'
                         + '<p style="font-weight:700;font-size:13px;margin:0 0 5px">' + _escHtml(v.prefixo) + ' <span style="font-weight:400;color:#71717a">' + _escHtml(v.placa) + '</span></p>'
                         + (v.status ? '<p style="margin:0">Último Reporte: <strong>' + _escHtml(v.status) + '</strong></p>' : '')
@@ -1936,6 +2004,7 @@
                         + '<p style="margin:0">Motor: ' + (v.ignition ? '🔵 <strong>Ligado</strong>' : '⚪ <strong>Desligado</strong>') + '</p>'
                         + '<p style="margin:0">Velocidade: <strong>' + (v.speed || 0) + ' km/h</strong></p>'
                         + (v.motorista ? '<p style="margin:0">Condutor: <strong>' + _escHtml(v.motorista) + '</strong></p>' : '')
+                        + cercaHtml
                         + (v.position_at ? '<p style="color:#9ca3af;font-size:11px;margin:5px 0 0">Posição: ' + _escHtml(v.position_at) + '</p>' : '')
                         + '</div>';
 
