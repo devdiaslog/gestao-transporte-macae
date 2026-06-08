@@ -167,7 +167,7 @@
                                     <p class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $cerca->nome }}</p>
                                 </td>
                                 <td class="px-6 py-4 text-zinc-500 dark:text-zinc-400">
-                                    {{ $cerca->atividade ?: '—' }}
+                                    {{ $cerca->atividade?->label() ?? '—' }}
                                 </td>
                                 <td class="px-6 py-4">
                                     @if(is_array($cerca->poligono) && count($cerca->poligono) >= 3)

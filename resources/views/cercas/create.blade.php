@@ -61,17 +61,20 @@
                     <label for="atividade" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                         Atividade
                     </label>
-                    <input
+                    <select
                         id="atividade"
-                        type="text"
                         name="atividade"
-                        value="{{ old('atividade') }}"
-                        placeholder="Ex: Carga/Descarga"
                         class="block w-full rounded-lg border px-3.5 py-2.5 text-sm shadow-xs outline-none transition-all duration-200
-                               placeholder:text-zinc-400 focus:ring-2
-                               border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-zinc-900/10
+                               focus:ring-2 border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-zinc-900/10
                                dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10"
-                    />
+                    >
+                        <option value="">— Selecione —</option>
+                        @foreach(\App\Enums\AtividadeCerca::cases() as $caso)
+                            <option value="{{ $caso->value }}" @selected(old('atividade') === $caso->value)>
+                                {{ $caso->label() }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
 
                 {{-- Tempos --}}

@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\AtividadeCerca;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Enum;
 
 class UpdateCercaRequest extends FormRequest
 {
@@ -19,7 +21,7 @@ class UpdateCercaRequest extends FormRequest
     {
         return [
             'nome' => ['required', 'string', 'max:150'],
-            'atividade' => ['nullable', 'string', 'max:100'],
+            'atividade' => ['nullable', new Enum(AtividadeCerca::class)],
             'poligono' => ['nullable', 'array'],
             'status' => ['required', 'boolean'],
             'tempo_minimo' => ['required', 'integer', 'min:1', 'max:1440'],
