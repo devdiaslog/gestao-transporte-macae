@@ -1,6 +1,19 @@
 <x-layouts.app title="Nova Cerca">
 
     <link rel="stylesheet" href="/vendor/leaflet/leaflet.css"/>
+    <style>
+        .cerca-tooltip {
+            background: rgba(0,0,0,.75);
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 8px;
+            white-space: nowrap;
+        }
+        .cerca-tooltip::before { display: none; }
+    </style>
 
     {{-- Page header --}}
     <div class="mt-4 flex items-center gap-4">
@@ -230,6 +243,23 @@
             attribution: 'Tiles © Esri',
             maxZoom: 20,
         }).addTo(map);
+
+        // ── Cercas existentes (somente leitura) ──────────────────────────────
+        var cercasExistentes = @json($cercasExistentes);
+
+        cercasExistentes.forEach(function (c) {
+            var poly = L.polygon(c.poligono, {
+                color: '#f59e0b',
+                weight: 2,
+                fillColor: '#f59e0b',
+                fillOpacity: 0.15,
+                interactive: true,
+            }).addTo(map);
+
+            var label = c.nome + (c.atividade ? ' — ' + c.atividade : '');
+            poly.bindTooltip(label, { permanent: false, direction: 'center', className: 'cerca-tooltip' });
+        });
+        // ─────────────────────────────────────────────────────────────────────
 
         var vertices    = [];   // [[lat, lng], ...]
         var markers     = [];   // L.circleMarker[]

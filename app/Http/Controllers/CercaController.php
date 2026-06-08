@@ -26,7 +26,19 @@ class CercaController extends Controller
 
     public function create(): View
     {
-        return view('cercas.create');
+        $cercasExistentes = Cerca::query()
+            ->whereNotNull('poligono')
+            ->where('status', true)
+            ->get(['id', 'nome', 'atividade', 'poligono'])
+            ->map(fn (Cerca $c) => [
+                'nome' => $c->nome,
+                'atividade' => $c->atividade?->label(),
+                'poligono' => $c->poligono,
+            ])
+            ->filter(fn (array $c) => is_array($c['poligono']) && count($c['poligono']) >= 3)
+            ->values();
+
+        return view('cercas.create', compact('cercasExistentes'));
     }
 
     public function store(StoreCercaRequest $request): RedirectResponse
