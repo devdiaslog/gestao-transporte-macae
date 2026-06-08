@@ -75,6 +75,53 @@
                     />
                 </div>
 
+                {{-- Tempos --}}
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                        <label for="tempo_minimo" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                            Tempo Mínimo <span class="text-red-500">*</span>
+                            <span class="ml-1 font-normal text-zinc-400">(min)</span>
+                        </label>
+                        <input
+                            id="tempo_minimo"
+                            type="number"
+                            name="tempo_minimo"
+                            value="{{ old('tempo_minimo', $cerca->tempo_minimo) }}"
+                            min="1"
+                            max="1440"
+                            class="block w-full rounded-lg border px-3.5 py-2.5 text-sm shadow-xs outline-none transition-all duration-200
+                                   focus:ring-2 border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-zinc-900/10
+                                   dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10
+                                   {{ $errors->has('tempo_minimo') ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10' : '' }}"
+                        />
+                        @error('tempo_minimo')
+                            <p class="text-xs text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="tempo_maximo" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                            Tempo Máximo <span class="text-red-500">*</span>
+                            <span class="ml-1 font-normal text-zinc-400">(min)</span>
+                        </label>
+                        <input
+                            id="tempo_maximo"
+                            type="number"
+                            name="tempo_maximo"
+                            value="{{ old('tempo_maximo', $cerca->tempo_maximo) }}"
+                            min="1"
+                            max="1440"
+                            class="block w-full rounded-lg border px-3.5 py-2.5 text-sm shadow-xs outline-none transition-all duration-200
+                                   focus:ring-2 border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-zinc-900/10
+                                   dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10
+                                   {{ $errors->has('tempo_maximo') ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10' : '' }}"
+                        />
+                        @error('tempo_maximo')
+                            <p class="text-xs text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
                 {{-- Status --}}
                 <div class="space-y-1.5">
                     <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">

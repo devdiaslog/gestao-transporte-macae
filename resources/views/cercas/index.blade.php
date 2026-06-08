@@ -153,6 +153,8 @@
                             <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Nome</th>
                             <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Atividade</th>
                             <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Polígono</th>
+                            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">T. Mínimo</th>
+                            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">T. Máximo</th>
                             <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Status</th>
                             <th scope="col" class="hidden px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 sm:table-cell">Cadastrado em</th>
                             <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Ações</th>
@@ -178,6 +180,12 @@
                                     @else
                                         <span class="text-xs text-zinc-400 dark:text-zinc-600">Sem polígono</span>
                                     @endif
+                                </td>
+                                <td class="px-6 py-4 text-zinc-500 dark:text-zinc-400">
+                                    {{ $cerca->tempo_minimo }} min
+                                </td>
+                                <td class="px-6 py-4 text-zinc-500 dark:text-zinc-400">
+                                    {{ floor($cerca->tempo_maximo / 60) > 0 ? floor($cerca->tempo_maximo / 60).'h ' : '' }}{{ $cerca->tempo_maximo % 60 > 0 ? ($cerca->tempo_maximo % 60).'min' : '' }}
                                 </td>
                                 <td class="px-6 py-4">
                                     @if($cerca->status)

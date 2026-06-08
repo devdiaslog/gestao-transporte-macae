@@ -12,7 +12,7 @@ class Cerca extends Model
     /** @use HasFactory<CercaFactory> */
     use HasEncryptedRouteKey, HasFactory;
 
-    protected $fillable = ['nome', 'atividade', 'poligono', 'status'];
+    protected $fillable = ['nome', 'atividade', 'poligono', 'status', 'tempo_minimo', 'tempo_maximo'];
 
     protected $casts = [
         'poligono' => 'array',

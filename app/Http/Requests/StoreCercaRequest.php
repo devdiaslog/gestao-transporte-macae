@@ -22,6 +22,8 @@ class StoreCercaRequest extends FormRequest
             'atividade' => ['nullable', 'string', 'max:100'],
             'poligono' => ['nullable', 'array'],
             'status' => ['required', 'boolean'],
+            'tempo_minimo' => ['required', 'integer', 'min:1', 'max:1440'],
+            'tempo_maximo' => ['required', 'integer', 'min:1', 'max:1440'],
         ];
     }
 
