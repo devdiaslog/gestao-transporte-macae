@@ -1982,19 +1982,13 @@
                                      : '⚫ Sem Sinal');
 
                     var cercaInfo = _cercaParaVeiculo(v.lat, v.lng);
-                    var cercaHtml = '';
-                    if (cercaInfo) {
-                        var distStr = cercaInfo.distKm < 1
-                            ? Math.round(cercaInfo.distKm * 1000) + ' m'
-                            : cercaInfo.distKm.toFixed(1) + ' km';
-                        if (cercaInfo.dentro) {
-                            cercaHtml = '<p style="margin:0">📍 Cerca: <strong>' + _escHtml(cercaInfo.nome) + '</strong>'
-                                      + (cercaInfo.atividade ? ' <span style="color:#6b7280">(' + _escHtml(cercaInfo.atividade) + ')</span>' : '')
-                                      + '</p>';
-                        } else {
-                            cercaHtml = '<p style="margin:0">📍 Cerca mais próxima: <strong>' + _escHtml(cercaInfo.nome) + '</strong>'
-                                      + ' <span style="color:#6b7280">~' + distStr + '</span></p>';
-                        }
+                    var localidadeHtml = '';
+                    if (cercaInfo && cercaInfo.dentro) {
+                        localidadeHtml = '<p style="margin:0">📍 <strong>' + _escHtml(cercaInfo.nome) + '</strong>'
+                                       + (cercaInfo.atividade ? ' <span style="color:#6b7280">(' + _escHtml(cercaInfo.atividade) + ')</span>' : '')
+                                       + '</p>';
+                    } else {
+                        localidadeHtml = '<p style="margin:0">📍 <span id="loc-' + _escHtml(v.placa) + '" style="color:#9ca3af">Carregando endereço…</span></p>';
                     }
 
                     var popup = '<div style="min-width:190px;font-size:12px;line-height:1.75">'
@@ -2004,13 +1998,37 @@
                         + '<p style="margin:0">Motor: ' + (v.ignition ? '🔵 <strong>Ligado</strong>' : '⚪ <strong>Desligado</strong>') + '</p>'
                         + '<p style="margin:0">Velocidade: <strong>' + (v.speed || 0) + ' km/h</strong></p>'
                         + (v.motorista ? '<p style="margin:0">Condutor: <strong>' + _escHtml(v.motorista) + '</strong></p>' : '')
-                        + cercaHtml
+                        + localidadeHtml
                         + (v.position_at ? '<p style="color:#9ca3af;font-size:11px;margin:5px 0 0">Posição: ' + _escHtml(v.position_at) + '</p>' : '')
                         + '</div>';
 
                     var marker = L.marker([v.lat, v.lng], { icon: icon })
                         .bindPopup(popup)
                         .addTo(_leafletLayerGeral);
+
+                    // Busca endereço via Nominatim apenas quando popup abre e veículo não está em cerca
+                    if (!(cercaInfo && cercaInfo.dentro)) {
+                        (function (placa, lat, lng) {
+                            marker.on('popupopen', function () {
+                                var el = document.getElementById('loc-' + placa);
+                                if (!el || el.dataset.loaded) { return; }
+                                el.dataset.loaded = '1';
+                                fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + lat + '&lon=' + lng + '&accept-language=pt-BR', {
+                                    headers: { 'Accept': 'application/json' }
+                                })
+                                .then(function (r) { return r.json(); })
+                                .then(function (d) {
+                                    if (!el) { return; }
+                                    var road = d.address && (d.address.road || d.address.suburb || d.address.neighbourhood || d.address.city_district || d.address.town || d.address.city);
+                                    el.textContent = road || d.display_name || 'Endereço não encontrado';
+                                    el.style.color = '';
+                                })
+                                .catch(function () {
+                                    if (el) { el.textContent = 'Endereço indisponível'; }
+                                });
+                            });
+                        }(v.placa, v.lat, v.lng));
+                    }
 
                     _mapaGeralIndex.push({
                         prefixo: (v.prefixo || '').toLowerCase(),
