@@ -20,16 +20,25 @@ class StoreCercaRequest extends FormRequest
         return [
             'nome' => ['required', 'string', 'max:150'],
             'atividade' => ['nullable', 'string', 'max:100'],
-            'poligono' => ['nullable', 'json'],
+            'poligono' => ['nullable', 'array'],
             'status' => ['required', 'boolean'],
         ];
     }
 
     protected function prepareForValidation(): void
     {
+        $poligono = $this->input('poligono');
+
+        if (is_string($poligono) && $poligono !== '') {
+            $decoded = json_decode($poligono, true);
+            $poligono = is_array($decoded) ? $decoded : null;
+        } else {
+            $poligono = null;
+        }
+
         $this->merge([
             'status' => (bool) $this->input('status', true),
-            'poligono' => $this->input('poligono') ?: null,
+            'poligono' => $poligono,
         ]);
     }
 }

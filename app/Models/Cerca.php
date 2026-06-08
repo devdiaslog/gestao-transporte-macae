@@ -13,11 +13,8 @@ class Cerca extends Model
 
     protected $fillable = ['nome', 'atividade', 'poligono', 'status'];
 
-    public function casts(): array
-    {
-        return [
-            'poligono' => 'array',
-            'status' => 'boolean',
-        ];
-    }
+    protected $casts = [
+        'poligono' => 'array',
+        'status' => 'boolean',
+    ];
 }
