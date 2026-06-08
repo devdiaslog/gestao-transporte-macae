@@ -247,12 +247,28 @@
         // ── Cercas existentes (somente leitura) ──────────────────────────────
         var cercasExistentes = @json($cercasExistentes);
 
-        cercasExistentes.forEach(function (c) {
+        var PALETA = [
+            '#f59e0b', // âmbar
+            '#3b82f6', // azul
+            '#10b981', // esmeralda
+            '#ef4444', // vermelho
+            '#8b5cf6', // violeta
+            '#f97316', // laranja
+            '#06b6d4', // ciano
+            '#ec4899', // rosa
+            '#84cc16', // lima
+            '#6366f1', // índigo
+            '#14b8a6', // teal
+            '#e11d48', // rose
+        ];
+
+        cercasExistentes.forEach(function (c, i) {
+            var cor = PALETA[i % PALETA.length];
             var poly = L.polygon(c.poligono, {
-                color: '#f59e0b',
-                weight: 2,
-                fillColor: '#f59e0b',
-                fillOpacity: 0.15,
+                color: cor,
+                weight: 2.5,
+                fillColor: cor,
+                fillOpacity: 0.18,
                 interactive: true,
             }).addTo(map);
 
