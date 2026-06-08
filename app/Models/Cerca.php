@@ -16,8 +16,17 @@ class Cerca extends Model
     protected $fillable = ['nome', 'atividade', 'poligono', 'status', 'tempo_minimo', 'tempo_maximo'];
 
     protected $casts = [
-        'atividade' => AtividadeCerca::class,
         'poligono' => 'array',
         'status' => 'boolean',
     ];
+
+    public function getAtividadeAttribute(?string $value): ?AtividadeCerca
+    {
+        return AtividadeCerca::tryFrom($value ?? '');
+    }
+
+    public function setAtividadeAttribute(?string $value): void
+    {
+        $this->attributes['atividade'] = $value ?: null;
+    }
 }
