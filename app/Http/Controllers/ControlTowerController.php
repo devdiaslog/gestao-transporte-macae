@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreReporteRapidoRequest;
 use App\Models\Cerca;
+use App\Models\CercaEvento;
 use App\Models\Divisao;
 use App\Models\Equipamento;
 use App\Models\EquipamentoLog;
@@ -212,18 +213,23 @@ class ControlTowerController extends Controller
         $tz = config('app.timezone');
         $tipoMotorizado = TipoEquipamento::where('nome', 'Motorizado')->first();
 
+        // Pré-carrega eventos de cerca em aberto (sem saida_em) para todos os equipamentos
+        $eventosAbertos = CercaEvento::query()
+            ->with('cerca')
+            ->whereNull('saida_em')
+            ->get()
+            ->keyBy('equipamento_id');
+
         $veiculos = Equipamento::query()
             ->with(['posicao', 'motorista'])
             ->where('status', true)
             ->when($tipoMotorizado, fn ($q) => $q->where('tipo_id', $tipoMotorizado->id))
             ->get()
             ->filter(fn ($e) => $e->posicao?->latitude && $e->posicao?->longitude)
-            ->map(function ($e) use ($tz) {
+            ->map(function ($e) use ($tz, $eventosAbertos) {
                 $stateSince = $e->posicao->state_since;
 
                 // state_since no futuro indica dado com timezone incorreto no banco
-                // (UTC gravado como se fosse BRT, lido 3h à frente). Nesses casos
-                // não exibimos duração — a migration corrige os registros existentes.
                 $mins = ($stateSince && $stateSince->isPast())
                     ? (int) $stateSince->diffInMinutes(now())
                     : null;
@@ -237,6 +243,16 @@ class ControlTowerController extends Controller
                     $duration = null;
                 }
 
+                // Veículo sem sinal há mais de 3 horas
+                $positionAt = $e->posicao->position_at;
+                $semSinal = ! $positionAt || $positionAt->diffInHours(now()) >= 3;
+
+                // Tempo na cerca (evento aberto)
+                $eventoAberto = $eventosAbertos->get($e->id);
+                $tempoCercaMins = $eventoAberto
+                    ? (int) $eventoAberto->entrada_em->diffInMinutes(now())
+                    : null;
+
                 return [
                     'prefixo' => $e->prefixo,
                     'placa' => $e->placa,
@@ -249,8 +265,10 @@ class ControlTowerController extends Controller
                     'tracker_state' => $e->posicao->tracker_state,
                     'state_duration' => $duration,
                     'state_since_mins' => $mins,
-                    'position_at' => $e->posicao->position_at?->setTimezone($tz)->format('d/m/Y H:i'),
+                    'position_at' => $positionAt?->setTimezone($tz)->format('d/m/Y H:i'),
                     'synced_at' => $e->posicao->synced_at?->setTimezone($tz)->format('d/m/Y H:i'),
+                    'sem_sinal' => $semSinal,
+                    'tempo_cerca_mins' => $tempoCercaMins,
                 ];
             })
             ->values();

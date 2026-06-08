@@ -1967,7 +1967,12 @@
                 var bounds = [];
 
                 veiculos.forEach(function (v) {
-                    var bgColor = v.tracker_state === 'Em Movimento' ? '#16a34a' : (v.tracker_state === 'Parado' ? '#b91c1c' : '#3f3f46');
+                    // ── Cor do ícone ─────────────────────────────────────────
+                    var bgColor = v.sem_sinal ? '#52525b'
+                                : (v.tracker_state === 'Em Movimento' ? '#16a34a'
+                                : (v.tracker_state === 'Parado'       ? '#b91c1c'
+                                : '#3f3f46'));
+
                     var icon = L.divIcon({
                         html: '<div style="width:60px;display:flex;justify-content:center;align-items:center;">'
                               + '<span style="background:' + bgColor + ';color:#fff;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.4)">'
@@ -1977,33 +1982,57 @@
                         iconAnchor: [30, 11]
                     });
 
-                    var trackerLabel = v.tracker_state === 'Em Movimento' ? '🟢 Em Movimento'
-                                     : (v.tracker_state === 'Parado'      ? '🔴 Parado'
-                                     : '⚫ Sem Sinal');
+                    // ── Linha de estado do rastreador ────────────────────────
+                    var trackerHtml;
+                    if (v.sem_sinal) {
+                        trackerHtml = '<p style="margin:0;color:#6b7280">⬛ <strong>Desconhecido</strong>'
+                                    + (v.position_at ? ' — última posição em ' + _escHtml(v.position_at) : '')
+                                    + '</p>';
+                    } else {
+                        var trackerLabel = v.tracker_state === 'Em Movimento' ? '🟢 Em Movimento'
+                                         : (v.tracker_state === 'Parado'      ? '🔴 Parado'
+                                         : '⚫ Sem Sinal');
+                        trackerHtml = '<p style="margin:0">' + trackerLabel
+                                    + (v.state_duration ? ' <span style="color:#6b7280">há ' + _escHtml(v.state_duration) + '</span>'
+                                    : ' <span style="color:#d1d5db">— aguardando sync</span>') + '</p>';
+                    }
 
-                    var cercaInfo    = _cercaParaVeiculo(v.lat, v.lng);
-                    var _PROX_KM     = 0.3; // 300 m — dentro ou próximo = usa nome da cerca
-                    var usarCerca    = cercaInfo && (cercaInfo.dentro || cercaInfo.distKm <= _PROX_KM);
+                    // ── Localidade: cerca ou endereço ────────────────────────
+                    var _PROX_KM    = 0.3;
+                    var cercaInfo   = _cercaParaVeiculo(v.lat, v.lng);
+                    var usarCerca   = cercaInfo && (cercaInfo.dentro || cercaInfo.distKm <= _PROX_KM);
                     var localidadeHtml = '';
 
                     if (usarCerca) {
+                        // Tempo na cerca vem do servidor (evento aberto)
+                        var tempoCercaStr = '';
+                        if (v.tempo_cerca_mins !== null && v.tempo_cerca_mins !== undefined) {
+                            var tcH = Math.floor(v.tempo_cerca_mins / 60);
+                            var tcM = v.tempo_cerca_mins % 60;
+                            tempoCercaStr = ' <span style="color:#6b7280">há ' + (tcH > 0 ? tcH + 'h ' : '') + tcM + 'min</span>';
+                        }
                         localidadeHtml = '<p style="margin:0">📍 <strong>' + _escHtml(cercaInfo.nome) + '</strong>'
                                        + (cercaInfo.atividade ? ' <span style="color:#6b7280">(' + _escHtml(cercaInfo.atividade) + ')</span>' : '')
-                                       + '</p>';
+                                       + tempoCercaStr + '</p>';
                     } else {
                         localidadeHtml = '<p style="margin:0">📍 <span id="loc-' + _escHtml(v.placa) + '" style="color:#9ca3af">Carregando endereço…</span></p>';
                     }
 
+                    // ── Popup ────────────────────────────────────────────────
                     var popup = '<div style="min-width:190px;font-size:12px;line-height:1.75">'
                         + '<p style="font-weight:700;font-size:13px;margin:0 0 5px">' + _escHtml(v.prefixo) + ' <span style="font-weight:400;color:#71717a">' + _escHtml(v.placa) + '</span></p>'
                         + (v.status ? '<p style="margin:0">Último Reporte: <strong>' + _escHtml(v.status) + '</strong></p>' : '')
-                        + '<p style="margin:0">' + trackerLabel + (v.state_duration ? ' <span style="color:#6b7280">há ' + _escHtml(v.state_duration) + '</span>' : ' <span style="color:#d1d5db">— aguardando sync</span>') + '</p>'
-                        + '<p style="margin:0">Motor: ' + (v.ignition ? '🔵 <strong>Ligado</strong>' : '⚪ <strong>Desligado</strong>') + '</p>'
-                        + '<p style="margin:0">Velocidade: <strong>' + (v.speed || 0) + ' km/h</strong></p>'
-                        + (v.motorista ? '<p style="margin:0">Condutor: <strong>' + _escHtml(v.motorista) + '</strong></p>' : '')
-                        + localidadeHtml
-                        + (v.position_at ? '<p style="color:#9ca3af;font-size:11px;margin:5px 0 0">Posição: ' + _escHtml(v.position_at) + '</p>' : '')
-                        + '</div>';
+                        + trackerHtml;
+
+                    if (!v.sem_sinal) {
+                        popup += '<p style="margin:0">Motor: ' + (v.ignition ? '🔵 <strong>Ligado</strong>' : '⚪ <strong>Desligado</strong>') + '</p>'
+                               + '<p style="margin:0">Velocidade: <strong>' + (v.speed || 0) + ' km/h</strong></p>';
+                    }
+
+                    popup += (v.motorista ? '<p style="margin:0">Condutor: <strong>' + _escHtml(v.motorista) + '</strong></p>' : '')
+                           + localidadeHtml
+                           + (!v.sem_sinal && v.position_at ? '<p style="color:#9ca3af;font-size:11px;margin:5px 0 0">Posição: ' + _escHtml(v.position_at) + '</p>' : '')
+                           + '</div>';
 
                     var marker = L.marker([v.lat, v.lng], { icon: icon })
                         .bindPopup(popup)
