@@ -1990,7 +1990,7 @@
                         if (cercaInfo.dentro) {
                             cercaHtml = '<p style="margin:0">📍 Cerca: <strong>' + _escHtml(cercaInfo.nome) + '</strong>'
                                       + (cercaInfo.atividade ? ' <span style="color:#6b7280">(' + _escHtml(cercaInfo.atividade) + ')</span>' : '')
-                                      + ' <span style="background:#16a34a;color:#fff;font-size:10px;padding:1px 5px;border-radius:4px;vertical-align:middle">Dentro</span></p>';
+                                      + '</p>';
                         } else {
                             cercaHtml = '<p style="margin:0">📍 Cerca mais próxima: <strong>' + _escHtml(cercaInfo.nome) + '</strong>'
                                       + ' <span style="color:#6b7280">~' + distStr + '</span></p>';
