@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Equipamento;
 use App\Models\PosicaoVeiculo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -195,6 +196,16 @@ class VfleetsService
             ->get()
             ->keyBy('license_plate');
 
+        // Pré-carrega equipamentos pelo id_rastreador (license_plate) para geofencing
+        $equipamentos = Equipamento::query()
+            ->with('posicao')
+            ->where('status', true)
+            ->whereIn('id_rastreador', $plates)
+            ->get()
+            ->keyBy('id_rastreador');
+
+        $geofencing = app(GeofencingService::class);
+
         foreach ($posicoes as $pos) {
             $plate = $pos['licensePlate'] ?? null;
 
@@ -205,10 +216,17 @@ class VfleetsService
             $positionAt = isset($pos['dateTime']) ? $this->parseApiDatetime($pos['dateTime']) : null;
             $stateFields = $this->resolveStateFields($pos['speed'] ?? null, $existing->get($plate), $syncedAt, $positionAt);
 
-            PosicaoVeiculo::updateOrCreate(
+            $posicaoAtualizada = PosicaoVeiculo::updateOrCreate(
                 ['license_plate' => $plate],
                 $this->buildAttributes($pos, $syncedAt, $stateFields),
             );
+
+            // Geofencing: detecta entrada/saída em cercas
+            $equipamento = $equipamentos->get($plate);
+            if ($equipamento) {
+                $equipamento->setRelation('posicao', $posicaoAtualizada);
+                $geofencing->processarVeiculo($equipamento, $syncedAt);
+            }
 
             $total++;
         }
