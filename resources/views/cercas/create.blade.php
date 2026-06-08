@@ -228,15 +228,29 @@
             }
         }
 
+        var verticeIcon = L.divIcon({
+            className: '',
+            html: '<div style="width:14px;height:14px;border-radius:50%;background:#3b82f6;border:2px solid #1d4ed8;box-shadow:0 1px 4px rgba(0,0,0,.4);cursor:grab;"></div>',
+            iconSize: [14, 14],
+            iconAnchor: [7, 7],
+        });
+
         function adicionarVertice(lat, lng) {
+            var idx = vertices.length;
             vertices.push([lat, lng]);
-            var m = L.circleMarker([lat, lng], {
-                radius: 6,
-                color: '#1d4ed8',
-                weight: 2,
-                fillColor: '#3b82f6',
-                fillOpacity: 0.9,
-            }).addTo(map);
+
+            var m = L.marker([lat, lng], { icon: verticeIcon, draggable: true }).addTo(map);
+
+            m.on('drag', function (e) {
+                var ll = e.target.getLatLng();
+                vertices[idx] = [ll.lat, ll.lng];
+                redesenharPoligono();
+            });
+
+            m.on('dragend', function () {
+                atualizarStatus();
+            });
+
             markers.push(m);
             redesenharPoligono();
             atualizarStatus();
