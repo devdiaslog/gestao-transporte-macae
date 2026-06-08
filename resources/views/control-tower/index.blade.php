@@ -1523,8 +1523,16 @@
     // ─── Mapa Geral (todas as frotas) ───────────────────────────────────────
     var _leafletMapGeral        = null;
     var _leafletLayerGeral      = null;
+    var _leafletLayerCercas     = null;
+    var _cercasDesenhadas       = false;
     var _mapaGeralIsFullscreen  = false;
     var _mapaGeralIndex         = []; // [{prefixo, placa, lat, lng, marker}]
+
+    var _PALETA_CERCAS = [
+        '#f59e0b','#3b82f6','#10b981','#ef4444','#8b5cf6',
+        '#f97316','#06b6d4','#ec4899','#84cc16','#6366f1',
+        '#14b8a6','#e11d48',
+    ];
 
     window.filtrarMapaGeral = function () {
         var q        = (document.getElementById('mapa-geral-search').value || '').trim().toLowerCase();
@@ -1873,8 +1881,32 @@
                         maxNativeZoom: 19
                     });
                     layerRua.addTo(_leafletMapGeral);
-                    L.control.layers({ 'Mapa': layerRua, 'Satélite': layerSatelite }, {}, { position: 'topright' }).addTo(_leafletMapGeral);
-                    _leafletLayerGeral = L.layerGroup().addTo(_leafletMapGeral);
+                    _leafletLayerCercas = L.layerGroup().addTo(_leafletMapGeral);
+                    _leafletLayerGeral  = L.layerGroup().addTo(_leafletMapGeral);
+                    L.control.layers(
+                        { 'Mapa': layerRua, 'Satélite': layerSatelite },
+                        { 'Cercas': _leafletLayerCercas },
+                        { position: 'topright' }
+                    ).addTo(_leafletMapGeral);
+                }
+
+                // Desenha cercas apenas uma vez (não mudam em tempo real)
+                if (!_cercasDesenhadas && data.cercas && data.cercas.length) {
+                    _cercasDesenhadas = true;
+                    data.cercas.forEach(function (c, i) {
+                        var cor = _PALETA_CERCAS[i % _PALETA_CERCAS.length];
+                        L.polygon(c.poligono, {
+                            color: cor,
+                            weight: 2,
+                            fillColor: cor,
+                            fillOpacity: 0.12,
+                        })
+                        .bindTooltip(
+                            '<strong>' + c.nome + '</strong>' + (c.atividade ? '<br>' + c.atividade : ''),
+                            { sticky: true, direction: 'top' }
+                        )
+                        .addTo(_leafletLayerCercas);
+                    });
                 }
 
                 // Limpa marcadores e índice anteriores

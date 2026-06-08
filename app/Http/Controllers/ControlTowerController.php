@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreReporteRapidoRequest;
+use App\Models\Cerca;
 use App\Models\Divisao;
 use App\Models\Equipamento;
 use App\Models\EquipamentoLog;
@@ -254,7 +255,19 @@ class ControlTowerController extends Controller
             })
             ->values();
 
-        return response()->json(['veiculos' => $veiculos]);
+        $cercas = Cerca::query()
+            ->where('status', true)
+            ->whereNotNull('poligono')
+            ->get(['nome', 'atividade', 'poligono'])
+            ->map(fn (Cerca $c) => [
+                'nome' => $c->nome,
+                'atividade' => $c->atividade?->label(),
+                'poligono' => $c->poligono,
+            ])
+            ->filter(fn (array $c) => is_array($c['poligono']) && count($c['poligono']) >= 3)
+            ->values();
+
+        return response()->json(['veiculos' => $veiculos, 'cercas' => $cercas]);
     }
 
     public function posicao(string $plate, VfleetsService $vfleets): JsonResponse
