@@ -438,6 +438,19 @@
                                     $stateDuration = null;
                                 }
 
+                                $semSinal     = ! $posicao || ! $posicao->position_at || $posicao->position_at->lt(now()->subHours(3));
+
+                                $eventoAberto = $eventosAbertos->get($equipamento->id);
+                                $cercaMins    = $eventoAberto ? (int) $eventoAberto->entrada_em->diffInMinutes(now()) : null;
+                                $cercaNome    = $eventoAberto?->cerca?->nome;
+                                if ($cercaMins !== null) {
+                                    $ch = intdiv($cercaMins, 60);
+                                    $cm = $cercaMins % 60;
+                                    $cercaDuration = $ch > 0 ? "{$ch}h {$cm}m" : "{$cm}m";
+                                } else {
+                                    $cercaDuration = null;
+                                }
+
                                 $mapInfo = [
                                     'status'         => $equipamento->status_operacional,
                                     'tracker_state'  => $posicao?->tracker_state,
@@ -445,6 +458,7 @@
                                     'ignition'       => (bool) ($posicao?->ignition ?? false),
                                     'speed'          => (int) ($posicao?->speed ?? 0),
                                     'motorista'      => $equipamento->motorista?->nome,
+                                    'sem_sinal'      => $semSinal,
                                 ];
                                 $tz             = config('app.timezone');
                                 $horasDesdeReporte = $ultimoReporte
@@ -546,7 +560,12 @@
 
 
                                 <td data-col="tempo-status" class="px-3 py-2 whitespace-nowrap">
-                                    @if($posicao && $posicao->tracker_state)
+                                    @if($semSinal)
+                                        <p class="text-xs font-medium text-zinc-400 dark:text-zinc-500">⬛ Desconhecido</p>
+                                        @if($posicaoAt)
+                                            <p class="text-[11px] text-zinc-300 dark:text-zinc-700">última pos. {{ $posicaoAt }}</p>
+                                        @endif
+                                    @elseif($posicao && $posicao->tracker_state)
                                         @php
                                             $tsState = $posicao->tracker_state;
                                             if ($tsState === 'Em Movimento') {
@@ -571,6 +590,12 @@
                                         @endif
                                     @else
                                         <span class="text-zinc-300 dark:text-zinc-700">—</span>
+                                    @endif
+                                    @if($cercaNome && $cercaDuration)
+                                        <p class="mt-1 text-[11px] text-violet-600 dark:text-violet-400 truncate max-w-[120px]" title="{{ $cercaNome }}">
+                                            📍 {{ $cercaNome }}
+                                        </p>
+                                        <p class="text-[11px] text-violet-500/70 dark:text-violet-500/60">há {{ $cercaDuration }}</p>
                                     @endif
                                 </td>
 
@@ -1314,23 +1339,28 @@
 
     function _buildMapPopup(label, info) {
         info = info || {};
-        var trackerLabel = info.tracker_state === 'Em Movimento' ? '🟢 Em Movimento'
-                         : (info.tracker_state === 'Parado'      ? '🔴 Parado'
-                         : (info.tracker_state               ? '⚫ Sem Sinal' : ''));
+        var semSinal = !!info.sem_sinal;
         var html = '<div style="min-width:190px;font-size:12px;line-height:1.75">'
             + '<p style="font-weight:700;font-size:13px;margin:0 0 5px">' + label + '</p>';
         if (info.status) {
             html += '<p style="margin:0">Último Reporte: <strong>' + info.status + '</strong></p>';
         }
-        if (trackerLabel) {
-            html += '<p style="margin:0">' + trackerLabel
-                + (info.state_duration
-                    ? ' <span style="color:#6b7280">há ' + info.state_duration + '</span>'
-                    : ' <span style="color:#d1d5db">— aguardando sync</span>')
-                + '</p>';
+        if (semSinal) {
+            html += '<p style="margin:0;color:#6b7280">⬛ <strong>Desconhecido</strong></p>';
+        } else {
+            var trackerLabel = info.tracker_state === 'Em Movimento' ? '🟢 Em Movimento'
+                             : (info.tracker_state === 'Parado'      ? '🔴 Parado'
+                             : (info.tracker_state               ? '⚫ Sem Sinal' : ''));
+            if (trackerLabel) {
+                html += '<p style="margin:0">' + trackerLabel
+                    + (info.state_duration
+                        ? ' <span style="color:#6b7280">há ' + info.state_duration + '</span>'
+                        : ' <span style="color:#d1d5db">— aguardando sync</span>')
+                    + '</p>';
+            }
+            html += '<p style="margin:0">Motor: ' + (info.ignition ? '🔵 <strong>Ligado</strong>' : '⚪ <strong>Desligado</strong>') + '</p>';
+            html += '<p style="margin:0">Velocidade: <strong>' + (info.speed || 0) + ' km/h</strong></p>';
         }
-        html += '<p style="margin:0">Motor: ' + (info.ignition ? '🔵 <strong>Ligado</strong>' : '⚪ <strong>Desligado</strong>') + '</p>';
-        html += '<p style="margin:0">Velocidade: <strong>' + (info.speed || 0) + ' km/h</strong></p>';
         if (info.motorista) {
             html += '<p style="margin:0">Condutor: <strong>' + info.motorista + '</strong></p>';
         }
@@ -1440,6 +1470,7 @@
                 state_duration: data.state_duration,
                 ignition:       data.ignition,
                 speed:          data.speed,
+                sem_sinal:      data.sem_sinal,
             });
             _renderMap(data.latitude, data.longitude, label);
             updateMapInfo(data.position_at, data.synced_at);
@@ -1494,6 +1525,7 @@
                 state_duration: data.state_duration,
                 ignition:       data.ignition,
                 speed:          data.speed,
+                sem_sinal:      data.sem_sinal,
             });
             _renderMap(data.latitude, data.longitude, label);
             updateMapInfo(data.position_at, data.synced_at);

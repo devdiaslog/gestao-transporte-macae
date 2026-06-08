@@ -122,7 +122,16 @@ class ControlTowerController extends Controller
             ->sortByDesc(fn ($e) => $e->posicao->state_since)
             ->values();
 
-        return view('control-tower.index', compact('equipamentos', 'divisoes', 'modelos', 'modelosImplemento', 'implementos', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado', 'ultimosReportes', 'recentementeAlterados'));
+        // Eventos de cerca abertos para os equipamentos desta página
+        $equipamentoIds = $equipamentos->pluck('id')->values()->all();
+        $eventosAbertos = CercaEvento::query()
+            ->with('cerca')
+            ->whereNull('saida_em')
+            ->whereIn('equipamento_id', $equipamentoIds)
+            ->get()
+            ->keyBy('equipamento_id');
+
+        return view('control-tower.index', compact('equipamentos', 'divisoes', 'modelos', 'modelosImplemento', 'implementos', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado', 'ultimosReportes', 'recentementeAlterados', 'eventosAbertos'));
     }
 
     public function export(Request $request): Response
@@ -306,6 +315,8 @@ class ControlTowerController extends Controller
         $m = $mins !== null ? $mins % 60 : 0;
         $duration = $mins !== null ? ($d > 0 ? "{$d}d {$h}h {$m}m" : ($h > 0 ? "{$h}h {$m}m" : "{$m}m")) : null;
 
+        $semSinal = ! $pos->position_at || $pos->position_at->diffInHours(now()) >= 3;
+
         return response()->json([
             'ok' => true,
             'latitude' => $pos->latitude,
@@ -316,6 +327,7 @@ class ControlTowerController extends Controller
             'state_duration' => $duration,
             'ignition' => (bool) $pos->ignition,
             'speed' => (int) $pos->speed,
+            'sem_sinal' => $semSinal,
         ]);
     }
 
