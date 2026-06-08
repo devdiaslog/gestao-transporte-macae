@@ -178,9 +178,9 @@
 
         var map = L.map('cerca-map').setView(MACAE, 13);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap',
-            maxZoom: 19,
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles © Esri',
+            maxZoom: 20,
         }).addTo(map);
 
         var vertices    = [];
@@ -267,7 +267,7 @@
         document.getElementById('btn-minha-loc').addEventListener('click', function () {
             if (! navigator.geolocation) { return; }
             navigator.geolocation.getCurrentPosition(function (pos) {
-                map.flyTo([pos.coords.latitude, pos.coords.longitude], 15, { duration: 1 });
+                map.setView([pos.coords.latitude, pos.coords.longitude], 17);
             });
         });
 
