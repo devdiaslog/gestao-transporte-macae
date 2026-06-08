@@ -1981,9 +1981,12 @@
                                      : (v.tracker_state === 'Parado'      ? '🔴 Parado'
                                      : '⚫ Sem Sinal');
 
-                    var cercaInfo = _cercaParaVeiculo(v.lat, v.lng);
+                    var cercaInfo    = _cercaParaVeiculo(v.lat, v.lng);
+                    var _PROX_KM     = 0.3; // 300 m — dentro ou próximo = usa nome da cerca
+                    var usarCerca    = cercaInfo && (cercaInfo.dentro || cercaInfo.distKm <= _PROX_KM);
                     var localidadeHtml = '';
-                    if (cercaInfo && cercaInfo.dentro) {
+
+                    if (usarCerca) {
                         localidadeHtml = '<p style="margin:0">📍 <strong>' + _escHtml(cercaInfo.nome) + '</strong>'
                                        + (cercaInfo.atividade ? ' <span style="color:#6b7280">(' + _escHtml(cercaInfo.atividade) + ')</span>' : '')
                                        + '</p>';
@@ -2006,8 +2009,8 @@
                         .bindPopup(popup)
                         .addTo(_leafletLayerGeral);
 
-                    // Busca endereço via Nominatim apenas quando popup abre e veículo não está em cerca
-                    if (!(cercaInfo && cercaInfo.dentro)) {
+                    // Nominatim apenas para veículos fora do raio de qualquer cerca
+                    if (!usarCerca) {
                         (function (placa, lat, lng) {
                             marker.on('popupopen', function () {
                                 var el = document.getElementById('loc-' + placa);
