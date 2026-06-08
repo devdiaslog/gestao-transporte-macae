@@ -222,9 +222,9 @@
             if (polygon) { map.removeLayer(polygon); polygon = null; }
             if (vertices.length >= 3) {
                 polygon = L.polygon(ordenarVertices(vertices), {
-                    color: '#3b82f6',
+                    color: '#000',
                     weight: 2,
-                    fillColor: '#3b82f6',
+                    fillColor: '#000',
                     fillOpacity: 0.15,
                 }).addTo(map);
             }
@@ -232,7 +232,7 @@
 
         var verticeIcon = L.divIcon({
             className: '',
-            html: '<div style="width:14px;height:14px;border-radius:50%;background:#3b82f6;border:2px solid #1d4ed8;box-shadow:0 1px 4px rgba(0,0,0,.4);cursor:grab;"></div>',
+            html: '<div style="width:14px;height:14px;border-radius:50%;background:#000;border:2px solid #000;box-shadow:0 1px 4px rgba(0,0,0,.4);cursor:grab;"></div>',
             iconSize: [14, 14],
             iconAnchor: [7, 7],
         });
