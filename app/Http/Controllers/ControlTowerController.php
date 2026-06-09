@@ -134,6 +134,34 @@ class ControlTowerController extends Controller
         return view('control-tower.index', compact('equipamentos', 'divisoes', 'modelos', 'modelosImplemento', 'implementos', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado', 'ultimosReportes', 'recentementeAlterados', 'eventosAbertos'));
     }
 
+    public function painel(Request $request): View
+    {
+        $tipoMotorizado = TipoEquipamento::where('nome', 'Motorizado')->first();
+
+        $equipamentos = Equipamento::query()
+            ->with(['modelo', 'divisao', 'motorista', 'posicao'])
+            ->where('status', true)
+            ->when($tipoMotorizado, fn ($q) => $q->where('tipo_id', $tipoMotorizado->id))
+            ->when($request->filled('divisao_id'), fn ($q) => $q->where('divisao_id', $request->divisao_id))
+            ->orderBy('prefixo')
+            ->get();
+
+        $divisoes = Divisao::where('status', true)->orderBy('nome')->get();
+
+        $statusOperacionais = StatusOperacional::where('status', true)->orderBy('nome')->get();
+        $statusCores = $statusOperacionais->pluck('cor', 'nome');
+
+        $equipamentoIds = $equipamentos->pluck('id')->values()->all();
+        $eventosAbertos = CercaEvento::query()
+            ->with('cerca')
+            ->whereNull('saida_em')
+            ->whereIn('equipamento_id', $equipamentoIds)
+            ->get()
+            ->keyBy('equipamento_id');
+
+        return view('control-tower.painel', compact('equipamentos', 'divisoes', 'statusCores', 'eventosAbertos'));
+    }
+
     public function export(Request $request): Response
     {
         $tipoMotorizado = TipoEquipamento::where('nome', 'Motorizado')->first();
