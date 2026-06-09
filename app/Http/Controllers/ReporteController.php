@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateReporteRequest;
 use App\Models\Equipamento;
+use App\Models\EquipamentoLog;
 use App\Models\Reporte;
 use App\Models\ReporteItem;
 use App\Models\StatusOperacional;
@@ -97,6 +98,10 @@ class ReporteController extends Controller
 
         if (! empty($itens)) {
             ReporteItem::insert($itens);
+        }
+
+        if ($validated['salvar_como'] === 'publicado') {
+            $this->atualizarStatusEquipamentos($itens);
         }
 
         $msg = $validated['salvar_como'] === 'rascunho'
@@ -212,6 +217,10 @@ class ReporteController extends Controller
             ReporteItem::insert($itens);
         }
 
+        if ($validated['salvar_como'] === 'publicado') {
+            $this->atualizarStatusEquipamentos($itens);
+        }
+
         $msg = $validated['salvar_como'] === 'rascunho'
             ? 'Rascunho atualizado com sucesso.'
             : 'Reporte atualizado com sucesso.';
@@ -255,6 +264,56 @@ class ReporteController extends Controller
         ])->send();
 
         exit;
+    }
+
+    /**
+     * Atualiza o status_operacional dos equipamentos com base nos itens publicados.
+     *
+     * @param  array<int, array<string, mixed>>  $itens
+     */
+    private function atualizarStatusEquipamentos(array $itens): void
+    {
+        $prefixos = collect($itens)
+            ->pluck('prefixo')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($prefixos)) {
+            return;
+        }
+
+        $equipamentos = Equipamento::whereIn('prefixo', $prefixos)->get()->keyBy('prefixo');
+
+        foreach ($itens as $item) {
+            $prefixo = $item['prefixo'] ?? null;
+            $novoStatus = $item['status_operacional'] ?? null;
+
+            if (! $prefixo || ! $novoStatus) {
+                continue;
+            }
+
+            $equipamento = $equipamentos->get($prefixo);
+
+            if (! $equipamento) {
+                continue;
+            }
+
+            $statusAnterior = $equipamento->status_operacional;
+
+            if ($statusAnterior !== $novoStatus) {
+                EquipamentoLog::create([
+                    'equipamento_id' => $equipamento->id,
+                    'user_id' => auth()->id(),
+                    'campo' => 'Status Operacional',
+                    'valor_anterior' => $statusAnterior,
+                    'valor_novo' => $novoStatus,
+                ]);
+            }
+
+            $equipamento->update(['status_operacional' => $novoStatus]);
+        }
     }
 
     private function gerarNumero(Carbon $now): string

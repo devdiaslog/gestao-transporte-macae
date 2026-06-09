@@ -196,6 +196,8 @@
                         ['col' => 'modelo',          'label' => 'Modelo / Implemento'],
                         ['col' => 'status-op',       'label' => 'Status'],
                         ['col' => 'tempo-status',    'label' => 'Tempo Status'],
+                        ['col' => 'cerca',           'label' => 'Cerca'],
+                        ['col' => 'tempo-cerca',     'label' => 'Tempo Cerca'],
                         ['col' => 'condutor',        'label' => 'Condutor'],
                         ['col' => 'ultimo-reporte',  'label' => 'Último Reporte'],
                         ['col' => 'documento',       'label' => 'Documento'],
@@ -371,8 +373,20 @@
                             <th data-col="status-op" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Status
                             </th>
-                            <th data-col="tempo-status" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
-                                Tempo Status
+                            <th data-col="tempo-status" data-sortable="tempo-status"
+                                class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap cursor-pointer select-none hover:text-zinc-600 dark:hover:text-zinc-400"
+                                onclick="sortTableByCol('tempo-status')">
+                                Tempo Status <span id="sort-icon-tempo-status" class="ml-0.5 opacity-40">↕</span>
+                            </th>
+                            <th data-col="cerca" data-sortable="cerca"
+                                class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap cursor-pointer select-none hover:text-zinc-600 dark:hover:text-zinc-400"
+                                onclick="sortTableByCol('cerca')">
+                                Cerca <span id="sort-icon-cerca" class="ml-0.5 opacity-40">↕</span>
+                            </th>
+                            <th data-col="tempo-cerca" data-sortable="tempo-cerca"
+                                class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap cursor-pointer select-none hover:text-zinc-600 dark:hover:text-zinc-400"
+                                onclick="sortTableByCol('tempo-cerca')">
+                                Tempo Cerca <span id="sort-icon-tempo-cerca" class="ml-0.5 opacity-40">↕</span>
                             </th>
                             <th data-col="condutor" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Condutor
@@ -439,16 +453,39 @@
                                 }
 
                                 $semSinal     = ! $posicao || ! $posicao->position_at || $posicao->position_at->lt(now()->subHours(3));
+                                if ($semSinal && $posicao?->position_at) {
+                                    $semSinalMins = (int) $posicao->position_at->diffInMinutes(now());
+                                    $sdx = intdiv($semSinalMins, 1440);
+                                    $shx = intdiv($semSinalMins % 1440, 60);
+                                    $smx = $semSinalMins % 60;
+                                    $semSinalDuration = $sdx > 0 ? "{$sdx}d {$shx}h {$smx}m" : ($shx > 0 ? "{$shx}h {$smx}m" : "{$smx}m");
+                                } else {
+                                    $semSinalDuration = null;
+                                }
 
-                                $eventoAberto = $eventosAbertos->get($equipamento->id);
-                                $cercaMins    = $eventoAberto ? (int) $eventoAberto->entrada_em->diffInMinutes(now()) : null;
-                                $cercaNome    = $eventoAberto?->cerca?->nome;
+                                $eventoAberto  = $eventosAbertos->get($equipamento->id);
+                                $cercaMins     = $eventoAberto ? (int) $eventoAberto->entrada_em->diffInMinutes(now()) : null;
+                                $cercaNome     = $eventoAberto?->cerca?->nome;
                                 if ($cercaMins !== null) {
-                                    $ch = intdiv($cercaMins, 60);
+                                    $cd = intdiv($cercaMins, 1440);
+                                    $ch = intdiv($cercaMins % 1440, 60);
                                     $cm = $cercaMins % 60;
-                                    $cercaDuration = $ch > 0 ? "{$ch}h {$cm}m" : "{$cm}m";
+                                    $cercaDuration = $cd > 0 ? "{$cd}d {$ch}h {$cm}m" : ($ch > 0 ? "{$ch}h {$cm}m" : "{$cm}m");
+
+                                    $tMin = (int) ($eventoAberto->cerca->tempo_minimo ?? 15);
+                                    $tMax = (int) ($eventoAberto->cerca->tempo_maximo ?? 120);
+                                    if ($cercaMins < $tMin) {
+                                        $cercaBarColor = '#2563eb'; // azul — abaixo do mínimo
+                                    } elseif ($cercaMins < $tMax * 0.75) {
+                                        $cercaBarColor = '#16a34a'; // verde — dentro do limite
+                                    } elseif ($cercaMins < $tMax) {
+                                        $cercaBarColor = '#ca8a04'; // amarelo — próximo do limite
+                                    } else {
+                                        $cercaBarColor = '#dc2626'; // vermelho — excedeu
+                                    }
                                 } else {
                                     $cercaDuration = null;
+                                    $cercaBarColor = null;
                                 }
 
                                 $mapInfo = [
@@ -472,6 +509,7 @@
                             {{-- ─── Data row ──────────────────────────────── --}}
                             <tr id="row-{{ $equipamento->id }}"
                                 data-search="{{ strtolower($searchText) }}"
+                                data-tracker-state="{{ $semSinal ? 'Desconhecido' : ($posicao?->tracker_state ?? '') }}"
                                 class="ct-row transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/30">
 
                                 {{-- Sinalizador HJ --}}
@@ -559,43 +597,39 @@
                                 </td>
 
 
-                                <td data-col="tempo-status" class="px-3 py-2 whitespace-nowrap">
+                                <td data-col="tempo-status" class="px-3 py-2 whitespace-nowrap"
+                                    data-mins="{{ $semSinal ? ($semSinalMins ?? 0) : ($stateMins ?? 0) }}">
                                     @if($semSinal)
-                                        <p class="text-xs font-medium text-zinc-400 dark:text-zinc-500">⬛ Desconhecido</p>
-                                        @if($posicaoAt)
-                                            <p class="text-[11px] text-zinc-300 dark:text-zinc-700">última pos. {{ $posicaoAt }}</p>
-                                        @endif
+                                        <div style="background:#52525b;padding:4px 10px;text-align:center;color:#fff;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:0.04em;min-width:80px;">
+                                            {{ $semSinalDuration ?? '—' }}
+                                        </div>
                                     @elseif($posicao && $posicao->tracker_state)
-                                        @php
-                                            $tsState = $posicao->tracker_state;
-                                            if ($tsState === 'Em Movimento') {
-                                                $tsEmoji  = '🟢';
-                                                $tsColor  = 'text-emerald-600 dark:text-emerald-400';
-                                                $tsDurColor = 'text-emerald-500/70 dark:text-emerald-500/60';
-                                            } elseif ($tsState === 'Parado') {
-                                                $tsEmoji  = '🔴';
-                                                $tsColor  = 'text-rose-600 dark:text-rose-400';
-                                                $tsDurColor = 'text-rose-500/70 dark:text-rose-500/60';
-                                            } else {
-                                                $tsEmoji  = '⚫';
-                                                $tsColor  = 'text-zinc-400 dark:text-zinc-500';
-                                                $tsDurColor = 'text-zinc-400 dark:text-zinc-500';
-                                            }
-                                        @endphp
-                                        <p class="text-xs font-medium {{ $tsColor }}">{{ $tsEmoji }} {{ $tsState }}</p>
-                                        @if($stateDuration)
-                                            <p class="text-[11px] {{ $tsDurColor }}">há {{ $stateDuration }}</p>
-                                        @else
-                                            <p class="text-[11px] text-zinc-300 dark:text-zinc-700">— aguardando sync</p>
-                                        @endif
+                                        @php $barColor = $posicao->tracker_state === 'Em Movimento' ? '#16a34a' : '#dc2626'; @endphp
+                                        <div style="background:{{ $barColor }};padding:4px 10px;text-align:center;color:#fff;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:0.04em;min-width:80px;">
+                                            {{ $stateDuration ?? '—:—:—' }}
+                                        </div>
                                     @else
                                         <span class="text-zinc-300 dark:text-zinc-700">—</span>
                                     @endif
-                                    @if($cercaNome && $cercaDuration)
-                                        <p class="mt-1 text-[11px] text-violet-600 dark:text-violet-400 truncate max-w-[120px]" title="{{ $cercaNome }}">
-                                            📍 {{ $cercaNome }}
-                                        </p>
-                                        <p class="text-[11px] text-violet-500/70 dark:text-violet-500/60">há {{ $cercaDuration }}</p>
+                                </td>
+
+                                <td data-col="cerca" class="px-3 py-2 whitespace-nowrap"
+                                    data-cerca="{{ strtolower($cercaNome ?? '') }}">
+                                    @if($cercaNome)
+                                        <p class="text-xs text-zinc-700 dark:text-zinc-300 whitespace-nowrap">{{ $cercaNome }}</p>
+                                    @else
+                                        <span class="text-zinc-300 dark:text-zinc-700">—</span>
+                                    @endif
+                                </td>
+
+                                <td data-col="tempo-cerca" class="px-3 py-2 whitespace-nowrap"
+                                    data-mins="{{ $cercaMins ?? 0 }}">
+                                    @if($cercaDuration && $cercaBarColor)
+                                        <div style="background:{{ $cercaBarColor }};padding:4px 10px;text-align:center;color:#fff;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:0.04em;min-width:80px;">
+                                            {{ $cercaDuration }}
+                                        </div>
+                                    @else
+                                        <span class="text-zinc-300 dark:text-zinc-700">—</span>
                                     @endif
                                 </td>
 
@@ -1043,14 +1077,24 @@
                            class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
                                   border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
                                   dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                    <button type="button" id="btn-elog-rapido" onclick="buscarElogRapido()"
-                            class="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-blue-600
-                                   hover:text-blue-800 disabled:opacity-40 dark:text-blue-400 dark:hover:text-blue-300">
-                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 0Z"/>
-                        </svg>
-                        Pesquisar no Elog
-                    </button>
+                    <div class="mt-1.5 flex items-center gap-3">
+                        <button type="button" id="btn-elog-rapido" onclick="buscarElogRapido()"
+                                class="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600
+                                       hover:text-blue-800 disabled:opacity-40 dark:text-blue-400 dark:hover:text-blue-300">
+                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 0Z"/>
+                            </svg>
+                            Pesquisar no Elog
+                        </button>
+                        <a id="btn-pesquisar-reporte" href="#" target="_blank"
+                           class="inline-flex items-center gap-1 text-[11px] font-medium text-violet-600
+                                  hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-300">
+                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                            </svg>
+                            Ver Reportes
+                        </a>
+                    </div>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Tempo Parado</label>
@@ -1147,6 +1191,65 @@
             if (idx === -1) { hidden.push(col); } else { hidden.splice(idx, 1); }
             localStorage.setItem(STORE_KEY, JSON.stringify(hidden));
             applyColVisibility();
+        };
+
+        // ─── Sort de colunas ────────────────────────────────────────────────
+        var _sortState = {}; // col → 'asc' | 'desc'
+        var _SORT_COLS  = ['tempo-status', 'tempo-cerca', 'cerca'];
+
+        // Prioridade de agrupamento: Parado → Desconhecido → Em Movimento → demais
+        var _STATE_PRIORITY = { 'Parado': 0, 'Desconhecido': 1, 'Em Movimento': 2 };
+
+        window.sortTableByCol = function (col) {
+            var tbody = document.getElementById('ct-tbody');
+            if (!tbody) { return; }
+
+            var dir = _sortState[col] === 'asc' ? 'desc' : 'asc';
+            _sortState[col] = dir;
+
+            // Atualiza ícones — reseta os demais
+            _SORT_COLS.forEach(function (c) {
+                var icon = document.getElementById('sort-icon-' + c);
+                if (!icon) { return; }
+                if (c === col) {
+                    icon.textContent = dir === 'asc' ? '↑' : '↓';
+                    icon.style.opacity = '1';
+                } else {
+                    icon.textContent = '↕';
+                    icon.style.opacity = '0.4';
+                    delete _sortState[c];
+                }
+            });
+
+            var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+
+            rows.sort(function (a, b) {
+                var tdA = a.querySelector('[data-col="' + col + '"]');
+                var tdB = b.querySelector('[data-col="' + col + '"]');
+
+                if (col === 'cerca') {
+                    // Ordenação alfabética; vazios vão para o final
+                    var nA = tdA ? (tdA.getAttribute('data-cerca') || '') : '';
+                    var nB = tdB ? (tdB.getAttribute('data-cerca') || '') : '';
+                    if (!nA && nB) { return 1; }
+                    if (nA && !nB) { return -1; }
+                    if (nA === nB) { return 0; }
+                    return dir === 'asc' ? nA.localeCompare(nB) : nB.localeCompare(nA);
+                }
+
+                // Colunas de tempo: agrupa por status, depois ordena por minutos
+                var stateA = a.getAttribute('data-tracker-state') || '';
+                var stateB = b.getAttribute('data-tracker-state') || '';
+                var pA = _STATE_PRIORITY[stateA] !== undefined ? _STATE_PRIORITY[stateA] : 99;
+                var pB = _STATE_PRIORITY[stateB] !== undefined ? _STATE_PRIORITY[stateB] : 99;
+                if (pA !== pB) { return pA - pB; }
+
+                var vA = tdA ? parseInt(tdA.getAttribute('data-mins') || '0', 10) : 0;
+                var vB = tdB ? parseInt(tdB.getAttribute('data-mins') || '0', 10) : 0;
+                return dir === 'asc' ? vA - vB : vB - vA;
+            });
+
+            rows.forEach(function (row) { tbody.appendChild(row); });
         };
 
         // ─── Column picker dropdown ─────────────────────────────────────────
@@ -1769,12 +1872,18 @@
     var _BIGCORE_URL            = '{{ route("bigcore.veiculo") }}';
 
     // ─── Reporte Rápido ─────────────────────────────────────────────────────
-    var _rrUrl   = null;
-    var _rrPlaca = null;
+    var _rrUrl      = null;
+    var _rrPlaca    = null;
+    var _rrPrefixo  = null;
+    var _reportesUrl = '{{ route("reportes.index") }}';
 
     window.openReporteRapidoModal = function (equipamentoId, prefixo, placa, url) {
-        _rrUrl   = url;
-        _rrPlaca = placa;
+        _rrUrl     = url;
+        _rrPlaca   = placa;
+        _rrPrefixo = prefixo || placa;
+
+        var busca = encodeURIComponent(prefixo || placa);
+        document.getElementById('btn-pesquisar-reporte').href = _reportesUrl + '?busca=' + busca;
 
         document.getElementById('rr-subtitle').textContent = 'Veículo: ' + (prefixo ? prefixo + ' / ' + placa : placa);
         document.getElementById('rr-nome').value            = 'Reporte Interno ' + (prefixo || placa);
