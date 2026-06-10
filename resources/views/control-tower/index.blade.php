@@ -1525,7 +1525,7 @@
         };
 
         var html = '<div style="min-width:500px;font-size:22px;line-height:1.6">'
-            + '<p style="font-weight:700;font-size:24px;margin:0 0 12px">' + label + '</p>'
+            + '<p style="font-weight:600;font-size:24px;margin:0 0 12px">' + label + '</p>'
             + '<table style="border-collapse:collapse;width:100%">';
 
         // Status Elog
@@ -1553,7 +1553,7 @@
 
         // Tracker state / Sem sinal
         if (semSinal) {
-            var semSinalVal = '⬛ <strong>Desconhecido</strong>';
+            var semSinalVal = '⬛ <span style="font-weight:600">Desconhecido</span>';
             if (info.sem_sinal_duration) { semSinalVal += ' <span style="color:#6b7280;font-weight:400">há ' + info.sem_sinal_duration + '</span>'; }
             html += row('Rastreador', semSinalVal);
         } else {
@@ -1562,7 +1562,7 @@
             var trackerLabel = trackerIcon + ' ' + (info.tracker_state || 'Sem Sinal');
             if (info.state_duration) { trackerLabel += ' <span style="color:#6b7280;font-weight:400">há ' + info.state_duration + '</span>'; }
             html += row('Rastreador', trackerLabel);
-            html += row('Motor', info.ignition ? '🔵 <strong>Ligado</strong>' : '⚪ <strong>Desligado</strong>');
+            html += row('Motor', info.ignition ? '🔵 <span style="font-weight:600">Ligado</span>' : '⚪ <span style="font-weight:600">Desligado</span>');
             html += row('Velocidade', (info.speed || 0) + ' km/h');
         }
 
@@ -2260,7 +2260,7 @@
                     var _hr = '<tr><td colspan="2" style="padding:3px 0"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0"></td></tr>';
 
                     var popup = '<div style="min-width:500px;font-size:22px;line-height:1.6">'
-                        + '<p style="font-weight:700;font-size:24px;margin:0 0 12px">'
+                        + '<p style="font-weight:600;font-size:24px;margin:0 0 12px">'
                         + _escHtml(v.prefixo) + ' <span style="font-weight:400;color:#71717a">' + _escHtml(v.placa) + '</span></p>'
                         + '<table style="border-collapse:collapse;width:100%">';
 
@@ -2284,7 +2284,7 @@
 
                     // Rastreador
                     if (v.sem_sinal) {
-                        var semSinalVal = '⬛ <strong>Desconhecido</strong>';
+                        var semSinalVal = '⬛ <span style="font-weight:600">Desconhecido</span>';
                         if (v.sem_sinal_duration) { semSinalVal += ' <span style="color:#6b7280;font-weight:400">há ' + _escHtml(v.sem_sinal_duration) + '</span>'; }
                         popup += _row('Rastreador', semSinalVal);
                     } else {
@@ -2292,7 +2292,7 @@
                         var trackerLabel = trackerIcon + ' ' + (v.tracker_state || 'Sem Sinal');
                         if (v.state_duration) { trackerLabel += ' <span style="color:#6b7280;font-weight:400">há ' + _escHtml(v.state_duration) + '</span>'; }
                         popup += _row('Rastreador', trackerLabel);
-                        popup += _row('Motor', v.ignition ? '🔵 <strong>Ligado</strong>' : '⚪ <strong>Desligado</strong>');
+                        popup += _row('Motor', v.ignition ? '🔵 <span style="font-weight:600">Ligado</span>' : '⚪ <span style="font-weight:600">Desligado</span>');
                         popup += _row('Velocidade', (v.speed || 0) + ' km/h');
                     }
 
@@ -2300,7 +2300,7 @@
                     if (usarCerca) {
                         popup += _hr;
                         popup += '<tr><td style="color:#6b7280;padding:2px 16px 2px 0;white-space:nowrap">Cerca</td>'
-                               + '<td style="font-weight:600;white-space:nowrap"><strong>' + _escHtml(cercaInfo.nome) + '</strong>'
+                               + '<td style="font-weight:600;white-space:nowrap">' + _escHtml(cercaInfo.nome)
                                + '</td></tr>';
                         if (v.tempo_cerca_duracao) {
                             var cercaBg = v.cerca_bar_color || '#6b7280';
