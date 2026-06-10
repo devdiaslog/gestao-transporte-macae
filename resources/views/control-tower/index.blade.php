@@ -320,6 +320,33 @@
         </div>
     @endif
 
+    {{-- ─── Recentes Elog (últimos 60 min) ───────────────────────────────── --}}
+    @if($recentesElog->isNotEmpty())
+        <div class="mt-1 flex items-center gap-2 overflow-x-auto pb-1 px-0.5">
+            <span class="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
+                📋 Recentes Elog:
+            </span>
+            @foreach($recentesElog as $elogItem)
+                @php
+                    $minsElog = $elogItem['entrada_em'];
+                    $durElog  = $minsElog < 60
+                        ? $minsElog.'m'
+                        : intdiv($minsElog, 60).'h '.($minsElog % 60).'m';
+                    $bgElog   = $elogItem['cor'] ?? null;
+                @endphp
+                <span
+                    title="{{ $elogItem['status_operacional'] }}{{ $elogItem['documento'] ? ' — Doc: '.$elogItem['documento'] : '' }} — há {{ $durElog }}"
+                    class="inline-flex shrink-0 items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium"
+                    style="{{ $bgElog ? 'background:'.$bgElog.';color:#fff;' : 'background:#f4f4f5;color:#18181b;' }}"
+                >
+                    <span class="font-semibold">{{ $elogItem['prefixo'] ?? $elogItem['placa'] }}</span>
+                    <span style="opacity:.85">{{ $elogItem['status_operacional'] }}</span>
+                    <span style="opacity:.7">há {{ $durElog }}</span>
+                </span>
+            @endforeach
+        </div>
+    @endif
+
     {{-- ─── Table card — fixed height + internal scroll ────────────────────── --}}
     <div id="table-wrapper"
          class="mt-3 overflow-hidden rounded-xl border shadow-sm
@@ -499,14 +526,47 @@
                                     $cercaBarColor = null;
                                 }
 
+                                $statusEvento    = $statusEventosAbertos->get($equipamento->id);
+                                $elogMins        = $statusEvento ? (int) $statusEvento->entrada_em->diffInMinutes(now()) : null;
+                                if ($elogMins !== null) {
+                                    $ed = intdiv($elogMins, 1440);
+                                    $eh = intdiv($elogMins % 1440, 60);
+                                    $em = $elogMins % 60;
+                                    $elogDuracao = $ed > 0 ? "{$ed}d {$eh}h {$em}m" : ($eh > 0 ? "{$eh}h {$em}m" : "{$em}m");
+                                } else {
+                                    $elogDuracao = null;
+                                }
+
+                                $documento        = $statusEvento?->documento;
+                                $minutosPassados  = $documento
+                                    ? (int) ($minutosAtendimento->get($equipamento->id . '_' . $documento)?->total_minutos ?? 0)
+                                    : 0;
+                                $totalAtendimento = $minutosPassados + ($elogMins ?? 0);
+                                if ($totalAtendimento > 0) {
+                                    $ta = intdiv($totalAtendimento, 1440);
+                                    $tb = intdiv($totalAtendimento % 1440, 60);
+                                    $tc = $totalAtendimento % 60;
+                                    $tempoAtendimento = $ta > 0 ? "{$ta}d {$tb}h {$tc}m" : ($tb > 0 ? "{$tb}h {$tc}m" : "{$tc}m");
+                                } else {
+                                    $tempoAtendimento = null;
+                                }
+
                                 $mapInfo = [
-                                    'status'         => $equipamento->status_operacional,
-                                    'tracker_state'  => $posicao?->tracker_state,
-                                    'state_duration' => $stateDuration,
-                                    'ignition'       => (bool) ($posicao?->ignition ?? false),
-                                    'speed'          => (int) ($posicao?->speed ?? 0),
-                                    'motorista'      => $equipamento->motorista?->nome,
-                                    'sem_sinal'      => $semSinal,
+                                    'status_elog'       => $statusEvento?->status_operacional,
+                                    'tempo_elog'        => $elogDuracao,
+                                    'atendimento'       => $documento,
+                                    'tempo_atendimento' => $tempoAtendimento,
+                                    'observacao'        => $statusEvento?->observacao,
+                                    'tracker_state'    => $posicao?->tracker_state,
+                                    'state_duration'   => $stateDuration,
+                                    'sem_sinal'        => $semSinal,
+                                    'sem_sinal_duration' => $semSinalDuration ?? null,
+                                    'ignition'         => (bool) ($posicao?->ignition ?? false),
+                                    'speed'            => (int) ($posicao?->speed ?? 0),
+                                    'motorista'        => $equipamento->motorista?->nome,
+                                    'cerca_nome'       => $cercaNome ?? null,
+                                    'cerca_duracao'    => $cercaDuration ?? null,
+                                    'cerca_bar_color'  => $cercaBarColor ?? null,
                                 ];
                                 $tz             = config('app.timezone');
                                 $horasDesdeReporte = $ultimoReporte
@@ -820,7 +880,7 @@
         </div>
 
         {{-- Container do mapa --}}
-        <div id="leaflet-map" style="height:400px;"></div>
+        <div id="leaflet-map" style="height:600px;"></div>
     </div>
 
     {{-- ─── Mapa Geral ─────────────────────────────────────────────────────── --}}
@@ -923,8 +983,13 @@
             </div>
         </div>
 
-        {{-- Faixa de alterações recentes --}}
+        {{-- Faixa de alterações recentes Vfleets --}}
         <div id="mapa-geral-recentes" style="flex-shrink:0; display:none;"
+             class="border-b border-slate-200 dark:border-zinc-800 px-4 py-1.5 overflow-x-auto whitespace-nowrap">
+        </div>
+
+        {{-- Faixa de alterações recentes Elog --}}
+        <div id="mapa-geral-recentes-elog" style="flex-shrink:0; display:none;"
              class="border-b border-slate-200 dark:border-zinc-800 px-4 py-1.5 overflow-x-auto whitespace-nowrap">
         </div>
 
@@ -1454,31 +1519,78 @@
     function _buildMapPopup(label, info) {
         info = info || {};
         var semSinal = !!info.sem_sinal;
-        var html = '<div style="min-width:190px;font-size:12px;line-height:1.75">'
-            + '<p style="font-weight:700;font-size:13px;margin:0 0 5px">' + label + '</p>';
-        if (info.status) {
-            html += '<p style="margin:0">Último Reporte: <strong>' + info.status + '</strong></p>';
+        var row = function(lbl, val) {
+            return '<tr><td style="color:#6b7280;padding:2px 16px 2px 0;white-space:nowrap">' + lbl + '</td>'
+                 + '<td style="font-weight:600">' + val + '</td></tr>';
+        };
+
+        var html = '<div style="min-width:500px;font-size:23px;line-height:1.6">'
+            + '<p style="font-weight:700;font-size:25px;margin:0 0 12px">' + label + '</p>'
+            + '<table style="border-collapse:collapse;width:100%">';
+
+        // Status Elog
+        if (info.status_elog) {
+            var elogVal = info.status_elog;
+            if (info.tempo_elog) { elogVal += ' <span style="color:#6b7280;font-weight:400">há ' + info.tempo_elog + '</span>'; }
+            html += row('Status Elog', elogVal);
         }
+
+        // Atendimento (documento) + tempo total
+        if (info.atendimento) {
+            var atendVal = info.atendimento;
+            if (info.tempo_atendimento) { atendVal += ' <span style="color:#6b7280;font-weight:400">(' + info.tempo_atendimento + ' total)</span>'; }
+            html += row('Atendimento', atendVal);
+        }
+
+        // Observação (truncada)
+        if (info.observacao) {
+            var obs = info.observacao.length > 100 ? info.observacao.substring(0, 100) + '…' : info.observacao;
+            html += row('Observação', '<span title="' + info.observacao.replace(/"/g, '&quot;') + '">' + obs + '</span>');
+        }
+
+        // Divisória
+        html += '<tr><td colspan="2" style="padding:3px 0"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0"></td></tr>';
+
+        // Tracker state / Sem sinal
         if (semSinal) {
-            html += '<p style="margin:0;color:#6b7280">⬛ <strong>Desconhecido</strong></p>';
+            var semSinalVal = '⬛ <strong>Desconhecido</strong>';
+            if (info.sem_sinal_duration) { semSinalVal += ' <span style="color:#6b7280;font-weight:400">há ' + info.sem_sinal_duration + '</span>'; }
+            html += row('Rastreador', semSinalVal);
         } else {
-            var trackerLabel = info.tracker_state === 'Em Movimento' ? '🟢 Em Movimento'
-                             : (info.tracker_state === 'Parado'      ? '🔴 Parado'
-                             : (info.tracker_state               ? '⚫ Sem Sinal' : ''));
-            if (trackerLabel) {
-                html += '<p style="margin:0">' + trackerLabel
-                    + (info.state_duration
-                        ? ' <span style="color:#6b7280">há ' + info.state_duration + '</span>'
-                        : ' <span style="color:#d1d5db">— aguardando sync</span>')
-                    + '</p>';
+            var trackerIcon = info.tracker_state === 'Em Movimento' ? '🟢'
+                            : (info.tracker_state === 'Parado'      ? '🔴' : '⚫');
+            var trackerLabel = trackerIcon + ' ' + (info.tracker_state || 'Sem Sinal');
+            if (info.state_duration) { trackerLabel += ' <span style="color:#6b7280;font-weight:400">há ' + info.state_duration + '</span>'; }
+            html += row('Rastreador', trackerLabel);
+            html += row('Motor', info.ignition ? '🔵 <strong>Ligado</strong>' : '⚪ <strong>Desligado</strong>');
+            html += row('Velocidade', (info.speed || 0) + ' km/h');
+        }
+
+        // Tempo parado (state_duration quando Parado)
+        if (!semSinal && info.tracker_state === 'Parado' && info.state_duration) {
+            html += row('Tempo Parado', info.state_duration);
+        }
+
+        // Cerca
+        if (info.cerca_nome) {
+            html += '<tr><td colspan="2" style="padding:3px 0"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0"></td></tr>';
+            html += '<tr><td style="color:#6b7280;padding:2px 16px 2px 0;white-space:nowrap">Cerca</td>'
+                  + '<td style="font-weight:600;white-space:nowrap">' + info.cerca_nome + '</td></tr>';
+            if (info.cerca_duracao) {
+                var cercaBarBg = info.cerca_bar_color || '#6b7280';
+                html += '<tr><td style="color:#6b7280;padding:2px 16px 2px 0;white-space:nowrap">Tempo Cerca</td>'
+                      + '<td><div style="background:' + cercaBarBg + ';padding:4px 16px;color:#fff;font-size:21px;font-weight:600;display:inline-block">'
+                      + info.cerca_duracao + '</div></td></tr>';
             }
-            html += '<p style="margin:0">Motor: ' + (info.ignition ? '🔵 <strong>Ligado</strong>' : '⚪ <strong>Desligado</strong>') + '</p>';
-            html += '<p style="margin:0">Velocidade: <strong>' + (info.speed || 0) + ' km/h</strong></p>';
         }
+
+        // Condutor
         if (info.motorista) {
-            html += '<p style="margin:0">Condutor: <strong>' + info.motorista + '</strong></p>';
+            html += '<tr><td colspan="2" style="padding:3px 0"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0"></td></tr>';
+            html += row('Condutor', info.motorista);
         }
-        html += '</div>';
+
+        html += '</table></div>';
         return html;
     }
 
@@ -1510,12 +1622,12 @@
             overlay.style.left         = '50%';
             overlay.style.right        = '';
             overlay.style.bottom       = '';
-            overlay.style.width        = '680px';
+            overlay.style.width        = '1020px';
             overlay.style.maxWidth     = 'calc(100vw - 2rem)';
             overlay.style.transform    = 'translate(-50%, -50%)';
             overlay.style.borderRadius = '1rem';
             overlay.style.boxShadow    = '0 25px 50px -12px rgba(0,0,0,.35)';
-            mapDiv.style.height        = '400px';
+            mapDiv.style.height        = '600px';
             backdrop.style.display     = 'block';
             iconExp.style.display      = 'block';
             iconCmp.style.display      = 'none';
@@ -1879,6 +1991,7 @@
     };
     var _mapaGeralUrl           = '{{ route("control-tower.mapa-geral") }}';
     var _sincronizarUrl         = '{{ route("control-tower.sincronizar-posicoes") }}';
+    var _sincronizarStatusUrl   = '{{ route("control-tower.sincronizar-status-operacional") }}';
     var _csrfToken              = '{{ csrf_token() }}';
     var _BIGCORE_URL            = '{{ route("bigcore.veiculo") }}';
 
@@ -2134,60 +2247,88 @@
                         iconAnchor: [30, 11]
                     });
 
-                    // ── Linha de estado do rastreador ────────────────────────
-                    var trackerHtml;
-                    if (v.sem_sinal) {
-                        trackerHtml = '<p style="margin:0;color:#6b7280">⬛ <strong>Desconhecido</strong>'
-                                    + (v.position_at ? ' — última posição em ' + _escHtml(v.position_at) : '')
-                                    + '</p>';
-                    } else {
-                        var trackerLabel = v.tracker_state === 'Em Movimento' ? '🟢 Em Movimento'
-                                         : (v.tracker_state === 'Parado'      ? '🔴 Parado'
-                                         : '⚫ Sem Sinal');
-                        trackerHtml = '<p style="margin:0">' + trackerLabel
-                                    + (v.state_duration ? ' <span style="color:#6b7280">há ' + _escHtml(v.state_duration) + '</span>'
-                                    : ' <span style="color:#d1d5db">— aguardando sync</span>') + '</p>';
-                    }
-
                     // ── Localidade: cerca ou endereço ────────────────────────
-                    var _PROX_KM    = 0.3;
-                    var cercaInfo   = _cercaParaVeiculo(v.lat, v.lng);
-                    var usarCerca   = cercaInfo && (cercaInfo.dentro || cercaInfo.distKm <= _PROX_KM);
-                    var localidadeHtml = '';
+                    var _PROX_KM  = 0.3;
+                    var cercaInfo = _cercaParaVeiculo(v.lat, v.lng);
+                    var usarCerca = cercaInfo && (cercaInfo.dentro || cercaInfo.distKm <= _PROX_KM);
 
-                    if (usarCerca) {
-                        // Tempo na cerca vem do servidor (evento aberto)
-                        var tempoCercaStr = '';
-                        if (v.tempo_cerca_mins !== null && v.tempo_cerca_mins !== undefined) {
-                            var tcH = Math.floor(v.tempo_cerca_mins / 60);
-                            var tcM = v.tempo_cerca_mins % 60;
-                            tempoCercaStr = ' <span style="color:#6b7280">há ' + (tcH > 0 ? tcH + 'h ' : '') + tcM + 'min</span>';
-                        }
-                        localidadeHtml = '<p style="margin:0">📍 <strong>' + _escHtml(cercaInfo.nome) + '</strong>'
-                                       + (cercaInfo.atividade ? ' <span style="color:#6b7280">(' + _escHtml(cercaInfo.atividade) + ')</span>' : '')
-                                       + tempoCercaStr + '</p>';
+                    // ── Popup (tabela) ────────────────────────────────────────
+                    var _row = function (lbl, val) {
+                        return '<tr><td style="color:#6b7280;padding:2px 16px 2px 0;white-space:nowrap">' + lbl + '</td>'
+                             + '<td style="font-weight:600">' + val + '</td></tr>';
+                    };
+                    var _hr = '<tr><td colspan="2" style="padding:3px 0"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0"></td></tr>';
+
+                    var popup = '<div style="min-width:500px;font-size:23px;line-height:1.6">'
+                        + '<p style="font-weight:700;font-size:25px;margin:0 0 12px">'
+                        + _escHtml(v.prefixo) + ' <span style="font-weight:400;color:#71717a">' + _escHtml(v.placa) + '</span></p>'
+                        + '<table style="border-collapse:collapse;width:100%">';
+
+                    // Status Elog
+                    if (v.status_elog) {
+                        var elogVal = _escHtml(v.status_elog);
+                        if (v.tempo_elog) { elogVal += ' <span style="color:#6b7280;font-weight:400">há ' + _escHtml(v.tempo_elog) + '</span>'; }
+                        popup += _row('Status Elog', elogVal);
+                    }
+                    if (v.atendimento) {
+                        var atendVal = _escHtml(v.atendimento);
+                        if (v.tempo_atendimento) { atendVal += ' <span style="color:#6b7280;font-weight:400">(' + _escHtml(v.tempo_atendimento) + ' total)</span>'; }
+                        popup += _row('Atendimento', atendVal);
+                    }
+                    if (v.observacao) {
+                        var obs = v.observacao.length > 100 ? v.observacao.substring(0, 100) + '…' : v.observacao;
+                        popup += _row('Observação', '<span title="' + v.observacao.replace(/"/g, '&quot;') + '">' + _escHtml(obs) + '</span>');
+                    }
+
+                    popup += _hr;
+
+                    // Rastreador
+                    if (v.sem_sinal) {
+                        var semSinalVal = '⬛ <strong>Desconhecido</strong>';
+                        if (v.sem_sinal_duration) { semSinalVal += ' <span style="color:#6b7280;font-weight:400">há ' + _escHtml(v.sem_sinal_duration) + '</span>'; }
+                        popup += _row('Rastreador', semSinalVal);
                     } else {
-                        localidadeHtml = '<p style="margin:0">📍 <span id="loc-' + _escHtml(v.placa) + '" style="color:#9ca3af">Carregando endereço…</span></p>';
+                        var trackerIcon  = v.tracker_state === 'Em Movimento' ? '🟢' : (v.tracker_state === 'Parado' ? '🔴' : '⚫');
+                        var trackerLabel = trackerIcon + ' ' + (v.tracker_state || 'Sem Sinal');
+                        if (v.state_duration) { trackerLabel += ' <span style="color:#6b7280;font-weight:400">há ' + _escHtml(v.state_duration) + '</span>'; }
+                        popup += _row('Rastreador', trackerLabel);
+                        popup += _row('Motor', v.ignition ? '🔵 <strong>Ligado</strong>' : '⚪ <strong>Desligado</strong>');
+                        popup += _row('Velocidade', (v.speed || 0) + ' km/h');
                     }
 
-                    // ── Popup ────────────────────────────────────────────────
-                    var popup = '<div style="min-width:190px;font-size:12px;line-height:1.75">'
-                        + '<p style="font-weight:700;font-size:13px;margin:0 0 5px">' + _escHtml(v.prefixo) + ' <span style="font-weight:400;color:#71717a">' + _escHtml(v.placa) + '</span></p>'
-                        + (v.status ? '<p style="margin:0">Último Reporte: <strong>' + _escHtml(v.status) + '</strong></p>' : '')
-                        + trackerHtml;
-
-                    if (!v.sem_sinal) {
-                        popup += '<p style="margin:0">Motor: ' + (v.ignition ? '🔵 <strong>Ligado</strong>' : '⚪ <strong>Desligado</strong>') + '</p>'
-                               + '<p style="margin:0">Velocidade: <strong>' + (v.speed || 0) + ' km/h</strong></p>';
+                    // Cerca
+                    if (usarCerca) {
+                        popup += _hr;
+                        popup += '<tr><td style="color:#6b7280;padding:2px 16px 2px 0;white-space:nowrap">Cerca</td>'
+                               + '<td style="font-weight:600;white-space:nowrap"><strong>' + _escHtml(cercaInfo.nome) + '</strong>'
+                               + (cercaInfo.atividade ? ' <span style="color:#6b7280;font-weight:400">(' + _escHtml(cercaInfo.atividade) + ')</span>' : '')
+                               + '</td></tr>';
+                        if (v.tempo_cerca_duracao) {
+                            var cercaBg = v.cerca_bar_color || '#6b7280';
+                            popup += '<tr><td style="color:#6b7280;padding:2px 16px 2px 0;white-space:nowrap">Tempo Cerca</td>'
+                                   + '<td><div style="background:' + cercaBg + ';padding:4px 16px;color:#fff;font-size:21px;font-weight:600;display:inline-block">'
+                                   + _escHtml(v.tempo_cerca_duracao) + '</div></td></tr>';
+                        }
+                    } else {
+                        popup += _hr;
+                        popup += '<tr><td colspan="2"><p style="margin:0">📍 <span id="loc-' + _escHtml(v.placa) + '" style="color:#9ca3af">Carregando endereço…</span></p></td></tr>';
                     }
 
-                    popup += (v.motorista ? '<p style="margin:0">Condutor: <strong>' + _escHtml(v.motorista) + '</strong></p>' : '')
-                           + localidadeHtml
-                           + (!v.sem_sinal && v.position_at ? '<p style="color:#9ca3af;font-size:11px;margin:5px 0 0">Posição: ' + _escHtml(v.position_at) + '</p>' : '')
-                           + '</div>';
+                    // Condutor
+                    if (v.motorista) {
+                        popup += _hr;
+                        popup += _row('Condutor', _escHtml(v.motorista));
+                    }
+
+                    // Rodapé com posição
+                    if (!v.sem_sinal && v.position_at) {
+                        popup += '<tr><td colspan="2" style="color:#9ca3af;font-size:11px;padding-top:5px">Posição: ' + _escHtml(v.position_at) + '</td></tr>';
+                    }
+
+                    popup += '</table></div>';
 
                     var marker = L.marker([v.lat, v.lng], { icon: icon })
-                        .bindPopup(popup)
+                        .bindPopup(popup, { maxWidth: 600 })
                         .addTo(_leafletLayerGeral);
 
                     // Nominatim apenas para veículos fora do raio de qualquer cerca
@@ -2240,7 +2381,7 @@
 
                 var faixaEl = document.getElementById('mapa-geral-recentes');
                 if (recentes.length > 0) {
-                    var pills = '<span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#a1a1aa;margin-right:6px;vertical-align:middle">⚡ Recentes:</span>';
+                    var pills = '<span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#a1a1aa;margin-right:6px;vertical-align:middle">⚡ Recentes Vfleets:</span>';
                     recentes.forEach(function (v) {
                         var emoji = v.tracker_state === 'Em Movimento' ? '🟢' : (v.tracker_state === 'Parado' ? '🔴' : '⚫');
                         var dur   = v.state_since_mins < 60
@@ -2262,11 +2403,39 @@
                     faixaEl.style.display = 'none';
                     faixaEl.innerHTML     = '';
                 }
+
+                // Faixa de recentes Elog (última hora)
+                var recentesElog = data.recentes_elog || [];
+                var faixaElog    = document.getElementById('mapa-geral-recentes-elog');
+                if (recentesElog.length > 0) {
+                    var pillsElog = '<span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#a1a1aa;margin-right:6px;vertical-align:middle">📋 Recentes Elog:</span>';
+                    recentesElog.forEach(function (v) {
+                        var mins = v.entrada_em || 0;
+                        var dur  = mins < 60
+                            ? mins + 'm'
+                            : Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm';
+                        var bg   = v.cor ? v.cor : '#f4f4f5';
+                        var fg   = v.cor ? '#fff' : '#18181b';
+                        pillsElog += '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:6px;padding:2px 8px;border-radius:4px;background:' + bg + ';color:' + fg + ';font-size:11px;cursor:default;vertical-align:middle"'
+                            + ' title="' + _escHtml(v.status_operacional) + (v.documento ? ' — Doc: ' + _escHtml(v.documento) : '') + ' — há ' + dur + '">'
+                            + '<strong>' + _escHtml(v.prefixo || v.placa) + '</strong>'
+                            + ' <span style="opacity:.85">' + _escHtml(v.status_operacional) + '</span>'
+                            + ' <span style="opacity:.7">há ' + dur + '</span>'
+                            + '</span>';
+                    });
+                    faixaElog.innerHTML     = pillsElog;
+                    faixaElog.style.display = '';
+                } else {
+                    faixaElog.style.display = 'none';
+                    faixaElog.innerHTML     = '';
+                }
             })
             .catch(function () {
                 document.getElementById('mapa-geral-info').textContent = 'Erro ao carregar posições.';
             });
     }
+
+    var _sincStatusEmAndamento = false;
 
     function sincronizarERecarregar() {
         var btn  = document.getElementById('mapa-geral-btn-refresh');
@@ -2275,6 +2444,21 @@
         btn.disabled         = true;
         icon.style.animation = 'spin 1s linear infinite';
         info.textContent     = 'Sincronizando com a API…';
+
+        // Sincroniza status operacional em paralelo (fire-and-forget)
+        if (!_sincStatusEmAndamento) {
+            _sincStatusEmAndamento = true;
+            fetch(_sincronizarStatusUrl, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': _csrfToken,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .catch(function () {})
+            .finally(function () { _sincStatusEmAndamento = false; });
+        }
 
         fetch(_sincronizarUrl, {
             method: 'POST',

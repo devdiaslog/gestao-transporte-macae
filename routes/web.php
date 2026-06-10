@@ -17,6 +17,8 @@ use App\Http\Controllers\SubDivisaoController;
 use App\Http\Controllers\TipoEquipamentoController;
 use App\Http\Controllers\TipoOcorrenciaController;
 use App\Http\Controllers\UserController;
+use App\Services\BigcoreService;
+use App\Services\StatusOperacionalService;
 use App\Services\VfleetsService;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +39,22 @@ Route::get('sync/posicoes', function (VfleetsService $vfleets) {
     }
 })->name('sync.posicoes');
 
+// Sincronização de status operacional via Bigcore — protegida por chave secreta
+Route::get('sync/status-operacional', function (BigcoreService $bigcore, StatusOperacionalService $service) {
+    if (request('key') !== config('services.bigcore.sync_key') || ! config('services.bigcore.sync_key')) {
+        abort(403);
+    }
+
+    try {
+        $registros = $bigcore->buscarTodos();
+        $total = $service->sincronizar($registros, now());
+
+        return response()->json(['ok' => true, 'processados' => count($registros), 'alteracoes' => $total]);
+    } catch (Throwable $e) {
+        return response()->json(['ok' => false, 'erro' => $e->getMessage()], 500);
+    }
+})->name('sync.status-operacional');
+
 // Auth routes (guest only)
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -53,6 +71,7 @@ Route::middleware('auth')->group(function () {
     Route::get('torre-de-controle-export', [ControlTowerController::class, 'export'])->name('control-tower.export');
     Route::get('torre-de-controle/mapa-geral', [ControlTowerController::class, 'mapaGeral'])->name('control-tower.mapa-geral');
     Route::post('torre-de-controle/sincronizar-posicoes', [ControlTowerController::class, 'sincronizarPosicoes'])->name('control-tower.sincronizar-posicoes');
+    Route::post('torre-de-controle/sincronizar-status-operacional', [ControlTowerController::class, 'sincronizarStatusOperacional'])->name('control-tower.sincronizar-status-operacional');
     Route::get('torre-de-controle/posicao/{plate}', [ControlTowerController::class, 'posicao'])->name('control-tower.posicao');
     Route::post('torre-de-controle/{equipamento}/reporte-rapido', [ControlTowerController::class, 'reporteRapido'])->name('control-tower.reporte-rapido');
     Route::patch('torre-de-controle/{equipamento}/implemento', [ControlTowerController::class, 'updateImplemento'])->name('control-tower.implemento');

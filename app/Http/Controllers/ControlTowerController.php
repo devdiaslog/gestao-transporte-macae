@@ -12,14 +12,18 @@ use App\Models\ModeloEquipamento;
 use App\Models\Motorista;
 use App\Models\Reporte;
 use App\Models\ReporteItem;
+use App\Models\StatusEvento;
 use App\Models\StatusOperacional;
 use App\Models\TipoEquipamento;
+use App\Services\BigcoreService;
+use App\Services\StatusOperacionalService;
 use App\Services\VfleetsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use Throwable;
 
@@ -131,7 +135,47 @@ class ControlTowerController extends Controller
             ->get()
             ->keyBy('equipamento_id');
 
-        return view('control-tower.index', compact('equipamentos', 'divisoes', 'modelos', 'modelosImplemento', 'implementos', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado', 'ultimosReportes', 'recentementeAlterados', 'eventosAbertos'));
+        // Eventos de status operacional abertos
+        $statusEventosAbertos = StatusEvento::query()
+            ->whereNull('saida_em')
+            ->whereIn('equipamento_id', $equipamentoIds)
+            ->get()
+            ->keyBy('equipamento_id');
+
+        // Soma de minutos por (equipamento_id, documento) — eventos já fechados
+        // Chave: "equipamento_id_documento"
+        $minutosAtendimento = StatusEvento::query()
+            ->whereIn('equipamento_id', $equipamentoIds)
+            ->whereNotNull('saida_em')
+            ->whereNotNull('documento')
+            ->selectRaw('equipamento_id, documento, SUM(duracao_minutos) as total_minutos')
+            ->groupBy('equipamento_id', 'documento')
+            ->get()
+            ->keyBy(fn ($r) => $r->equipamento_id.'_'.$r->documento);
+
+        // Recentes Elog — frotas que mudaram de status/documento na última hora
+        $idsRecentesElog = StatusEvento::query()
+            ->whereNotNull('saida_em')
+            ->where('saida_em', '>=', now()->subHour())
+            ->distinct()
+            ->pluck('equipamento_id');
+
+        $recentesElog = StatusEvento::query()
+            ->whereNull('saida_em')
+            ->whereIn('equipamento_id', $idsRecentesElog)
+            ->with('equipamento')
+            ->get()
+            ->map(fn ($e) => [
+                'prefixo' => $e->equipamento?->prefixo,
+                'placa' => $e->equipamento?->placa,
+                'status_operacional' => $e->status_operacional,
+                'documento' => $e->documento,
+                'cor' => $statusCores->get($e->status_operacional),
+                'entrada_em' => $e->entrada_em ? (int) $e->entrada_em->diffInMinutes(now()) : 0,
+            ])
+            ->values();
+
+        return view('control-tower.index', compact('equipamentos', 'divisoes', 'modelos', 'modelosImplemento', 'implementos', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado', 'ultimosReportes', 'recentementeAlterados', 'eventosAbertos', 'statusEventosAbertos', 'minutosAtendimento', 'recentesElog'));
     }
 
     public function painel(Request $request): View
@@ -159,7 +203,107 @@ class ControlTowerController extends Controller
             ->get()
             ->keyBy('equipamento_id');
 
-        return view('control-tower.painel', compact('equipamentos', 'divisoes', 'statusCores', 'eventosAbertos'));
+        $cards = $equipamentos->map(function (Equipamento $e) use ($eventosAbertos, $statusCores) {
+            return $this->montarCardVeiculo($e, $eventosAbertos->get($e->id), $statusCores);
+        });
+
+        return view('control-tower.painel', compact('cards', 'divisoes'));
+    }
+
+    /**
+     * Formata um intervalo em minutos para exibição legível (Xd Xh Xm).
+     */
+    private function formatarDuracao(int $mins): string
+    {
+        $d = intdiv($mins, 1440);
+        $h = intdiv($mins % 1440, 60);
+        $m = $mins % 60;
+
+        return $d > 0 ? "{$d}d {$h}h {$m}m" : ($h > 0 ? "{$h}h {$m}m" : "{$m}m");
+    }
+
+    /**
+     * Monta o array de dados calculados de um veículo para o card do painel.
+     *
+     * @param  Collection<string, string>  $statusCores
+     * @return array<string, mixed>
+     */
+    private function montarCardVeiculo(Equipamento $equipamento, ?CercaEvento $eventoAberto, $statusCores): array
+    {
+        $posicao = $equipamento->posicao;
+        $semSinal = ! $posicao || ! $posicao->position_at || $posicao->position_at->lt(now()->subHours(3));
+
+        // Cor do ícone (ignição)
+        if ($semSinal) {
+            $iconColor = '#71717a';
+        } elseif ($posicao->ignition) {
+            $iconColor = '#16a34a';
+        } else {
+            $iconColor = '#dc2626';
+        }
+
+        // Barra de tempo de status (tracker_state)
+        $stateSinceRaw = $posicao?->state_since;
+        $stateMins = ($stateSinceRaw && $stateSinceRaw->isPast())
+            ? (int) $stateSinceRaw->diffInMinutes(now())
+            : null;
+
+        if ($semSinal && $posicao?->position_at) {
+            $barMins = (int) $posicao->position_at->diffInMinutes(now());
+            $barTime = $this->formatarDuracao($barMins);
+            $barColor = '#71717a';
+        } elseif ($stateMins !== null) {
+            $barMins = $stateMins;
+            $barTime = $this->formatarDuracao($stateMins);
+            $barColor = $posicao?->tracker_state === 'Em Movimento' ? '#16a34a' : '#dc2626';
+        } else {
+            $barMins = 0;
+            $barTime = '—';
+            $barColor = '#71717a';
+        }
+
+        // Cerca
+        $cercaMins = $eventoAberto ? (int) $eventoAberto->entrada_em->diffInMinutes(now()) : null;
+        $cercaNome = $eventoAberto?->cerca?->nome;
+        $cercaDuration = null;
+        $cercaBarColor = null;
+
+        if ($cercaMins !== null) {
+            $cercaDuration = $this->formatarDuracao($cercaMins);
+            $tMin = (int) ($eventoAberto->cerca->tempo_minimo ?? 15);
+            $tMax = (int) ($eventoAberto->cerca->tempo_maximo ?? 120);
+
+            $cercaBarColor = match (true) {
+                $cercaMins < $tMin => '#2563eb',
+                $cercaMins < $tMax * 0.75 => '#16a34a',
+                $cercaMins < $tMax => '#ca8a04',
+                default => '#dc2626',
+            };
+        }
+
+        $statusOp = $equipamento->status_operacional;
+
+        return [
+            'id' => $equipamento->id,
+            'prefixo' => $equipamento->prefixo,
+            'placa' => $equipamento->placa,
+            'divisao' => $equipamento->divisao?->nome,
+            'iconColor' => $iconColor,
+            'statusOp' => $statusOp,
+            'statusCor' => $statusCores[$statusOp] ?? '#71717a',
+            'barColor' => $barColor,
+            'barTime' => $barTime,
+            'barMins' => $barMins,
+            'cercaNome' => $cercaNome,
+            'cercaDuration' => $cercaDuration,
+            'cercaBarColor' => $cercaBarColor,
+            'searchKey' => strtolower(implode(' ', array_filter([
+                $equipamento->prefixo,
+                $equipamento->placa,
+                $equipamento->divisao?->nome,
+            ]))),
+            'reporteUrl' => route('control-tower.reporte-rapido', $equipamento),
+        ];
     }
 
     public function export(Request $request): Response
@@ -245,6 +389,18 @@ class ControlTowerController extends Controller
         return response()->json(['ok' => true, 'total' => $total]);
     }
 
+    public function sincronizarStatusOperacional(BigcoreService $bigcore, StatusOperacionalService $service): JsonResponse
+    {
+        try {
+            $registros = $bigcore->buscarTodos();
+            $alteracoes = $service->sincronizar($registros, now());
+        } catch (Throwable $e) {
+            return response()->json(['ok' => false, 'erro' => $e->getMessage()], 500);
+        }
+
+        return response()->json(['ok' => true, 'processados' => count($registros), 'alteracoes' => $alteracoes]);
+    }
+
     public function mapaGeral(): JsonResponse
     {
         $tz = config('app.timezone');
@@ -257,13 +413,28 @@ class ControlTowerController extends Controller
             ->get()
             ->keyBy('equipamento_id');
 
+        // Pré-carrega eventos de status operacional abertos
+        $statusEventosAbertos = StatusEvento::query()
+            ->whereNull('saida_em')
+            ->get()
+            ->keyBy('equipamento_id');
+
+        // Soma de minutos por (equipamento_id, documento) — eventos já fechados
+        $minutosAtendimento = StatusEvento::query()
+            ->whereNotNull('saida_em')
+            ->whereNotNull('documento')
+            ->selectRaw('equipamento_id, documento, SUM(duracao_minutos) as total_minutos')
+            ->groupBy('equipamento_id', 'documento')
+            ->get()
+            ->keyBy(fn ($r) => $r->equipamento_id.'_'.$r->documento);
+
         $veiculos = Equipamento::query()
             ->with(['posicao', 'motorista'])
             ->where('status', true)
             ->when($tipoMotorizado, fn ($q) => $q->where('tipo_id', $tipoMotorizado->id))
             ->get()
             ->filter(fn ($e) => $e->posicao?->latitude && $e->posicao?->longitude)
-            ->map(function ($e) use ($tz, $eventosAbertos) {
+            ->map(function ($e) use ($tz, $eventosAbertos, $statusEventosAbertos, $minutosAtendimento) {
                 $stateSince = $e->posicao->state_since;
 
                 // state_since no futuro indica dado com timezone incorreto no banco
@@ -283,19 +454,79 @@ class ControlTowerController extends Controller
                 // Veículo sem sinal há mais de 3 horas
                 $positionAt = $e->posicao->position_at;
                 $semSinal = ! $positionAt || $positionAt->diffInHours(now()) >= 3;
+                if ($semSinal && $positionAt) {
+                    $semSinalMins = (int) $positionAt->diffInMinutes(now());
+                    $sd = intdiv($semSinalMins, 1440);
+                    $sh = intdiv($semSinalMins % 1440, 60);
+                    $sm = $semSinalMins % 60;
+                    $semSinalDuration = $sd > 0 ? "{$sd}d {$sh}h {$sm}m" : ($sh > 0 ? "{$sh}h {$sm}m" : "{$sm}m");
+                } else {
+                    $semSinalDuration = null;
+                }
 
                 // Tempo na cerca (evento aberto)
                 $eventoAberto = $eventosAbertos->get($e->id);
                 $tempoCercaMins = $eventoAberto
                     ? (int) $eventoAberto->entrada_em->diffInMinutes(now())
                     : null;
+                if ($tempoCercaMins !== null) {
+                    $cd = intdiv($tempoCercaMins, 1440);
+                    $ch = intdiv($tempoCercaMins % 1440, 60);
+                    $cm = $tempoCercaMins % 60;
+                    $tempoCercaDuracao = $cd > 0 ? "{$cd}d {$ch}h {$cm}m" : ($ch > 0 ? "{$ch}h {$cm}m" : "{$cm}m");
+                    $tMin = (int) ($eventoAberto->cerca->tempo_minimo ?? 15);
+                    $tMax = (int) ($eventoAberto->cerca->tempo_maximo ?? 120);
+                    if ($tempoCercaMins < $tMin) {
+                        $cercaBarColor = '#2563eb';
+                    } elseif ($tempoCercaMins < $tMax * 0.75) {
+                        $cercaBarColor = '#16a34a';
+                    } elseif ($tempoCercaMins < $tMax) {
+                        $cercaBarColor = '#ca8a04';
+                    } else {
+                        $cercaBarColor = '#dc2626';
+                    }
+                } else {
+                    $tempoCercaDuracao = null;
+                    $cercaBarColor = null;
+                }
+
+                // StatusEvento aberto
+                $statusEvento = $statusEventosAbertos->get($e->id);
+                $elogMins = $statusEvento ? (int) $statusEvento->entrada_em->diffInMinutes(now()) : null;
+                if ($elogMins !== null) {
+                    $ed = intdiv($elogMins, 1440);
+                    $eh = intdiv($elogMins % 1440, 60);
+                    $em = $elogMins % 60;
+                    $elogDuracao = $ed > 0 ? "{$ed}d {$eh}h {$em}m" : ($eh > 0 ? "{$eh}h {$em}m" : "{$em}m");
+                } else {
+                    $elogDuracao = null;
+                }
+
+                // Tempo total no atendimento (documento): fechados + aberto atual
+                $documento = $statusEvento?->documento;
+                $minutosPassados = $documento
+                    ? (int) ($minutosAtendimento->get($e->id.'_'.$documento)?->total_minutos ?? 0)
+                    : 0;
+                $totalAtendimento = $minutosPassados + ($elogMins ?? 0);
+                if ($totalAtendimento > 0) {
+                    $ta = intdiv($totalAtendimento, 1440);
+                    $tb = intdiv($totalAtendimento % 1440, 60);
+                    $tc = $totalAtendimento % 60;
+                    $tempoAtendimento = $ta > 0 ? "{$ta}d {$tb}h {$tc}m" : ($tb > 0 ? "{$tb}h {$tc}m" : "{$tc}m");
+                } else {
+                    $tempoAtendimento = null;
+                }
 
                 return [
                     'prefixo' => $e->prefixo,
                     'placa' => $e->placa,
                     'lat' => (float) $e->posicao->latitude,
                     'lng' => (float) $e->posicao->longitude,
-                    'status' => $e->status_operacional,
+                    'status_elog' => $statusEvento?->status_operacional,
+                    'tempo_elog' => $elogDuracao,
+                    'atendimento' => $documento,
+                    'tempo_atendimento' => $tempoAtendimento,
+                    'observacao' => $statusEvento?->observacao,
                     'motorista' => $e->motorista?->nome,
                     'ignition' => (bool) $e->posicao->ignition,
                     'speed' => (int) $e->posicao->speed,
@@ -305,7 +536,10 @@ class ControlTowerController extends Controller
                     'position_at' => $positionAt?->setTimezone($tz)->format('d/m/Y H:i'),
                     'synced_at' => $e->posicao->synced_at?->setTimezone($tz)->format('d/m/Y H:i'),
                     'sem_sinal' => $semSinal,
+                    'sem_sinal_duration' => $semSinalDuration,
                     'tempo_cerca_mins' => $tempoCercaMins,
+                    'tempo_cerca_duracao' => $tempoCercaDuracao,
+                    'cerca_bar_color' => $cercaBarColor,
                 ];
             })
             ->values();
@@ -322,7 +556,31 @@ class ControlTowerController extends Controller
             ->filter(fn (array $c) => is_array($c['poligono']) && count($c['poligono']) >= 3)
             ->values();
 
-        return response()->json(['veiculos' => $veiculos, 'cercas' => $cercas]);
+        // Veículos que mudaram de status/documento no Elog na última hora
+        $coresStatus = StatusOperacional::pluck('cor', 'nome');
+
+        $idsRecentesElog = StatusEvento::query()
+            ->whereNotNull('saida_em')
+            ->where('saida_em', '>=', now()->subHour())
+            ->distinct()
+            ->pluck('equipamento_id');
+
+        $recentesElog = StatusEvento::query()
+            ->whereNull('saida_em')
+            ->whereIn('equipamento_id', $idsRecentesElog)
+            ->with('equipamento')
+            ->get()
+            ->map(fn ($e) => [
+                'prefixo' => $e->equipamento?->prefixo,
+                'placa' => $e->equipamento?->placa,
+                'status_operacional' => $e->status_operacional,
+                'documento' => $e->documento,
+                'cor' => $coresStatus->get($e->status_operacional),
+                'entrada_em' => $e->entrada_em ? (int) $e->entrada_em->setTimezone($tz)->diffInMinutes(now()) : 0,
+            ])
+            ->values();
+
+        return response()->json(['veiculos' => $veiculos, 'cercas' => $cercas, 'recentes_elog' => $recentesElog]);
     }
 
     public function posicao(string $plate, VfleetsService $vfleets): JsonResponse

@@ -7,6 +7,29 @@ use Illuminate\Support\Facades\Http;
 
 class BigcoreService
 {
+    /**
+     * Retorna todos os veículos da API Bigcore.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function buscarTodos(): array
+    {
+        $response = Http::withHeaders([
+            'Authorization' => config('services.bigcore.token'),
+            'TenantId' => config('services.bigcore.tenant'),
+            'SubscriptionId' => config('services.bigcore.subscription'),
+        ])->get(config('services.bigcore.endpoint'), [
+            'Telemetry' => 'true',
+            'Rows' => 500,
+        ]);
+
+        if (! $response->successful()) {
+            return [];
+        }
+
+        return $response->json('data', []);
+    }
+
     public function buscarPorPlaca(string $placa): ?array
     {
         $response = Http::withHeaders([

@@ -40,10 +40,12 @@
             <select name="divisao_id" onchange="this.form.submit()"
                     class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
                            border-slate-200 bg-white text-zinc-700
-                           dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
+                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                           dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
+                           dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
                 <option value="">Todas as divisões</option>
-                @foreach($divisoes as $div)
-                    <option value="{{ $div->id }}" @selected(request('divisao_id') == $div->id)>{{ $div->nome }}</option>
+                @foreach($divisoes as $divisao)
+                    <option value="{{ $divisao->id }}" @selected(request('divisao_id') == $divisao->id)>{{ $divisao->nome }}</option>
                 @endforeach
             </select>
         </form>
@@ -64,123 +66,45 @@
          class="mt-3 grid gap-3"
          style="grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));">
 
-        @foreach($equipamentos as $equipamento)
-            @php
-                $posicao  = $equipamento->posicao;
-                $semSinal = ! $posicao || ! $posicao->position_at || $posicao->position_at->lt(now()->subHours(3));
-
-                // Cor do ícone
-                if ($semSinal) {
-                    $iconColor  = '#71717a';
-                    $badgeState = 'Desconhecido';
-                } elseif ($posicao->ignition) {
-                    $iconColor  = '#16a34a';
-                    $badgeState = 'Ligado';
-                } else {
-                    $iconColor  = '#dc2626';
-                    $badgeState = 'Desligado';
-                }
-
-                // Tempo de status
-                $stateSinceRaw = $posicao?->state_since;
-                $stateMins     = ($stateSinceRaw && $stateSinceRaw->isPast())
-                    ? (int) $stateSinceRaw->diffInMinutes(now())
-                    : null;
-                if ($stateMins !== null) {
-                    $sd = intdiv($stateMins, 1440);
-                    $sh = intdiv($stateMins % 1440, 60);
-                    $sm = $stateMins % 60;
-                    $stateDuration = $sd > 0 ? "{$sd}d {$sh}h {$sm}m" : ($sh > 0 ? "{$sh}h {$sm}m" : "{$sm}m");
-                } else {
-                    $stateDuration = null;
-                }
-                if ($semSinal && $posicao?->position_at) {
-                    $semSinalMins = (int) $posicao->position_at->diffInMinutes(now());
-                    $sdx = intdiv($semSinalMins, 1440);
-                    $shx = intdiv($semSinalMins % 1440, 60);
-                    $smx = $semSinalMins % 60;
-                    $semSinalDuration = $sdx > 0 ? "{$sdx}d {$shx}h {$smx}m" : ($shx > 0 ? "{$shx}h {$smx}m" : "{$smx}m");
-                } else {
-                    $semSinalDuration = null;
-                }
-                $barMins  = $semSinal ? ($semSinalMins ?? 0) : ($stateMins ?? 0);
-                $barTime  = $semSinal ? ($semSinalDuration ?? '—') : ($stateDuration ?? '—');
-                $barColor = $semSinal ? '#71717a' : ($posicao?->tracker_state === 'Em Movimento' ? '#16a34a' : '#dc2626');
-
-                // Cerca
-                $eventoAberto = $eventosAbertos->get($equipamento->id);
-                $cercaMins    = $eventoAberto ? (int) $eventoAberto->entrada_em->diffInMinutes(now()) : null;
-                $cercaNome    = $eventoAberto?->cerca?->nome;
-                if ($cercaMins !== null) {
-                    $cd = intdiv($cercaMins, 1440);
-                    $ch = intdiv($cercaMins % 1440, 60);
-                    $cm = $cercaMins % 60;
-                    $cercaDuration = $cd > 0 ? "{$cd}d {$ch}h {$cm}m" : ($ch > 0 ? "{$ch}h {$cm}m" : "{$cm}m");
-                    $tMin = (int) ($eventoAberto->cerca->tempo_minimo ?? 15);
-                    $tMax = (int) ($eventoAberto->cerca->tempo_maximo ?? 120);
-                    if ($cercaMins < $tMin) {
-                        $cercaBarColor = '#2563eb';
-                    } elseif ($cercaMins < $tMax * 0.75) {
-                        $cercaBarColor = '#16a34a';
-                    } elseif ($cercaMins < $tMax) {
-                        $cercaBarColor = '#ca8a04';
-                    } else {
-                        $cercaBarColor = '#dc2626';
-                    }
-                } else {
-                    $cercaDuration = null;
-                    $cercaBarColor = null;
-                }
-
-                // Status operacional
-                $statusOp  = $equipamento->status_operacional;
-                $statusCor = $statusCores[$statusOp] ?? '#71717A';
-
-                $searchKey = strtolower(implode(' ', array_filter([
-                    $equipamento->prefixo,
-                    $equipamento->placa,
-                    $equipamento->divisao?->nome,
-                ])));
-            @endphp
-
+        @foreach($cards as $c)
             <div class="painel-card flex flex-col rounded-xl border bg-white shadow-sm transition-shadow hover:shadow-md
                         dark:border-zinc-800 dark:bg-zinc-900"
-                 data-search="{{ $searchKey }}">
+                 data-search="{{ $c['searchKey'] }}">
 
                 {{-- Tarja superior colorida --}}
-                <div class="h-1.5 w-full rounded-t-xl" style="background: {{ $iconColor }};"></div>
+                <div class="h-1.5 w-full rounded-t-xl" style="background: {{ $c['iconColor'] }};"></div>
 
                 <div class="flex flex-col items-center gap-2 p-3">
 
                     {{-- Ícone do caminhão --}}
-                    <svg style="color: {{ $iconColor }};" class="h-12 w-12 mt-1" fill="currentColor" viewBox="0 0 24 24">
+                    <svg style="color: {{ $c['iconColor'] }};" class="mt-1 h-12 w-12" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M1 3a1 1 0 0 1 1-1h15a1 1 0 0 1 1 1v3h2.293a1 1 0 0 1 .707.293l2 2A1 1 0 0 1 23 9v4a1 1 0 0 1-1 1h-1.126A3.001 3.001 0 0 1 15 14a3.001 3.001 0 0 1-5.874 0H7a1 1 0 0 1-1-1V3H2a1 1 0 0 1-1 0Zm6 10a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm10 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2ZM3 4v8h3.126A3.001 3.001 0 0 1 12 14h1.126A3.001 3.001 0 0 1 18 12V4H3Zm15 5v2.279a3 3 0 0 1 1.207.721H21V9.414L19.586 8H18Z"/>
                     </svg>
 
                     {{-- Prefixo + Placa --}}
                     <div class="text-center leading-tight">
-                        @if($equipamento->prefixo)
-                            <p class="text-sm font-bold text-zinc-900 dark:text-zinc-100">{{ $equipamento->prefixo }}</p>
-                            <p class="text-[11px] text-zinc-400 dark:text-zinc-500">{{ $equipamento->placa }}</p>
+                        @if($c['prefixo'])
+                            <p class="text-sm font-bold text-zinc-900 dark:text-zinc-100">{{ $c['prefixo'] }}</p>
+                            <p class="text-[11px] text-zinc-400 dark:text-zinc-500">{{ $c['placa'] }}</p>
                         @else
-                            <p class="text-sm font-bold text-zinc-900 dark:text-zinc-100">{{ $equipamento->placa }}</p>
+                            <p class="text-sm font-bold text-zinc-900 dark:text-zinc-100">{{ $c['placa'] }}</p>
                         @endif
                     </div>
 
                     {{-- Status operacional --}}
-                    @if($statusOp)
+                    @if($c['statusOp'])
                         <span class="w-full truncate rounded px-2 py-0.5 text-center text-[10px] font-semibold"
-                              style="background: {{ $statusCor }}1A; color: {{ $statusCor }}; box-shadow: inset 0 0 0 1px {{ $statusCor }}33;"
-                              title="{{ $statusOp }}">
-                            {{ $statusOp }}
+                              style="background: {{ $c['statusCor'] }}1A; color: {{ $c['statusCor'] }}; box-shadow: inset 0 0 0 1px {{ $c['statusCor'] }}33;"
+                              title="{{ $c['statusOp'] }}">
+                            {{ $c['statusOp'] }}
                         </span>
                     @endif
 
                     {{-- Cerca --}}
                     <div class="w-full text-center">
-                        @if($cercaNome)
-                            <p class="truncate text-[10px] font-medium text-violet-600 dark:text-violet-400" title="{{ $cercaNome }}">
-                                📍 {{ $cercaNome }}
+                        @if($c['cercaNome'])
+                            <p class="truncate text-[10px] font-medium text-violet-600 dark:text-violet-400" title="{{ $c['cercaNome'] }}">
+                                📍 {{ $c['cercaNome'] }}
                             </p>
                         @else
                             <p class="text-[10px] text-zinc-300 dark:text-zinc-700">Sem cerca</p>
@@ -188,14 +112,14 @@
                     </div>
 
                     {{-- Barra de tempo de status --}}
-                    <div class="w-full" style="background: {{ $barColor }}; padding: 3px 6px; text-align: center; color: #fff; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums;">
-                        {{ $barTime }}
+                    <div class="w-full" style="background: {{ $c['barColor'] }}; padding: 3px 6px; text-align: center; color: #fff; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums;">
+                        {{ $c['barTime'] }}
                     </div>
 
                     {{-- Barra de tempo em cerca --}}
-                    @if($cercaDuration && $cercaBarColor)
-                        <div class="w-full" style="background: {{ $cercaBarColor }}; padding: 3px 6px; text-align: center; color: #fff; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums;">
-                            ⏱ {{ $cercaDuration }}
+                    @if($c['cercaDuration'] && $c['cercaBarColor'])
+                        <div class="w-full" style="background: {{ $c['cercaBarColor'] }}; padding: 3px 6px; text-align: center; color: #fff; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums;">
+                            ⏱ {{ $c['cercaDuration'] }}
                         </div>
                     @endif
 

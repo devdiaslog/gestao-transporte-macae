@@ -40,6 +40,7 @@ return [
         'token' => env('API_TMS_TOKEN'),
         'tenant' => env('API_TMS_TENANT'),
         'subscription' => env('API_TMS_SUBSCRIPTION'),
+        'sync_key' => env('BIGCORE_SYNC_KEY'),
     ],
 
     'vfleets' => [

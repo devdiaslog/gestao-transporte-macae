@@ -1,6 +1,9 @@
 <x-layouts.app title="Editar Cerca">
 
     <link rel="stylesheet" href="/vendor/leaflet/leaflet.css"/>
+    <style>
+        #cerca-map .leaflet-top.leaflet-right { top: 52px; }
+    </style>
 
     {{-- Page header --}}
     <div class="mt-4 flex items-center gap-4">
@@ -229,10 +232,24 @@
 
         var map = L.map('cerca-map').setView(MACAE, 13);
 
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles © Esri',
-            maxZoom: 20,
-        }).addTo(map);
+        var layerRua = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            maxZoom: 21,
+            maxNativeZoom: 19,
+        });
+        var layerSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri',
+            maxZoom: 21,
+            maxNativeZoom: 19,
+        });
+
+        layerSatelite.addTo(map);
+
+        L.control.layers(
+            { 'Mapa': layerRua, 'Satélite': layerSatelite },
+            {},
+            { position: 'topright' }
+        ).addTo(map);
 
         var vertices    = [];
         var markers     = [];
@@ -283,9 +300,9 @@
 
         var verticeIcon = L.divIcon({
             className: '',
-            html: '<div style="width:14px;height:14px;border-radius:50%;background:#000;border:2px solid #000;box-shadow:0 1px 4px rgba(0,0,0,.4);cursor:grab;"></div>',
-            iconSize: [14, 14],
-            iconAnchor: [7, 7],
+            html: '<div style="width:7px;height:7px;border-radius:50%;background:#000;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.5);cursor:grab;"></div>',
+            iconSize: [7, 7],
+            iconAnchor: [3, 3],
         });
 
         function adicionarVertice(lat, lng) {
