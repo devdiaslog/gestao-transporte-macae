@@ -7,7 +7,7 @@
  * Uso no cron do cPanel:
  *   php /home/usuario/scripts/sync-status-operacional.php
  */
-$syncKey = getenv('BIGCORE_SYNC_KEY') ?: 'basic OTU6V0g5VFZCRVJGQVpJMlVTQ0lWMDQ5TjA4RVE1S004R0s=';
+$syncKey = getenv('API_TMS_TOKEN') ?: 'basic OTU6V0g5VFZCRVJGQVpJMlVTQ0lWMDQ5TjA4RVE1S004R0s=';
 $url = 'https://transporte.vixplancon.com/sync/status-operacional?key='.urlencode($syncKey);
 
 $ch = curl_init($url);
