@@ -1524,8 +1524,8 @@
                  + '<td style="font-weight:600">' + val + '</td></tr>';
         };
 
-        var html = '<div style="min-width:500px;font-size:23px;line-height:1.6">'
-            + '<p style="font-weight:700;font-size:25px;margin:0 0 12px">' + label + '</p>'
+        var html = '<div style="min-width:500px;font-size:22px;line-height:1.6">'
+            + '<p style="font-weight:700;font-size:24px;margin:0 0 12px">' + label + '</p>'
             + '<table style="border-collapse:collapse;width:100%">';
 
         // Status Elog
@@ -2259,8 +2259,8 @@
                     };
                     var _hr = '<tr><td colspan="2" style="padding:3px 0"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0"></td></tr>';
 
-                    var popup = '<div style="min-width:500px;font-size:23px;line-height:1.6">'
-                        + '<p style="font-weight:700;font-size:25px;margin:0 0 12px">'
+                    var popup = '<div style="min-width:500px;font-size:22px;line-height:1.6">'
+                        + '<p style="font-weight:700;font-size:24px;margin:0 0 12px">'
                         + _escHtml(v.prefixo) + ' <span style="font-weight:400;color:#71717a">' + _escHtml(v.placa) + '</span></p>'
                         + '<table style="border-collapse:collapse;width:100%">';
 
@@ -2301,7 +2301,6 @@
                         popup += _hr;
                         popup += '<tr><td style="color:#6b7280;padding:2px 16px 2px 0;white-space:nowrap">Cerca</td>'
                                + '<td style="font-weight:600;white-space:nowrap"><strong>' + _escHtml(cercaInfo.nome) + '</strong>'
-                               + (cercaInfo.atividade ? ' <span style="color:#6b7280;font-weight:400">(' + _escHtml(cercaInfo.atividade) + ')</span>' : '')
                                + '</td></tr>';
                         if (v.tempo_cerca_duracao) {
                             var cercaBg = v.cerca_bar_color || '#6b7280';
