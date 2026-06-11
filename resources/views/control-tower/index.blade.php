@@ -27,116 +27,20 @@
         $currentMotorista        = request('motorista_id');
     @endphp
 
+    {{-- Linha 1: Botões --}}
     <div class="mt-4 flex flex-wrap items-center gap-2">
 
-        {{-- Live search --}}
-        <div class="relative">
-            <svg class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
-                 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.197 5.197a7.5 7.5 0 0 0 10.606 10.606z"/>
+        {{-- Exportar CSV --}}
+        <a href="{{ route('control-tower.export', array_filter(['divisao_id' => $currentDivisao, 'modelo_id' => $currentModelo, 'status_operacional' => $currentStatusOp, 'implemento_modelo_id' => $currentImplementoModelo, 'motorista_id' => $currentMotorista])) }}"
+           title="Exportar para CSV/Excel"
+           class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors
+                  border-slate-200 bg-white text-zinc-700 hover:border-slate-300 hover:bg-slate-50
+                  dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-900">
+            <svg class="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
             </svg>
-            <input id="live-search" type="text" placeholder="Buscar placa, prefixo, divisão…"
-                   class="rounded-lg border py-2 pl-8 pr-3 text-sm outline-none transition-all w-56
-                          border-slate-200 bg-white text-zinc-700 placeholder-zinc-400
-                          focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                          dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:placeholder-zinc-600
-                          dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-        </div>
-
-        {{-- Server filters --}}
-        <form id="filter-form" method="GET" action="{{ route('control-tower.index') }}" class="flex items-center gap-2">
-            <select name="divisao_id" onchange="this.form.submit()"
-                    class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
-                           border-slate-200 bg-white text-zinc-700
-                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                           dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
-                           dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                <option value="">Todas as divisões</option>
-                @foreach($divisoes as $divisao)
-                    <option value="{{ $divisao->id }}" @selected($currentDivisao == $divisao->id)>{{ $divisao->nome }}</option>
-                @endforeach
-            </select>
-
-            <select name="status_operacional" onchange="this.form.submit()"
-                    class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
-                           border-slate-200 bg-white text-zinc-700
-                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                           dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
-                           dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                <option value="">Todos os status</option>
-                @foreach($statusOperacionais as $statusOp)
-                    <option value="{{ $statusOp->nome }}" @selected($currentStatusOp === $statusOp->nome)>
-                        {{ $statusOp->nome }}
-                    </option>
-                @endforeach
-            </select>
-
-            <select name="modelo_id" onchange="this.form.submit()"
-                    class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
-                           border-slate-200 bg-white text-zinc-700
-                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                           dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
-                           dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                <option value="">Todos os modelos</option>
-                @foreach($modelos as $modelo)
-                    <option value="{{ $modelo->id }}" @selected($currentModelo == $modelo->id)>{{ $modelo->nome }}</option>
-                @endforeach
-            </select>
-
-            @if($motoristas->isNotEmpty())
-                <select name="motorista_id" onchange="this.form.submit()"
-                        class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
-                               border-slate-200 bg-white text-zinc-700
-                               focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                               dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
-                               dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                    <option value="">Todos os condutores</option>
-                    @foreach($motoristas as $motorista)
-                        <option value="{{ $motorista->id }}" @selected($currentMotorista == $motorista->id)>
-                            {{ $motorista->nome }}
-                        </option>
-                    @endforeach
-                </select>
-            @endif
-
-            @if($modelosImplemento->isNotEmpty())
-                <select name="implemento_modelo_id" onchange="this.form.submit()"
-                        class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
-                               border-slate-200 bg-white text-zinc-700
-                               focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                               dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
-                               dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                    <option value="">Todos os implementos</option>
-                    @foreach($modelosImplemento as $mi)
-                        <option value="{{ $mi->id }}" @selected($currentImplementoModelo == $mi->id)>{{ $mi->nome }}</option>
-                    @endforeach
-                </select>
-            @endif
-
-            @if($currentDivisao || $currentModelo || $currentStatusOp || $currentImplementoModelo || $currentMotorista)
-                <a href="{{ route('control-tower.index') }}"
-                   class="flex items-center gap-1 rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors
-                          border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700
-                          dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500 dark:hover:text-zinc-300"
-                   title="Limpar filtros">
-                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
-                    </svg>
-                </a>
-            @endif
-
-            {{-- Exportar CSV --}}
-            <a href="{{ route('control-tower.export', array_filter(['divisao_id' => $currentDivisao, 'modelo_id' => $currentModelo, 'status_operacional' => $currentStatusOp, 'implemento_modelo_id' => $currentImplementoModelo, 'motorista_id' => $currentMotorista])) }}"
-               title="Exportar para CSV/Excel"
-               class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors
-                      border-slate-200 bg-white text-zinc-700 hover:border-slate-300 hover:bg-slate-50
-                      dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-900">
-                <svg class="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-                </svg>
-                Exportar
-            </a>
-        </form>
+            Exportar
+        </a>
 
         {{-- Métricas --}}
         <a href="{{ route('metricas.index') }}"
@@ -227,6 +131,107 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    {{-- Linha 2: Filtros --}}
+    <div class="mt-2 flex flex-wrap items-center gap-2">
+
+        {{-- Live search --}}
+        <div class="relative">
+            <svg class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
+                 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.197 5.197a7.5 7.5 0 0 0 10.606 10.606z"/>
+            </svg>
+            <input id="live-search" type="text" placeholder="Buscar placa, prefixo, divisão…"
+                   class="rounded-lg border py-2 pl-8 pr-3 text-sm outline-none transition-all w-56
+                          border-slate-200 bg-white text-zinc-700 placeholder-zinc-400
+                          focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                          dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:placeholder-zinc-600
+                          dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+        </div>
+
+        {{-- Server filters --}}
+        <form id="filter-form" method="GET" action="{{ route('control-tower.index') }}" class="flex flex-wrap items-center gap-2">
+            <select name="divisao_id" onchange="this.form.submit()"
+                    class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
+                           border-slate-200 bg-white text-zinc-700
+                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                           dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
+                           dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                <option value="">Todas as divisões</option>
+                @foreach($divisoes as $divisao)
+                    <option value="{{ $divisao->id }}" @selected($currentDivisao == $divisao->id)>{{ $divisao->nome }}</option>
+                @endforeach
+            </select>
+
+            <select name="status_operacional" onchange="this.form.submit()"
+                    class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
+                           border-slate-200 bg-white text-zinc-700
+                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                           dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
+                           dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                <option value="">Todos os status</option>
+                @foreach($statusOperacionais as $statusOp)
+                    <option value="{{ $statusOp->nome }}" @selected($currentStatusOp === $statusOp->nome)>
+                        {{ $statusOp->nome }}
+                    </option>
+                @endforeach
+            </select>
+
+            <select name="modelo_id" onchange="this.form.submit()"
+                    class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
+                           border-slate-200 bg-white text-zinc-700
+                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                           dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
+                           dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                <option value="">Todos os modelos</option>
+                @foreach($modelos as $modelo)
+                    <option value="{{ $modelo->id }}" @selected($currentModelo == $modelo->id)>{{ $modelo->nome }}</option>
+                @endforeach
+            </select>
+
+            @if($motoristas->isNotEmpty())
+                <select name="motorista_id" onchange="this.form.submit()"
+                        class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
+                               border-slate-200 bg-white text-zinc-700
+                               focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                               dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
+                               dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                    <option value="">Todos os condutores</option>
+                    @foreach($motoristas as $motorista)
+                        <option value="{{ $motorista->id }}" @selected($currentMotorista == $motorista->id)>
+                            {{ $motorista->nome }}
+                        </option>
+                    @endforeach
+                </select>
+            @endif
+
+            @if($modelosImplemento->isNotEmpty())
+                <select name="implemento_modelo_id" onchange="this.form.submit()"
+                        class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
+                               border-slate-200 bg-white text-zinc-700
+                               focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                               dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
+                               dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                    <option value="">Todos os implementos</option>
+                    @foreach($modelosImplemento as $mi)
+                        <option value="{{ $mi->id }}" @selected($currentImplementoModelo == $mi->id)>{{ $mi->nome }}</option>
+                    @endforeach
+                </select>
+            @endif
+
+            @if($currentDivisao || $currentModelo || $currentStatusOp || $currentImplementoModelo || $currentMotorista)
+                <a href="{{ route('control-tower.index') }}"
+                   class="flex items-center gap-1 rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors
+                          border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700
+                          dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500 dark:hover:text-zinc-300"
+                   title="Limpar filtros">
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                    </svg>
+                </a>
+            @endif
+        </form>
     </div>
 
     {{-- ─── Flash / errors ─────────────────────────────────────────────────── --}}
