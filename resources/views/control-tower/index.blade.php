@@ -25,6 +25,7 @@
         $currentStatusOp         = request('status_operacional');
         $currentImplementoModelo = request('implemento_modelo_id');
         $currentMotorista        = request('motorista_id');
+        $currentSubDivisoes      = request('sub_divisao_id', []);
     @endphp
 
     {{-- Linha 1: Botões --}}
@@ -220,7 +221,47 @@
                 </select>
             @endif
 
-            @if($currentDivisao || $currentModelo || $currentStatusOp || $currentImplementoModelo || $currentMotorista)
+            {{-- Subdivisões (multi-select dropdown) --}}
+            @if($subDivisoes->isNotEmpty())
+                <div class="relative" id="subdivisao-picker-wrapper">
+                    <button type="button" id="subdivisao-picker-btn" onclick="toggleSubDivisaoPicker()"
+                            class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
+                                   border-slate-200 bg-white text-zinc-700
+                                   dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
+                        <span id="subdivisao-picker-label">
+                            @if(count($currentSubDivisoes) === 0)
+                                Todas as subdivisões
+                            @elseif(count($currentSubDivisoes) === 1)
+                                {{ $subDivisoes->firstWhere('id', $currentSubDivisoes[0])?->nome ?? 'Subdivisão' }}
+                            @else
+                                {{ count($currentSubDivisoes) }} subdivisões
+                            @endif
+                        </span>
+                        <svg class="h-3.5 w-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                        </svg>
+                    </button>
+
+                    <div id="subdivisao-picker-panel"
+                         class="absolute left-0 top-full z-30 mt-1.5 hidden min-w-[200px] overflow-hidden rounded-xl border shadow-lg
+                                border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+                        <div class="py-1.5">
+                            @foreach($subDivisoes as $sd)
+                                <label class="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/50">
+                                    <input type="checkbox" name="sub_divisao_id[]"
+                                           value="{{ $sd->id }}"
+                                           class="h-4 w-4 rounded border-slate-300 accent-zinc-900 dark:accent-zinc-100"
+                                           @if(in_array((string)$sd->id, array_map('strval', (array)$currentSubDivisoes))) checked @endif
+                                           onchange="document.getElementById('filter-form').submit()">
+                                    <span class="text-xs text-zinc-700 dark:text-zinc-300">{{ $sd->nome }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            @if($currentDivisao || $currentModelo || $currentStatusOp || $currentImplementoModelo || $currentMotorista || count($currentSubDivisoes) > 0)
                 <a href="{{ route('control-tower.index') }}"
                    class="flex items-center gap-1 rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors
                           border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700
@@ -1332,6 +1373,20 @@
 
             rows.forEach(function (row) { tbody.appendChild(row); });
         };
+
+        // ─── Subdivisão picker dropdown ─────────────────────────────────────
+        window.toggleSubDivisaoPicker = function () {
+            var panel = document.getElementById('subdivisao-picker-panel');
+            if (panel) { panel.classList.toggle('hidden'); }
+        };
+
+        document.addEventListener('click', function (e) {
+            var wrapper = document.getElementById('subdivisao-picker-wrapper');
+            var panel   = document.getElementById('subdivisao-picker-panel');
+            if (wrapper && panel && !wrapper.contains(e.target)) {
+                panel.classList.add('hidden');
+            }
+        });
 
         // ─── Column picker dropdown ─────────────────────────────────────────
         window.toggleColPicker = function () {

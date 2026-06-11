@@ -14,6 +14,7 @@ use App\Models\Reporte;
 use App\Models\ReporteItem;
 use App\Models\StatusEvento;
 use App\Models\StatusOperacional;
+use App\Models\SubDivisao;
 use App\Models\TipoEquipamento;
 use App\Services\BigcoreService;
 use App\Services\StatusOperacionalService;
@@ -43,6 +44,7 @@ class ControlTowerController extends Controller
             ->when($request->filled('status_operacional'), fn ($q) => $q->where('status_operacional', $request->status_operacional))
             ->when($request->filled('implemento_modelo_id'), fn ($q) => $q->whereHas('implemento', fn ($q) => $q->where('modelo_id', $request->implemento_modelo_id)))
             ->when($request->filled('motorista_id'), fn ($q) => $q->where('motorista_id', $request->motorista_id))
+            ->when($request->filled('sub_divisao_id'), fn ($q) => $q->whereIn('sub_divisao_id', (array) $request->input('sub_divisao_id')))
             ->orderByRaw("(
                 SELECT MAX(r.data_hora_emissao)
                 FROM reporte_itens ri
@@ -55,6 +57,8 @@ class ControlTowerController extends Controller
             ->withQueryString();
 
         $divisoes = Divisao::where('status', true)->orderBy('nome')->get();
+
+        $subDivisoes = SubDivisao::where('status', true)->orderBy('nome')->get();
 
         $modelos = $tipoMotorizado
             ? ModeloEquipamento::where('tipo_equipamento_id', $tipoMotorizado->id)
@@ -175,7 +179,7 @@ class ControlTowerController extends Controller
             ])
             ->values();
 
-        return view('control-tower.index', compact('equipamentos', 'divisoes', 'modelos', 'modelosImplemento', 'implementos', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado', 'ultimosReportes', 'recentementeAlterados', 'eventosAbertos', 'statusEventosAbertos', 'minutosAtendimento', 'recentesElog'));
+        return view('control-tower.index', compact('equipamentos', 'divisoes', 'subDivisoes', 'modelos', 'modelosImplemento', 'implementos', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado', 'ultimosReportes', 'recentementeAlterados', 'eventosAbertos', 'statusEventosAbertos', 'minutosAtendimento', 'recentesElog'));
     }
 
     public function painel(Request $request): View
