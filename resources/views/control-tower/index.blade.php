@@ -6,18 +6,6 @@
 
 
 
-    {{-- ─── Page header ──────────────────────────────────────────────────────── --}}
-    <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-            <h2 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Torre de Controle</h2>
-            <p class="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">Equipamentos motorizados ativos.</p>
-        </div>
-        {{-- Live counter --}}
-        <span id="row-counter" class="rounded-full border px-3 py-1 text-xs font-medium
-                                      border-zinc-200 bg-zinc-50 text-zinc-500
-                                      dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"></span>
-    </div>
-
     {{-- ─── Toolbar ─────────────────────────────────────────────────────────── --}}
     @php
         $currentDivisao          = request('divisao_id');
@@ -330,68 +318,6 @@
             <span>— Mais de 24h ou sem reporte</span>
         </span>
     </div>
-
-    {{-- ─── Alterações Recentes (últimos 60 min) ──────────────────────────── --}}
-    @if($recentementeAlterados->isNotEmpty())
-        <div class="mt-2 flex items-center gap-2 overflow-x-auto pb-1 px-0.5">
-            <span class="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
-                ⚡ Recentes:
-            </span>
-            @foreach($recentementeAlterados as $eqR)
-                @php
-                    $posR   = $eqR->posicao;
-                    $minsR  = (int) $posR->state_since->diffInMinutes(now());
-                    $stateR = $posR->tracker_state;
-                    if ($stateR === 'Em Movimento') {
-                        $emojiR = '🟢';
-                        $clsR   = 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:ring-emerald-800/40';
-                    } elseif ($stateR === 'Parado') {
-                        $emojiR = '🔴';
-                        $clsR   = 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:ring-rose-800/40';
-                    } else {
-                        $emojiR = '⚫';
-                        $clsR   = 'bg-zinc-100 text-zinc-500 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-700';
-                    }
-                    $durR = $minsR < 60
-                        ? $minsR.'m'
-                        : intdiv($minsR, 60).'h '.($minsR % 60).'m';
-                @endphp
-                <span title="{{ $stateR }} — há {{ $durR }}"
-                      class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset {{ $clsR }}">
-                    {{ $emojiR }}
-                    <span class="font-semibold">{{ $eqR->prefixo ?? $eqR->placa }}</span>
-                    <span class="opacity-60">há {{ $durR }}</span>
-                </span>
-            @endforeach
-        </div>
-    @endif
-
-    {{-- ─── Recentes Elog (últimos 60 min) ───────────────────────────────── --}}
-    @if($recentesElog->isNotEmpty())
-        <div class="mt-1 flex items-center gap-2 overflow-x-auto pb-1 px-0.5">
-            <span class="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
-                📋 Recentes Elog:
-            </span>
-            @foreach($recentesElog as $elogItem)
-                @php
-                    $minsElog = $elogItem['entrada_em'];
-                    $durElog  = $minsElog < 60
-                        ? $minsElog.'m'
-                        : intdiv($minsElog, 60).'h '.($minsElog % 60).'m';
-                    $bgElog   = $elogItem['cor'] ?? null;
-                @endphp
-                <span
-                    title="{{ $elogItem['status_operacional'] }}{{ $elogItem['documento'] ? ' — Doc: '.$elogItem['documento'] : '' }} — há {{ $durElog }}"
-                    class="inline-flex shrink-0 items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium"
-                    style="{{ $bgElog ? 'background:'.$bgElog.';color:#fff;' : 'background:#f4f4f5;color:#18181b;' }}"
-                >
-                    <span class="font-semibold">{{ $elogItem['prefixo'] ?? $elogItem['placa'] }}</span>
-                    <span style="opacity:.85">{{ $elogItem['status_operacional'] }}</span>
-                    <span style="opacity:.7">há {{ $durElog }}</span>
-                </span>
-            @endforeach
-        </div>
-    @endif
 
     {{-- ─── Table card — fixed height + internal scroll ────────────────────── --}}
     <div id="table-wrapper"
@@ -796,52 +722,16 @@
                                 </td>
 
                                 <td class="px-3 py-2 text-right whitespace-nowrap">
-                                    <div class="inline-flex items-center gap-1">
-                                        <button type="button"
-                                                onclick="openReporteRapidoModal({{ $equipamento->id }}, '{{ addslashes($equipamento->prefixo ?? '') }}', '{{ addslashes($equipamento->placa) }}', '{{ route('control-tower.reporte-rapido', $equipamento) }}')"
-                                                title="Criar reporte rápido"
-                                                class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
-                                                       border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700
-                                                       dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300">
-                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
-                                            </svg>
-                                            Reporte
-                                        </button>
-                                        <button type="button"
-                                                data-map-info='@json($mapInfo, JSON_HEX_APOS)'
-                                                onclick="openMapModal({{ $hasLocation ? $posicao->latitude : 'null' }}, {{ $hasLocation ? $posicao->longitude : 'null' }}, '{{ addslashes($mapLabel) }}', '{{ addslashes($equipamento->id_rastreador) }}', '{{ $posicaoAt ?? '' }}', '{{ $syncedAt ?? '' }}', {{ $equipamento->id }}, JSON.parse(this.dataset.mapInfo))"
-                                                title="{{ $hasLocation ? 'Ver localização no mapa' : 'Sincronizar e ver localização no mapa' }}"
-                                                class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
-                                                       border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700
-                                                       dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300">
-                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
-                                            </svg>
-                                            Mapa
-                                        </button>
-                                        <a href="{{ route('ocorrencias.veiculo', $equipamento) }}"
-                                           title="Ver ocorrências do veículo"
-                                           class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
-                                                  border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700
-                                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300">
-                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
-                                            </svg>
-                                            Ocorrências
-                                        </a>
-                                        <a href="{{ route('control-tower.historico', $equipamento) }}"
-                                           title="Ver histórico de alterações"
-                                           class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
-                                                  border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700
-                                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300">
-                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
-                                            </svg>
-                                            Logs
-                                        </a>
-                                    </div>
+                                    <a href="{{ route('ocorrencias.veiculo', $equipamento) }}"
+                                       title="Ver ocorrências do veículo"
+                                       class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
+                                              border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700
+                                              dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300">
+                                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+                                        </svg>
+                                        Ocorrências
+                                    </a>
                                 </td>
                             </tr>
 
