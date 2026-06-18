@@ -6,7 +6,9 @@ use App\Http\Controllers\CercaController;
 use App\Http\Controllers\ControlTowerController;
 use App\Http\Controllers\DivisaoController;
 use App\Http\Controllers\EquipamentoController;
+use App\Http\Controllers\EtapaController;
 use App\Http\Controllers\JustificativaController;
+use App\Http\Controllers\LocalEtapaController;
 use App\Http\Controllers\MetricasController;
 use App\Http\Controllers\ModeloEquipamentoController;
 use App\Http\Controllers\MotoristaController;
@@ -15,6 +17,7 @@ use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\ResponsavelController;
 use App\Http\Controllers\SubDivisaoController;
 use App\Http\Controllers\TipoEquipamentoController;
+use App\Http\Controllers\TipoEtapaController;
 use App\Http\Controllers\TipoOcorrenciaController;
 use App\Http\Controllers\UserController;
 use App\Services\BigcoreService;
@@ -83,6 +86,12 @@ Route::middleware('auth')->group(function () {
     Route::patch('ocorrencias/{ocorrencia}/auditoria', [OcorrenciaController::class, 'auditar'])->name('ocorrencias.auditar');
     Route::resource('ocorrencias', OcorrenciaController::class)->except(['show'])->parameters(['ocorrencias' => 'ocorrencia']);
 
+    // Etapas — acessível a todos os perfis
+    Route::get('etapas/veiculo/{equipamento}', [EtapaController::class, 'veiculo'])->name('etapas.veiculo');
+    Route::post('etapas', [EtapaController::class, 'store'])->name('etapas.store');
+    Route::put('etapas/{etapa}', [EtapaController::class, 'update'])->name('etapas.update');
+    Route::delete('etapas/{etapa}', [EtapaController::class, 'destroy'])->name('etapas.destroy');
+
     // Bigcore (Elog)
     Route::get('bigcore/veiculo', [BigcoreController::class, 'veiculo'])->name('bigcore.veiculo');
 
@@ -124,5 +133,9 @@ Route::middleware('auth')->group(function () {
         Route::resource('responsaveis', ResponsavelController::class)->except(['show'])->parameters(['responsaveis' => 'responsavel']);
         Route::resource('tipos-ocorrencia', TipoOcorrenciaController::class)->except(['show'])->parameters(['tipos-ocorrencia' => 'tipoOcorrencia']);
         Route::resource('justificativas', JustificativaController::class)->except(['show'])->parameters(['justificativas' => 'justificativa']);
+
+        // Tabelas de apoio de etapas
+        Route::resource('tipos-etapa', TipoEtapaController::class)->except(['show', 'create', 'edit'])->parameters(['tipos-etapa' => 'tipoEtapa']);
+        Route::resource('locais-etapa', LocalEtapaController::class)->except(['show', 'create', 'edit'])->parameters(['locais-etapa' => 'localEtapa']);
     });
 });
