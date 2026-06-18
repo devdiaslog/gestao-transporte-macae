@@ -22,7 +22,7 @@ use App\Services\StatusOperacionalService;
 use App\Services\VfleetsService;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect()->route('ocorrencias.index'));
+Route::get('/', fn () => redirect()->route('control-tower.index'));
 
 // Sincronização de posições — protegida por chave secreta
 Route::get('sync/posicoes', function (VfleetsService $vfleets) {

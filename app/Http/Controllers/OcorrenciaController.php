@@ -23,25 +23,9 @@ use Illuminate\View\View;
 
 class OcorrenciaController extends Controller
 {
-    public function index(Request $request): View
+    public function index(): RedirectResponse
     {
-        $ocorrencias = Ocorrencia::query()
-            ->with(['veiculo', 'tipo', 'responsavel', 'justificativa', 'creator', 'auditor'])
-            ->when($request->filled('id_veiculo'), fn ($q) => $q->where('id_veiculo', $request->id_veiculo))
-            ->when($request->filled('id_tipo'), fn ($q) => $q->where('id_tipo', $request->id_tipo))
-            ->when($request->filled('id_responsavel'), fn ($q) => $q->where('id_responsavel', $request->id_responsavel))
-            ->when(! $request->has('status') || $request->status === 'aberta', fn ($q) => $q->whereNull('data_hora_fim'))
-            ->when($request->has('status') && $request->status === 'fechada', fn ($q) => $q->whereNotNull('data_hora_fim'))
-            ->when($request->filled('status_auditoria'), fn ($q) => $q->where('status_auditoria', $request->status_auditoria))
-            ->when($request->filled('data_inicio'), fn ($q) => $q->whereDate('data_hora_inicio', '>=', Carbon::parse($request->data_inicio)))
-            ->when($request->filled('data_fim'), fn ($q) => $q->whereDate('data_hora_inicio', '<=', Carbon::parse($request->data_fim)))
-            ->latest('data_hora_inicio')
-            ->paginate(15)
-            ->withQueryString();
-
-        [$veiculos, $tipos, $responsaveis, $justificativas, $tiposMap, $responsaveisMap] = $this->formData();
-
-        return view('ocorrencias.index', compact('ocorrencias', 'veiculos', 'tipos', 'responsaveis', 'justificativas', 'tiposMap', 'responsaveisMap'));
+        return redirect()->route('control-tower.index');
     }
 
     public function create(): View

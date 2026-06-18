@@ -17,40 +17,9 @@ use Illuminate\View\View;
 
 class ReporteController extends Controller
 {
-    public function index(Request $request): View
+    public function index(): RedirectResponse
     {
-        $query = ReporteItem::query()
-            ->with(['reporte.creator'])
-            ->whereHas('reporte')
-            ->when($request->filled('busca'), function ($q) use ($request) {
-                $busca = '%'.$request->busca.'%';
-                $q->where(function ($q) use ($busca) {
-                    $q->where('prefixo', 'like', $busca)
-                        ->orWhereHas('reporte', fn ($r) => $r->where('nome', 'like', $busca)
-                            ->orWhere('numero_reporte', 'like', $busca));
-                });
-            })
-            ->when($request->filled('status'), fn ($q) => $q->whereHas('reporte', fn ($r) => $r->where('status', $request->status)))
-            ->when($request->filled('data_inicio'), fn ($q) => $q->whereHas('reporte', fn ($r) => $r->whereDate('data_hora_emissao', '>=', $request->data_inicio)))
-            ->when($request->filled('data_fim'), fn ($q) => $q->whereHas('reporte', fn ($r) => $r->whereDate('data_hora_emissao', '<=', $request->data_fim)))
-            ->orderByDesc(
-                Reporte::select('data_hora_emissao')
-                    ->whereColumn('reportes.id', 'reporte_itens.reporte_id')
-                    ->limit(1)
-            );
-
-        if ($request->boolean('export')) {
-            $this->export($query->get());
-        }
-
-        $itens = $query->paginate(10)->withQueryString();
-        $statusOperacionais = StatusOperacional::where('status', true)->orderBy('nome')->get();
-        $prefixosMotorizados = Equipamento::where('tipo_id', 1)
-            ->whereNull('deleted_at')
-            ->orderBy('prefixo')
-            ->get(['prefixo', 'placa']);
-
-        return view('reportes.index', compact('itens', 'statusOperacionais', 'prefixosMotorizados'));
+        return redirect()->route('control-tower.index');
     }
 
     public function create(): View
@@ -108,7 +77,7 @@ class ReporteController extends Controller
             ? 'Rascunho salvo com sucesso.'
             : 'Reporte publicado com sucesso.';
 
-        return redirect()->route('reportes.index')->with('success', $msg);
+        return redirect()->route('control-tower.index')->with('success', $msg);
     }
 
     public function show(Reporte $reporte): View
@@ -225,14 +194,14 @@ class ReporteController extends Controller
             ? 'Rascunho atualizado com sucesso.'
             : 'Reporte atualizado com sucesso.';
 
-        return redirect()->route('reportes.index')->with('success', $msg);
+        return redirect()->route('control-tower.index')->with('success', $msg);
     }
 
     public function destroy(Reporte $reporte): RedirectResponse
     {
         $reporte->delete();
 
-        return redirect()->route('reportes.index')->with('success', 'Reporte excluído com sucesso.');
+        return redirect()->route('control-tower.index')->with('success', 'Reporte excluído com sucesso.');
     }
 
     private function export(Collection $itens): never
