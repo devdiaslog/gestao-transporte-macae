@@ -22,10 +22,8 @@ class TipoEtapaSeeder extends Seeder
 
     public function run(): void
     {
-        TipoEtapa::truncate();
-
         foreach ($this->tipos as $nome) {
-            TipoEtapa::create(['nome' => $nome, 'ativo' => true]);
+            TipoEtapa::firstOrCreate(['nome' => $nome], ['ativo' => true]);
         }
     }
 }

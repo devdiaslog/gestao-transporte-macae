@@ -62,10 +62,8 @@ class LocalEtapaSeeder extends Seeder
 
     public function run(): void
     {
-        LocalEtapa::truncate();
-
         foreach ($this->locais as $nome) {
-            LocalEtapa::create(['nome' => $nome, 'ativo' => true]);
+            LocalEtapa::firstOrCreate(['nome' => $nome], ['ativo' => true]);
         }
     }
 }
