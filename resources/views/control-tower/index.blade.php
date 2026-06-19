@@ -99,6 +99,7 @@
                         ['col' => 'placa',           'label' => 'Placa'],
                         ['col' => 'modelo',          'label' => 'Modelo / Implemento'],
                         ['col' => 'etapa',           'label' => 'Etapa'],
+                        ['col' => 'tp-etapa',        'label' => 'Tp Etapa'],
                         ['col' => 'status-op',       'label' => 'Status'],
                         ['col' => 'tempo-status',    'label' => 'Rastreador'],
                         ['col' => 'cerca',           'label' => 'Cerca'],
@@ -366,6 +367,11 @@
                             <th data-col="etapa" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Etapa
                             </th>
+                            <th data-col="tp-etapa" data-sortable="tp-etapa"
+                                class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap cursor-pointer select-none hover:text-zinc-600 dark:hover:text-zinc-400"
+                                onclick="sortTableByCol('tp-etapa')">
+                                Tp Etapa <span id="sort-icon-tp-etapa" class="ml-0.5 opacity-40">↕</span>
+                            </th>
                             <th data-col="tempo-status" data-sortable="tempo-status"
                                 class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap cursor-pointer select-none hover:text-zinc-600 dark:hover:text-zinc-400"
                                 onclick="sortTableByCol('tempo-status')">
@@ -535,6 +541,21 @@
                                     ? ($ultimaEtapa->tipoEtapa?->nome ?? '?') . ' · ' . ($ultimaEtapa->cerca?->nome ?? '?')
                                       . ' (' . ($etapaAberta ? 'aberta' : 'fechada') . ')'
                                     : 'Sem etapa';
+
+                                // Tp Etapa — duração da última etapa: agora-início (aberta) ou fim-início (fechada)
+                                $tpEtapaMins = $ultimaEtapa
+                                    ? (int) $ultimaEtapa->data_hora_inicio->setTimezone($tz)->diffInMinutes(
+                                        $etapaAberta ? now() : $ultimaEtapa->data_hora_fim->setTimezone($tz)
+                                    )
+                                    : null;
+                                if ($tpEtapaMins !== null) {
+                                    $ted = intdiv($tpEtapaMins, 1440);
+                                    $teh = intdiv($tpEtapaMins % 1440, 60);
+                                    $tem = $tpEtapaMins % 60;
+                                    $tpEtapaDuration = $ted > 0 ? "{$ted}d {$teh}h {$tem}m" : ($teh > 0 ? "{$teh}h {$tem}m" : "{$tem}m");
+                                } else {
+                                    $tpEtapaDuration = null;
+                                }
                             @endphp
 
                             {{-- ─── Data row ──────────────────────────────── --}}
@@ -651,6 +672,17 @@
                                                 @endif
                                             </div>
                                         </a>
+                                    @else
+                                        <span class="text-zinc-300 dark:text-zinc-700">—</span>
+                                    @endif
+                                </td>
+
+                                <td data-col="tp-etapa" class="px-3 py-2 whitespace-nowrap" data-mins="{{ $tpEtapaMins ?? 0 }}">
+                                    @if($tpEtapaDuration !== null)
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="h-1.5 w-1.5 rounded-full {{ $etapaAberta ? 'bg-emerald-500' : 'bg-zinc-400' }}"></span>
+                                            <span class="text-xs text-zinc-700 dark:text-zinc-300">{{ $tpEtapaDuration }}</span>
+                                        </div>
                                     @else
                                         <span class="text-zinc-300 dark:text-zinc-700">—</span>
                                     @endif
@@ -1172,7 +1204,7 @@
     (function () {
         // ─── Column visibility (localStorage) ──────────────────────────────
         var STORE_KEY     = 'ct_hidden_cols';
-        var ALL_COLS      = ['placa', 'modelo', 'etapa', 'status-op', 'tempo-status', 'cerca', 'tempo-cerca', 'condutor', 'documento', 'obs', 'divisao'];
+        var ALL_COLS      = ['placa', 'modelo', 'etapa', 'tp-etapa', 'status-op', 'tempo-status', 'cerca', 'tempo-cerca', 'condutor', 'documento', 'obs', 'divisao'];
         var DEFAULT_HIDDEN = ['placa', 'modelo', 'status-op', 'tempo-status', 'cerca', 'tempo-cerca', 'condutor', 'divisao'];
 
         function hiddenCols() {
@@ -1204,7 +1236,7 @@
 
         // ─── Sort de colunas ────────────────────────────────────────────────
         var _sortState = {}; // col → 'asc' | 'desc'
-        var _SORT_COLS  = ['tempo-status', 'tempo-cerca', 'cerca'];
+        var _SORT_COLS  = ['tempo-status', 'tempo-cerca', 'cerca', 'tp-etapa'];
 
         // Prioridade de agrupamento: Parado → Desconhecido → Em Movimento → demais
         var _STATE_PRIORITY = { 'Parado': 0, 'Desconhecido': 1, 'Em Movimento': 2 };
@@ -1244,6 +1276,13 @@
                     if (nA && !nB) { return -1; }
                     if (nA === nB) { return 0; }
                     return dir === 'asc' ? nA.localeCompare(nB) : nB.localeCompare(nA);
+                }
+
+                if (col === 'tp-etapa') {
+                    // Ordenação direta por duração da etapa, sem agrupamento por status do rastreador
+                    var mA = tdA ? parseInt(tdA.getAttribute('data-mins') || '0', 10) : 0;
+                    var mB = tdB ? parseInt(tdB.getAttribute('data-mins') || '0', 10) : 0;
+                    return dir === 'asc' ? mA - mB : mB - mA;
                 }
 
                 // Colunas de tempo: agrupa por status, depois ordena por minutos
