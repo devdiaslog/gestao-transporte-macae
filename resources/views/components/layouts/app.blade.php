@@ -403,19 +403,18 @@
 <script>
 (function () {
     // ── Sidebar collapse (desktop) ───────────────────────────────────────────
-    var COLLAPSED_KEY = 'sidebar-collapsed';
     var sidebar     = document.getElementById('sidebar');
     var mainWrapper = document.getElementById('main-wrapper');
     var overlay     = document.getElementById('sidebar-overlay');
     var logoEl      = document.getElementById('sidebar-logo');
     var profileBtn  = document.getElementById('profile-btn');
 
+    // Sempre fechado ao carregar a página — sem persistência em localStorage
+    var _collapsed = true;
+
     function isDesktop() { return window.innerWidth >= 1024; }
 
-    function isCollapsed() {
-        var val = localStorage.getItem(COLLAPSED_KEY);
-        return val === null ? true : val === 'true';
-    }
+    function isCollapsed() { return _collapsed; }
 
     function applySidebarState(collapsed) {
         if (collapsed) {
@@ -478,9 +477,8 @@
     }
 
     function toggleSidebar() {
-        var collapsed = !isCollapsed();
-        localStorage.setItem(COLLAPSED_KEY, String(collapsed));
-        applySidebarState(collapsed);
+        _collapsed = !_collapsed;
+        applySidebarState(_collapsed);
     }
 
     // ── Mobile off-canvas ────────────────────────────────────────────────────
