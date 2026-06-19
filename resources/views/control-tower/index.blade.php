@@ -416,7 +416,7 @@
                                     $equipamento->divisao?->nome,
                                     $impNome,
                                     $ultimaEtapa?->tipoEtapa?->nome,
-                                    $ultimaEtapa?->localEtapa?->nome,
+                                    $ultimaEtapa?->cerca?->nome,
                                     $ultimaEtapa?->motorista?->nome,
                                     $ultimaEtapa?->documento,
                                 ]));
@@ -532,7 +532,7 @@
                                     : null;
                                 $etapaAberta      = $ultimaEtapa && is_null($ultimaEtapa->data_hora_fim);
                                 $etapaLabel       = $horasDesdeEtapa !== null
-                                    ? ($ultimaEtapa->tipoEtapa?->nome ?? '?') . ' · ' . ($ultimaEtapa->localEtapa?->nome ?? '?')
+                                    ? ($ultimaEtapa->tipoEtapa?->nome ?? '?') . ' · ' . ($ultimaEtapa->cerca?->nome ?? '?')
                                       . ' (' . ($etapaAberta ? 'aberta' : 'fechada') . ')'
                                     : 'Sem etapa';
                             @endphp
@@ -629,7 +629,7 @@
                                     @if($ultimaEtapa)
                                         @php
                                             $etapaTipoNome  = $ultimaEtapa->tipoEtapa?->nome ?? '—';
-                                            $etapaLocalNome = $ultimaEtapa->localEtapa?->nome ?? '—';
+                                            $etapaLocalNome = $ultimaEtapa->cerca?->nome ?? '—';
                                             $etapaInicioFmt = $ultimaEtapa->data_hora_inicio->setTimezone($tz)->format('d/m H:i');
                                         @endphp
                                         <a href="{{ route('etapas.veiculo', $equipamento) }}"

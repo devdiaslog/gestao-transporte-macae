@@ -10,6 +10,7 @@ use App\Models\Equipamento;
 use App\Models\Etapa;
 use App\Models\Motorista;
 use App\Models\TipoEtapa;
+use App\Services\GeofencingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -43,7 +44,9 @@ class EtapaController extends Controller
             ->latest('data_hora_inicio')
             ->first();
 
-        return view('etapas.veiculo', compact('equipamento', 'etapas', 'tipos', 'cercas', 'motoristas', 'ultimaEtapa'));
+        $cercaAtual = $this->localizarCercaAtual($equipamento);
+
+        return view('etapas.veiculo', compact('equipamento', 'etapas', 'tipos', 'cercas', 'motoristas', 'ultimaEtapa', 'cercaAtual'));
     }
 
     public function store(StoreEtapaRequest $request): RedirectResponse
@@ -107,5 +110,27 @@ class EtapaController extends Controller
         $etapa->delete();
 
         return redirect()->back()->with('success', 'Etapa removida com sucesso.');
+    }
+
+    /** Verifica, com base na posição GPS atual, se o veículo está dentro de alguma cerca cadastrada. */
+    private function localizarCercaAtual(Equipamento $equipamento): ?Cerca
+    {
+        $lat = $equipamento->posicao?->latitude;
+        $lng = $equipamento->posicao?->longitude;
+
+        if (! $lat || ! $lng) {
+            return null;
+        }
+
+        $geofencing = new GeofencingService;
+
+        return Cerca::query()
+            ->where('status', true)
+            ->whereNotNull('poligono')
+            ->get()
+            ->first(fn (Cerca $cerca) => is_array($cerca->poligono)
+                && count($cerca->poligono) >= 3
+                && $geofencing->pontoDentro((float) $lat, (float) $lng, $cerca->poligono)
+            );
     }
 }

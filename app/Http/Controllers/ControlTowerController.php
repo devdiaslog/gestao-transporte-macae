@@ -172,7 +172,7 @@ class ControlTowerController extends Controller
 
         // Última etapa por equipamento
         $ultimasEtapas = Etapa::query()
-            ->with(['tipoEtapa', 'localEtapa', 'motorista'])
+            ->with(['tipoEtapa', 'cerca', 'motorista'])
             ->whereIn('equipamento_id', $equipamentoIds)
             ->latest('data_hora_inicio')
             ->get()

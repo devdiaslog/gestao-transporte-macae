@@ -518,6 +518,17 @@
                                 Anterior: <span class="font-medium">{{ $ultimaEtapa->cerca->nome }}</span>
                             </button>
                         @endif
+                        @if($cercaAtual)
+                            <button type="button"
+                                    onclick="window._comboCerca.setValue('{{ $cercaAtual->id }}')"
+                                    class="flex items-center gap-1 text-[11px] text-zinc-400 transition-colors hover:text-indigo-600 dark:hover:text-indigo-400">
+                                <svg class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+                                </svg>
+                                Localizar veículo: <span class="font-medium">{{ $cercaAtual->nome }}</span>
+                            </button>
+                        @endif
                     </div>
 
                     {{-- Condutor --}}
@@ -797,6 +808,17 @@
                             </svg>
                             Anterior: <span id="fin-hint-cerca-nome" class="font-medium ml-0.5"></span>
                         </button>
+                        @if($cercaAtual)
+                            <button type="button"
+                                    onclick="finComboCerca.setValue('{{ $cercaAtual->id }}')"
+                                    class="flex items-center gap-1 text-[11px] text-zinc-400 transition-colors hover:text-indigo-600 dark:hover:text-indigo-400">
+                                <svg class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+                                </svg>
+                                Localizar veículo: <span class="font-medium">{{ $cercaAtual->nome }}</span>
+                            </button>
+                        @endif
                     </div>
 
                     {{-- Condutor — 50% --}}
