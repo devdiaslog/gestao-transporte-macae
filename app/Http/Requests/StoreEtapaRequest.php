@@ -23,7 +23,7 @@ class StoreEtapaRequest extends FormRequest
         return [
             'equipamento_id' => ['required', 'integer', 'exists:equipamentos,id'],
             'tipo_etapa_id' => ['required', 'integer', 'exists:tipo_etapas,id', $this->validarTipoLocalUnico()],
-            'local_etapa_id' => ['required', 'integer', 'exists:local_etapas,id'],
+            'cerca_id' => ['required', 'integer', 'exists:cercas,id'],
             'motorista_id' => ['nullable', 'integer', 'exists:motoristas,id'],
             'documento' => ['nullable', 'string', 'max:100'],
             'data_hora_inicio' => [
@@ -45,7 +45,7 @@ class StoreEtapaRequest extends FormRequest
     {
         return [
             'tipo_etapa_id.required' => 'O tipo de etapa é obrigatório.',
-            'local_etapa_id.required' => 'O local é obrigatório.',
+            'cerca_id.required' => 'A cerca é obrigatória.',
             'data_hora_inicio.required' => 'A data/hora de início é obrigatória.',
             'data_hora_inicio.before_or_equal' => 'A data/hora de início não pode ser no futuro.',
             'data_hora_fim.after' => 'A data/hora de fim deve ser posterior ao início.',
@@ -68,7 +68,7 @@ class StoreEtapaRequest extends FormRequest
     }
 
     /**
-     * Bloqueia se a última etapa do veículo já possui o mesmo tipo e local,
+     * Bloqueia se a última etapa do veículo já possui o mesmo tipo e cerca,
      * evitando duplicação consecutiva acidental.
      */
     private function validarTipoLocalUnico(): Closure
@@ -77,14 +77,14 @@ class StoreEtapaRequest extends FormRequest
             $ultima = Etapa::query()
                 ->where('equipamento_id', $this->input('equipamento_id'))
                 ->latest('data_hora_inicio')
-                ->first(['tipo_etapa_id', 'local_etapa_id']);
+                ->first(['tipo_etapa_id', 'cerca_id']);
 
             if (
                 $ultima
                 && (int) $ultima->tipo_etapa_id === (int) $value
-                && (int) $ultima->local_etapa_id === (int) $this->input('local_etapa_id')
+                && (int) $ultima->cerca_id === (int) $this->input('cerca_id')
             ) {
-                $fail('A etapa anterior já possui o mesmo tipo e local. Verifique se não é um registro duplicado.');
+                $fail('A etapa anterior já possui o mesmo tipo e cerca. Verifique se não é um registro duplicado.');
             }
         };
     }

@@ -16,7 +16,7 @@ class Etapa extends Model
     protected $fillable = [
         'equipamento_id',
         'tipo_etapa_id',
-        'local_etapa_id',
+        'cerca_id',
         'motorista_id',
         'documento',
         'data_hora_inicio',
@@ -48,9 +48,9 @@ class Etapa extends Model
         return $this->belongsTo(TipoEtapa::class);
     }
 
-    public function localEtapa(): BelongsTo
+    public function cerca(): BelongsTo
     {
-        return $this->belongsTo(LocalEtapa::class);
+        return $this->belongsTo(Cerca::class);
     }
 
     public function motorista(): BelongsTo

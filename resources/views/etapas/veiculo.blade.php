@@ -179,7 +179,7 @@
                     <thead>
                         <tr class="border-b border-slate-200 dark:border-zinc-800">
                             <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Etapa</th>
-                            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Local</th>
+                            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Cerca</th>
                             <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Status</th>
                             <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Início</th>
                             <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Fim</th>
@@ -198,7 +198,7 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-zinc-600 dark:text-zinc-400">
-                                    {{ $etapa->localEtapa?->nome ?? '—' }}
+                                    {{ $etapa->cerca?->nome ?? '—' }}
                                 </td>
                                 <td class="px-6 py-4">
                                     @if($etapa->data_hora_fim)
@@ -237,7 +237,7 @@
                                                     'id'               => $etapa->getRouteKey(),
                                                     'veiculo'          => ($equipamento->placa).($equipamento->prefixo ? ' — '.$equipamento->prefixo : ''),
                                                     'tipo'             => $etapa->tipoEtapa?->nome ?? '—',
-                                                    'local'            => $etapa->localEtapa?->nome ?? '—',
+                                                    'cerca'            => $etapa->cerca?->nome ?? '—',
                                                     'status'           => $etapa->data_hora_fim ? 'Finalizado' : 'Em Aberto',
                                                     'data_hora_inicio' => $etapa->data_hora_inicio->format('d/m/Y H:i'),
                                                     'data_hora_fim'    => $etapa->data_hora_fim?->format('d/m/Y H:i') ?? '—',
@@ -266,10 +266,10 @@
                                                     data-finalizar="{{ json_encode([
                                                         'id'               => $etapa->getRouteKey(),
                                                         'tipo'             => $etapa->tipoEtapa?->nome ?? '—',
-                                                        'local'            => $etapa->localEtapa?->nome ?? '—',
+                                                        'cerca'            => $etapa->cerca?->nome ?? '—',
                                                         'inicio'           => $etapa->data_hora_inicio->format('d/m/Y H:i'),
                                                         'inicio_iso'       => $etapa->data_hora_inicio->format('Y-m-d\TH:i'),
-                                                        'local_etapa_id'   => $etapa->local_etapa_id,
+                                                        'cerca_id'   => $etapa->cerca_id,
                                                         'motorista_id'     => $etapa->motorista_id,
                                                         'motorista_nome'   => $etapa->motorista?->nome ?? '',
                                                         'documento'        => $etapa->documento ?? '',
@@ -292,7 +292,7 @@
                                                 data-etapa="{{ json_encode([
                                                     'id'               => $etapa->getRouteKey(),
                                                     'tipo_etapa_id'    => $etapa->tipo_etapa_id,
-                                                    'local_etapa_id'   => $etapa->local_etapa_id,
+                                                    'cerca_id'   => $etapa->cerca_id,
                                                     'motorista_id'     => $etapa->motorista_id,
                                                     'documento'        => $etapa->documento,
                                                     'data_hora_inicio' => $etapa->data_hora_inicio?->format('Y-m-d\TH:i'),
@@ -376,8 +376,8 @@
                     <p id="view-tipo" class="mt-1 text-sm text-zinc-700 dark:text-zinc-300"></p>
                 </div>
                 <div>
-                    <p class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Local</p>
-                    <p id="view-local" class="mt-1 text-sm text-zinc-700 dark:text-zinc-300"></p>
+                    <p class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Cerca</p>
+                    <p id="view-cerca" class="mt-1 text-sm text-zinc-700 dark:text-zinc-300"></p>
                 </div>
                 <div>
                     <p class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Condutor</p>
@@ -487,35 +487,35 @@
                         @enderror
                     </div>
 
-                    {{-- Local --}}
+                    {{-- Cerca --}}
                     <div class="space-y-1.5 sm:col-span-2 sm:col-start-3">
                         <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                            Local <span class="text-red-500">*</span>
+                            Cerca <span class="text-red-500">*</span>
                         </label>
-                        <div class="relative" id="combo-local-wrapper">
-                            <input type="hidden" id="modal-local-etapa" name="local_etapa_id">
-                            <input type="text" id="combo-local-search" autocomplete="off"
+                        <div class="relative" id="combo-cerca-wrapper">
+                            <input type="hidden" id="modal-cerca" name="cerca_id">
+                            <input type="text" id="combo-cerca-search" autocomplete="off"
                                    placeholder="Selecione ou filtre…"
                                    class="block w-full rounded-lg border px-3.5 py-2.5 text-sm shadow-xs outline-none transition-all duration-200 focus:ring-2
                                           bg-white text-zinc-900 placeholder:text-zinc-400 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500
-                                          {{ $errors->has('local_etapa_id') ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10 dark:border-red-700' : 'border-slate-300 focus:border-zinc-900 focus:ring-zinc-900/10 dark:border-zinc-700 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10' }}">
-                            <div id="combo-local-dropdown"
+                                          {{ $errors->has('cerca_id') ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10 dark:border-red-700' : 'border-slate-300 focus:border-zinc-900 focus:ring-zinc-900/10 dark:border-zinc-700 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10' }}">
+                            <div id="combo-cerca-dropdown"
                                  class="absolute z-[60] mt-1 hidden w-full overflow-hidden rounded-lg border shadow-lg
                                         border-slate-200 bg-white dark:border-zinc-700 dark:bg-zinc-800">
-                                <div id="combo-local-list" class="max-h-48 overflow-y-auto"></div>
+                                <div id="combo-cerca-list" class="max-h-48 overflow-y-auto"></div>
                             </div>
                         </div>
-                        @error('local_etapa_id')
+                        @error('cerca_id')
                             <p class="modal-field-error text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
                         @enderror
-                        @if($ultimaEtapa?->localEtapa)
+                        @if($ultimaEtapa?->cerca)
                             <button type="button"
-                                    onclick="window._comboLocal.setValue('{{ $ultimaEtapa->local_etapa_id }}')"
+                                    onclick="window._comboCerca.setValue('{{ $ultimaEtapa->cerca_id }}')"
                                     class="anterior-hint flex items-center gap-1 text-[11px] text-zinc-400 transition-colors hover:text-indigo-600 dark:hover:text-indigo-400">
                                 <svg class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m15 19-7-7 7-7"/>
                                 </svg>
-                                Anterior: <span class="font-medium">{{ $ultimaEtapa->localEtapa->nome }}</span>
+                                Anterior: <span class="font-medium">{{ $ultimaEtapa->cerca->nome }}</span>
                             </button>
                         @endif
                     </div>
@@ -769,33 +769,33 @@
                         @enderror
                     </div>
 
-                    {{-- Local --}}
+                    {{-- Cerca --}}
                     <div class="space-y-1.5 sm:col-span-2">
                         <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                            Local <span class="text-red-500">*</span>
+                            Cerca <span class="text-red-500">*</span>
                         </label>
-                        <div class="relative" id="fin-combo-local-wrapper">
-                            <input type="hidden" id="fin-local-etapa" name="proxima_local_etapa_id">
-                            <input type="text" id="fin-combo-local-search" autocomplete="off"
+                        <div class="relative" id="fin-combo-cerca-wrapper">
+                            <input type="hidden" id="fin-cerca" name="proxima_cerca_id">
+                            <input type="text" id="fin-combo-cerca-search" autocomplete="off"
                                    placeholder="Selecione ou filtre…"
                                    class="block w-full rounded-lg border px-3.5 py-2.5 text-sm shadow-xs outline-none transition-all duration-200 focus:ring-2
                                           bg-white text-zinc-900 placeholder:text-zinc-400 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500
                                           border-slate-300 focus:border-zinc-900 focus:ring-zinc-900/10 dark:border-zinc-700 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                            <div id="fin-combo-local-dropdown"
+                            <div id="fin-combo-cerca-dropdown"
                                  class="absolute z-[60] mt-1 hidden w-full overflow-hidden rounded-lg border shadow-lg
                                         border-slate-200 bg-white dark:border-zinc-700 dark:bg-zinc-800">
-                                <div id="fin-combo-local-list" class="max-h-48 overflow-y-auto"></div>
+                                <div id="fin-combo-cerca-list" class="max-h-48 overflow-y-auto"></div>
                             </div>
                         </div>
-                        @error('proxima_local_etapa_id')
+                        @error('proxima_cerca_id')
                             <p class="fin-field-error text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
                         @enderror
-                        <button type="button" id="fin-hint-local" style="display:none"
+                        <button type="button" id="fin-hint-cerca" style="display:none"
                                 class="flex items-center gap-1 text-[11px] text-zinc-400 transition-colors hover:text-indigo-600 dark:hover:text-indigo-400">
                             <svg class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m15 19-7-7 7-7"/>
                             </svg>
-                            Anterior: <span id="fin-hint-local-nome" class="font-medium ml-0.5"></span>
+                            Anterior: <span id="fin-hint-cerca-nome" class="font-medium ml-0.5"></span>
                         </button>
                     </div>
 
@@ -934,7 +934,7 @@
 
         var errorBorderClasses  = ['border-red-400', 'focus:border-red-500', 'focus:ring-red-500/10', 'dark:border-red-700'];
         var normalBorderClasses = ['border-slate-300', 'focus:border-zinc-900', 'focus:ring-zinc-900/10', 'dark:border-zinc-700', 'dark:focus:border-zinc-400', 'dark:focus:ring-zinc-400/10'];
-        var modalFieldIds       = ['combo-tipo-search', 'combo-local-search', 'combo-motorista-search', 'modal-documento', 'modal-data-inicio', 'modal-data-fim', 'modal-observacao'];
+        var modalFieldIds       = ['combo-tipo-search', 'combo-cerca-search', 'combo-motorista-search', 'modal-documento', 'modal-data-inicio', 'modal-data-fim', 'modal-observacao'];
 
         // ─── Combobox filtrável ───────────────────────────────────────────────────
         function makeCombobox(hiddenId, searchId, dropdownId, listId, items) {
@@ -1085,16 +1085,16 @@
         }
 
         var tipoItems      = @json($tipos->map(fn($t) => ['value' => $t->id, 'label' => titulo($t->nome)]));
-        var localItems     = @json($locais->map(fn($l) => ['value' => $l->id, 'label' => $l->nome]));
+        var cercaItems     = @json($cercas->map(fn($l) => ['value' => $l->id, 'label' => $l->nome]));
         var motoristaItems = @json($motoristas->map(fn($m) => ['value' => $m->id, 'label' => titulo($m->nome)]));
         motoristaItems.unshift({ value: '', label: '— Nenhum —' });
 
         var comboTipo      = makeCombobox('modal-tipo-etapa',  'combo-tipo-search',      'combo-tipo-dropdown',      'combo-tipo-list',      tipoItems);
-        var comboLocal     = makeCombobox('modal-local-etapa', 'combo-local-search',     'combo-local-dropdown',     'combo-local-list',     localItems);
+        var comboCerca     = makeCombobox('modal-cerca', 'combo-cerca-search',     'combo-cerca-dropdown',     'combo-cerca-list',     cercaItems);
         var comboMotorista = makeCombobox('modal-motorista',   'combo-motorista-search', 'combo-motorista-dropdown', 'combo-motorista-list', motoristaItems);
 
         // Expõe para uso nos hints de anterior (onclick inline no Blade)
-        window._comboLocal     = comboLocal;
+        window._comboCerca     = comboCerca;
         window._comboMotorista = comboMotorista;
 
         function clearModalErrors() {
@@ -1110,7 +1110,7 @@
         function resetForm() {
             document.getElementById('modal-id-etapa').value   = '';
             comboTipo.clear();
-            comboLocal.clear();
+            comboCerca.clear();
             comboMotorista.clear();
             document.getElementById('modal-documento').value   = '';
             document.getElementById('modal-data-inicio').value = '';
@@ -1137,12 +1137,12 @@
 
         // ─── Modal Finalizar ─────────────────────────────────────────────────────
         var finComboTipo      = null;
-        var finComboLocal     = null;
+        var finComboCerca     = null;
         var finComboMotorista = null;
 
         (function initFinalizarCombos() {
             finComboTipo      = makeCombobox('fin-tipo-etapa',  'fin-combo-tipo-search',      'fin-combo-tipo-dropdown',      'fin-combo-tipo-list',      @json($tipos->map(fn($t) => ['value' => $t->id, 'label' => $t->nome])));
-            finComboLocal     = makeCombobox('fin-local-etapa', 'fin-combo-local-search',     'fin-combo-local-dropdown',     'fin-combo-local-list',     @json($locais->map(fn($l) => ['value' => $l->id, 'label' => $l->nome])));
+            finComboCerca     = makeCombobox('fin-cerca', 'fin-combo-cerca-search',     'fin-combo-cerca-dropdown',     'fin-combo-cerca-list',     @json($cercas->map(fn($l) => ['value' => $l->id, 'label' => $l->nome])));
             finComboMotorista = makeCombobox('fin-motorista',   'fin-combo-motorista-search', 'fin-combo-motorista-dropdown', 'fin-combo-motorista-list', @json($motoristas->map(fn($m) => ['value' => $m->id, 'label' => $m->nome])));
         })();
 
@@ -1201,7 +1201,7 @@
             document.getElementById('finalizar-subtitulo').textContent =
                 '{{ $equipamento->placa }}{{ $equipamento->prefixo ? ' — '.$equipamento->prefixo : '' }}';
             document.getElementById('finalizar-etapa-info').textContent =
-                data.tipo + ' · ' + data.local + ' · Início: ' + data.inicio;
+                data.tipo + ' · ' + data.cerca + ' · Início: ' + data.inicio;
 
             // Guarda início para cálculo de longa duração
             _finInicioISO = data.inicio_iso || '';
@@ -1214,21 +1214,21 @@
             document.getElementById('fin-documento').value      = '';
             document.getElementById('fin-observacao').value     = '';
             finComboTipo.clear();
-            finComboLocal.clear();
+            finComboCerca.clear();
             finComboMotorista.clear();
 
             // ── Hints "Anterior:" ─────────────────────────────────────────────
-            var hintLocal      = document.getElementById('fin-hint-local');
+            var hintCerca      = document.getElementById('fin-hint-cerca');
             var hintMotorista  = document.getElementById('fin-hint-motorista');
             var hintDocumento  = document.getElementById('fin-hint-documento');
             var hintObservacao = document.getElementById('fin-hint-observacao');
 
-            if (data.local_etapa_id && data.local) {
-                document.getElementById('fin-hint-local-nome').textContent = data.local;
-                hintLocal.style.display = '';
-                hintLocal.onclick = function () { finComboLocal.setValue(data.local_etapa_id); };
+            if (data.cerca_id && data.cerca) {
+                document.getElementById('fin-hint-cerca-nome').textContent = data.cerca;
+                hintCerca.style.display = '';
+                hintCerca.onclick = function () { finComboCerca.setValue(data.cerca_id); };
             } else {
-                hintLocal.style.display = 'none';
+                hintCerca.style.display = 'none';
             }
 
             if (data.motorista_id && data.motorista_nome) {
@@ -1301,7 +1301,7 @@
             document.getElementById('etapa-form').action                = updateBase + '/' + data.id;
 
             comboTipo.setValue(data.tipo_etapa_id   || '');
-            comboLocal.setValue(data.local_etapa_id  || '');
+            comboCerca.setValue(data.cerca_id  || '');
             comboMotorista.setValue(data.motorista_id || '');
             document.getElementById('modal-documento').value        = data.documento             || '';
             document.getElementById('modal-data-inicio').value      = data.data_hora_inicio      || '';
@@ -1337,7 +1337,7 @@
             document.getElementById('view-title').textContent      = 'Etapa';
             document.getElementById('view-veiculo').textContent    = data.veiculo;
             document.getElementById('view-tipo').textContent       = data.tipo;
-            document.getElementById('view-local').textContent      = data.local;
+            document.getElementById('view-cerca').textContent      = data.cerca;
             document.getElementById('view-condutor').textContent   = data.condutor;
             document.getElementById('view-inicio').textContent     = data.data_hora_inicio;
             document.getElementById('view-fim').textContent        = data.data_hora_fim;
@@ -1369,7 +1369,7 @@
             // Modal de finalização — identificado pelo campo exclusivo proxima_tipo_etapa_id
             if (old.proxima_tipo_etapa_id !== undefined) {
                 if (old.proxima_tipo_etapa_id)    { finComboTipo.setValue(old.proxima_tipo_etapa_id); }
-                if (old.proxima_local_etapa_id)   { finComboLocal.setValue(old.proxima_local_etapa_id); }
+                if (old.proxima_cerca_id)   { finComboCerca.setValue(old.proxima_cerca_id); }
                 if (old.proxima_motorista_id)     { finComboMotorista.setValue(old.proxima_motorista_id); }
                 if (old.proxima_documento)         { document.getElementById('fin-documento').value     = old.proxima_documento; }
                 if (old.proxima_data_hora_inicio)  { document.getElementById('fin-proxima-inicio').value = old.proxima_data_hora_inicio; }
@@ -1391,7 +1391,7 @@
             }
 
             if (old.tipo_etapa_id)  { comboTipo.setValue(old.tipo_etapa_id); }
-            if (old.local_etapa_id) { comboLocal.setValue(old.local_etapa_id); }
+            if (old.cerca_id) { comboCerca.setValue(old.cerca_id); }
             if (old.motorista_id)   { comboMotorista.setValue(old.motorista_id); }
             if (old.documento)        { document.getElementById('modal-documento').value   = old.documento; }
             if (old.data_hora_inicio) { document.getElementById('modal-data-inicio').value = old.data_hora_inicio; }

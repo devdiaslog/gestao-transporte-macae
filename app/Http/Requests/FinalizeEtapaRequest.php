@@ -31,7 +31,7 @@ class FinalizeEtapaRequest extends FormRequest
 
             // ── Próxima etapa ────────────────────────────────────────────────────
             'proxima_tipo_etapa_id' => ['required', 'integer', 'exists:tipo_etapas,id'],
-            'proxima_local_etapa_id' => ['required', 'integer', 'exists:local_etapas,id'],
+            'proxima_cerca_id' => ['required', 'integer', 'exists:cercas,id'],
             'proxima_motorista_id' => ['nullable', 'integer', 'exists:motoristas,id'],
             'proxima_documento' => ['nullable', 'string', 'max:100'],
             'proxima_data_hora_inicio' => [
@@ -52,7 +52,7 @@ class FinalizeEtapaRequest extends FormRequest
             'data_hora_fim.required' => 'Informe o horário de encerramento da etapa.',
             'data_hora_fim.before_or_equal' => 'O encerramento não pode ser no futuro.',
             'proxima_tipo_etapa_id.required' => 'Informe o tipo da próxima etapa.',
-            'proxima_local_etapa_id.required' => 'Informe o local da próxima etapa.',
+            'proxima_cerca_id.required' => 'Informe a cerca da próxima etapa.',
             'proxima_data_hora_inicio.required' => 'Informe o início da próxima etapa.',
             'proxima_data_hora_inicio.before_or_equal' => 'O início da próxima etapa não pode ser no futuro.',
         ];

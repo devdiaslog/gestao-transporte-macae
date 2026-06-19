@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Requests\FinalizeEtapaRequest;
 use App\Http\Requests\StoreEtapaRequest;
 use App\Http\Requests\UpdateEtapaRequest;
+use App\Models\Cerca;
 use App\Models\Equipamento;
 use App\Models\Etapa;
-use App\Models\LocalEtapa;
 use App\Models\Motorista;
 use App\Models\TipoEtapa;
 use Illuminate\Http\RedirectResponse;
@@ -21,7 +21,7 @@ class EtapaController extends Controller
     public function veiculo(Request $request, Equipamento $equipamento): View
     {
         $etapas = Etapa::query()
-            ->with(['tipoEtapa', 'localEtapa', 'motorista', 'emissor', 'finalizador', 'auditor'])
+            ->with(['tipoEtapa', 'cerca', 'motorista', 'emissor', 'finalizador', 'auditor'])
             ->where('equipamento_id', $equipamento->id)
             ->when($request->input('status') === 'finalizado', fn ($q) => $q->whereNotNull('data_hora_fim'))
             ->when($request->input('status') === 'aberto', fn ($q) => $q->whereNull('data_hora_fim'))
@@ -34,16 +34,16 @@ class EtapaController extends Controller
             ->withQueryString();
 
         $tipos = TipoEtapa::where('ativo', true)->orderBy('nome')->get();
-        $locais = LocalEtapa::where('ativo', true)->orderBy('nome')->get();
+        $cercas = Cerca::where('status', true)->orderBy('nome')->get();
         $motoristas = Motorista::where('status', true)->orderBy('nome')->get();
 
         $ultimaEtapa = Etapa::query()
-            ->with(['localEtapa', 'motorista'])
+            ->with(['cerca', 'motorista'])
             ->where('equipamento_id', $equipamento->id)
             ->latest('data_hora_inicio')
             ->first();
 
-        return view('etapas.veiculo', compact('equipamento', 'etapas', 'tipos', 'locais', 'motoristas', 'ultimaEtapa'));
+        return view('etapas.veiculo', compact('equipamento', 'etapas', 'tipos', 'cercas', 'motoristas', 'ultimaEtapa'));
     }
 
     public function store(StoreEtapaRequest $request): RedirectResponse
@@ -72,7 +72,7 @@ class EtapaController extends Controller
             Etapa::create([
                 'equipamento_id' => $etapa->equipamento_id,
                 'tipo_etapa_id' => $request->proxima_tipo_etapa_id,
-                'local_etapa_id' => $request->proxima_local_etapa_id,
+                'cerca_id' => $request->proxima_cerca_id,
                 'motorista_id' => $request->proxima_motorista_id ?: null,
                 'documento' => $request->proxima_documento ?: null,
                 'data_hora_inicio' => $request->proxima_data_hora_inicio,

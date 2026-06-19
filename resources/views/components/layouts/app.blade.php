@@ -71,7 +71,7 @@
             $canManageUsers = $isAdmin;
             $canManageCadastros = $isAdmin || $isSupervisor;
             $canManageSupportTables = $isAdmin || $isSupervisor;
-            $isCadastrosActive = request()->routeIs('users.*', 'divisoes.*', 'subdivisoes.*', 'equipamentos.*', 'tipos-equipamentos.*', 'modelos-equipamentos.*', 'motoristas.*', 'tipos-etapa.*', 'locais-etapa.*');
+            $isCadastrosActive = request()->routeIs('users.*', 'divisoes.*', 'subdivisoes.*', 'equipamentos.*', 'tipos-equipamentos.*', 'modelos-equipamentos.*', 'motoristas.*', 'tipos-etapa.*');
             $isOcorrenciasActive = request()->routeIs('responsaveis.*', 'tipos-ocorrencia.*', 'justificativas.*', 'ocorrencias.*');
             $isReporteActive     = request()->routeIs('reportes.*');
         @endphp
@@ -170,7 +170,7 @@
                     </a>
                     @endif
 
-                    {{-- Etapas: tipos e locais — apenas Admin e Supervisor --}}
+                    {{-- Etapas: tipos — apenas Admin e Supervisor --}}
                     @if($canManageSupportTables)
                     <div class="mt-1 border-t border-slate-100 pt-1 dark:border-zinc-800/60"></div>
                     <a href="{{ route('tipos-etapa.index') }}"
@@ -178,12 +178,6 @@
                               transition-all duration-200
                               {{ request()->routeIs('tipos-etapa.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Tipos de Etapa
-                    </a>
-                    <a href="{{ route('locais-etapa.index') }}"
-                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
-                              transition-all duration-200
-                              {{ request()->routeIs('locais-etapa.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
-                        Locais de Etapa
                     </a>
                     @endif
                 </div>

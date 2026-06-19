@@ -8,7 +8,6 @@ use App\Http\Controllers\DivisaoController;
 use App\Http\Controllers\EquipamentoController;
 use App\Http\Controllers\EtapaController;
 use App\Http\Controllers\JustificativaController;
-use App\Http\Controllers\LocalEtapaController;
 use App\Http\Controllers\MetricasController;
 use App\Http\Controllers\ModeloEquipamentoController;
 use App\Http\Controllers\MotoristaController;
@@ -137,6 +136,5 @@ Route::middleware('auth')->group(function () {
 
         // Tabelas de apoio de etapas
         Route::resource('tipos-etapa', TipoEtapaController::class)->except(['show', 'create', 'edit'])->parameters(['tipos-etapa' => 'tipoEtapa']);
-        Route::resource('locais-etapa', LocalEtapaController::class)->except(['show', 'create', 'edit'])->parameters(['locais-etapa' => 'localEtapa']);
     });
 });

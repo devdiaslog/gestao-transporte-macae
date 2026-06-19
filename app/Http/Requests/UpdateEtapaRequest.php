@@ -22,7 +22,7 @@ class UpdateEtapaRequest extends FormRequest
     {
         return [
             'tipo_etapa_id' => ['required', 'integer', 'exists:tipo_etapas,id'],
-            'local_etapa_id' => ['required', 'integer', 'exists:local_etapas,id'],
+            'cerca_id' => ['required', 'integer', 'exists:cercas,id'],
             'motorista_id' => ['nullable', 'integer', 'exists:motoristas,id'],
             'documento' => ['nullable', 'string', 'max:100'],
             'data_hora_inicio' => [
@@ -48,7 +48,7 @@ class UpdateEtapaRequest extends FormRequest
     {
         return [
             'tipo_etapa_id.required' => 'O tipo de etapa é obrigatório.',
-            'local_etapa_id.required' => 'O local é obrigatório.',
+            'cerca_id.required' => 'A cerca é obrigatória.',
             'data_hora_inicio.required' => 'A data/hora de início é obrigatória.',
             'data_hora_inicio.before_or_equal' => 'A data/hora de início não pode ser no futuro.',
             'data_hora_fim.after' => 'A data/hora de fim deve ser posterior ao início.',
