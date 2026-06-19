@@ -1309,7 +1309,9 @@
         var counter    = document.getElementById('row-counter');
 
         function updateCounter(visible) {
-            counter.textContent = visible + ' / ' + allRows.length + ' equipamentos';
+            if (counter) {
+                counter.textContent = visible + ' / ' + allRows.length + ' equipamentos';
+            }
         }
         updateCounter(allRows.length);
 
