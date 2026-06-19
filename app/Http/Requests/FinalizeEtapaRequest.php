@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Etapa;
+use App\Models\TipoEtapa;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -31,7 +32,7 @@ class FinalizeEtapaRequest extends FormRequest
 
             // ── Próxima etapa ────────────────────────────────────────────────────
             'proxima_tipo_etapa_id' => ['required', 'integer', 'exists:tipo_etapas,id'],
-            'proxima_cerca_id' => ['required', 'integer', 'exists:cercas,id'],
+            'proxima_cerca_id' => ['nullable', 'integer', 'exists:cercas,id', $this->validarCercaObrigatoria()],
             'proxima_motorista_id' => ['nullable', 'integer', 'exists:motoristas,id'],
             'proxima_documento' => ['nullable', 'string', 'max:100'],
             'proxima_data_hora_inicio' => [
@@ -52,7 +53,6 @@ class FinalizeEtapaRequest extends FormRequest
             'data_hora_fim.required' => 'Informe o horário de encerramento da etapa.',
             'data_hora_fim.before_or_equal' => 'O encerramento não pode ser no futuro.',
             'proxima_tipo_etapa_id.required' => 'Informe o tipo da próxima etapa.',
-            'proxima_cerca_id.required' => 'Informe a cerca da próxima etapa.',
             'proxima_data_hora_inicio.required' => 'Informe o início da próxima etapa.',
             'proxima_data_hora_inicio.before_or_equal' => 'O início da próxima etapa não pode ser no futuro.',
         ];
@@ -72,6 +72,18 @@ class FinalizeEtapaRequest extends FormRequest
 
             if (Carbon::parse($fim)->diffInHours($etapa->data_hora_inicio) > 24 && empty($value)) {
                 $fail('A etapa tem duração superior a 24 horas. Informe o motivo.');
+            }
+        };
+    }
+
+    /** Exige a cerca quando o tipo de etapa selecionado para a próxima etapa a torna obrigatória. */
+    private function validarCercaObrigatoria(): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail): void {
+            $tipo = TipoEtapa::find($this->input('proxima_tipo_etapa_id'));
+
+            if ($tipo?->necessita_cerca && empty($value)) {
+                $fail('O tipo da próxima etapa exige o preenchimento da cerca.');
             }
         };
     }

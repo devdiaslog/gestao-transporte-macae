@@ -490,7 +490,7 @@
                     {{-- Cerca --}}
                     <div class="space-y-1.5 sm:col-span-2 sm:col-start-3">
                         <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                            Cerca <span class="text-red-500">*</span>
+                            Cerca <span id="modal-cerca-required" class="text-red-500" style="display:none">*</span>
                         </label>
                         <div class="relative" id="combo-cerca-wrapper">
                             <input type="hidden" id="modal-cerca" name="cerca_id">
@@ -783,7 +783,7 @@
                     {{-- Cerca --}}
                     <div class="space-y-1.5 sm:col-span-2">
                         <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                            Cerca <span class="text-red-500">*</span>
+                            Cerca <span id="fin-cerca-required" class="text-red-500" style="display:none">*</span>
                         </label>
                         <div class="relative" id="fin-combo-cerca-wrapper">
                             <input type="hidden" id="fin-cerca" name="proxima_cerca_id">
@@ -959,7 +959,7 @@
         var modalFieldIds       = ['combo-tipo-search', 'combo-cerca-search', 'combo-motorista-search', 'modal-documento', 'modal-data-inicio', 'modal-data-fim', 'modal-observacao'];
 
         // ─── Combobox filtrável ───────────────────────────────────────────────────
-        function makeCombobox(hiddenId, searchId, dropdownId, listId, items) {
+        function makeCombobox(hiddenId, searchId, dropdownId, listId, items, onSelect) {
             var hidden   = document.getElementById(hiddenId);
             var search   = document.getElementById(searchId);
             var list     = document.getElementById(listId);
@@ -1035,6 +1035,7 @@
                 search.value = label;
                 dropdown.classList.add('hidden');
                 highlighted  = -1;
+                if (onSelect) { onSelect(value); }
             }
 
             list.addEventListener('mousedown', function (e) {
@@ -1102,16 +1103,25 @@
                         hidden.value = item.value;
                         search.value = item.label;
                     }
+                    if (onSelect) { onSelect(value); }
                 },
             };
         }
 
-        var tipoItems      = @json($tipos->map(fn($t) => ['value' => $t->id, 'label' => titulo($t->nome)]));
+        var tipoItems      = @json($tipos->map(fn($t) => ['value' => $t->id, 'label' => titulo($t->nome), 'necessita_cerca' => $t->necessita_cerca]));
         var cercaItems     = @json($cercas->map(fn($l) => ['value' => $l->id, 'label' => $l->nome]));
         var motoristaItems = @json($motoristas->map(fn($m) => ['value' => $m->id, 'label' => titulo($m->nome)]));
         motoristaItems.unshift({ value: '', label: '— Nenhum —' });
 
-        var comboTipo      = makeCombobox('modal-tipo-etapa',  'combo-tipo-search',      'combo-tipo-dropdown',      'combo-tipo-list',      tipoItems);
+        // Mostra/oculta o asterisco de obrigatoriedade da cerca conforme o tipo escolhido.
+        function updateCercaRequired(requiredSpanId, items, tipoId) {
+            var tipo = items.filter(function (i) { return String(i.value) === String(tipoId); })[0];
+            var span = document.getElementById(requiredSpanId);
+            if (span) { span.style.display = (tipo && tipo.necessita_cerca) ? '' : 'none'; }
+        }
+
+        var comboTipo      = makeCombobox('modal-tipo-etapa',  'combo-tipo-search',      'combo-tipo-dropdown',      'combo-tipo-list',      tipoItems,
+            function (tipoId) { updateCercaRequired('modal-cerca-required', tipoItems, tipoId); });
         var comboCerca     = makeCombobox('modal-cerca', 'combo-cerca-search',     'combo-cerca-dropdown',     'combo-cerca-list',     cercaItems);
         var comboMotorista = makeCombobox('modal-motorista',   'combo-motorista-search', 'combo-motorista-dropdown', 'combo-motorista-list', motoristaItems);
 
@@ -1134,6 +1144,7 @@
             comboTipo.clear();
             comboCerca.clear();
             comboMotorista.clear();
+            updateCercaRequired('modal-cerca-required', tipoItems, '');
             document.getElementById('modal-documento').value   = '';
             document.getElementById('modal-data-inicio').value = '';
             document.getElementById('modal-data-fim').value    = '';
@@ -1161,9 +1172,11 @@
         var finComboTipo      = null;
         var finComboCerca     = null;
         var finComboMotorista = null;
+        var finTipoItems      = @json($tipos->map(fn($t) => ['value' => $t->id, 'label' => $t->nome, 'necessita_cerca' => $t->necessita_cerca]));
 
         (function initFinalizarCombos() {
-            finComboTipo      = makeCombobox('fin-tipo-etapa',  'fin-combo-tipo-search',      'fin-combo-tipo-dropdown',      'fin-combo-tipo-list',      @json($tipos->map(fn($t) => ['value' => $t->id, 'label' => $t->nome])));
+            finComboTipo      = makeCombobox('fin-tipo-etapa',  'fin-combo-tipo-search',      'fin-combo-tipo-dropdown',      'fin-combo-tipo-list',      finTipoItems,
+                function (tipoId) { updateCercaRequired('fin-cerca-required', finTipoItems, tipoId); });
             finComboCerca     = makeCombobox('fin-cerca', 'fin-combo-cerca-search',     'fin-combo-cerca-dropdown',     'fin-combo-cerca-list',     @json($cercas->map(fn($l) => ['value' => $l->id, 'label' => $l->nome])));
             finComboMotorista = makeCombobox('fin-motorista',   'fin-combo-motorista-search', 'fin-combo-motorista-dropdown', 'fin-combo-motorista-list', @json($motoristas->map(fn($m) => ['value' => $m->id, 'label' => $m->nome])));
         })();
@@ -1238,6 +1251,7 @@
             finComboTipo.clear();
             finComboCerca.clear();
             finComboMotorista.clear();
+            updateCercaRequired('fin-cerca-required', finTipoItems, '');
 
             // ── Hints "Anterior:" ─────────────────────────────────────────────
             var hintCerca      = document.getElementById('fin-hint-cerca');

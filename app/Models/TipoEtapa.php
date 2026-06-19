@@ -15,12 +15,14 @@ class TipoEtapa extends Model
 
     protected $fillable = [
         'nome',
+        'necessita_cerca',
         'ativo',
     ];
 
     protected function casts(): array
     {
         return [
+            'necessita_cerca' => 'boolean',
             'ativo' => 'boolean',
         ];
     }

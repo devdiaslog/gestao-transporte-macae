@@ -19,6 +19,7 @@ class StoreTipoEtapaRequest extends FormRequest
     {
         return [
             'nome' => ['required', 'string', 'max:150', 'unique:tipo_etapas,nome'],
+            'necessita_cerca' => ['boolean'],
             'ativo' => ['boolean'],
         ];
     }

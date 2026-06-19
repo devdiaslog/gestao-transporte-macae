@@ -70,6 +70,7 @@
                     <thead>
                         <tr class="border-b border-slate-200 dark:border-zinc-800">
                             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Nome</th>
+                            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Cerca</th>
                             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Status</th>
                             <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Ações</th>
                         </tr>
@@ -78,6 +79,17 @@
                         @foreach($tiposEtapa as $tipo)
                             <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800/30">
                                 <td class="px-6 py-4 font-medium text-zinc-900 dark:text-zinc-100">{{ $tipo->nome }}</td>
+                                <td class="px-6 py-4">
+                                    @if($tipo->necessita_cerca)
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>Obrigatória
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-zinc-400"></span>Opcional
+                                        </span>
+                                    @endif
+                                </td>
                                 <td class="px-6 py-4">
                                     @if($tipo->ativo)
                                         <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
@@ -93,7 +105,7 @@
                                     <div class="flex items-center justify-end gap-2">
                                         <button type="button"
                                                 onclick="openEditModal(this)"
-                                                data-tipo="{{ json_encode(['id' => $tipo->getRouteKey(), 'nome' => $tipo->nome, 'ativo' => $tipo->ativo]) }}"
+                                                data-tipo="{{ json_encode(['id' => $tipo->getRouteKey(), 'nome' => $tipo->nome, 'necessita_cerca' => $tipo->necessita_cerca, 'ativo' => $tipo->ativo]) }}"
                                                 class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium
                                                        border-zinc-200 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800/70">
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/></svg>
@@ -161,6 +173,14 @@
                     @enderror
                 </div>
                 <div class="flex items-center gap-2">
+                    <input id="modal-necessita-cerca" type="checkbox" name="necessita_cerca" value="1"
+                           class="h-4 w-4 rounded border-slate-300 text-zinc-900 focus:ring-zinc-900/20
+                                  dark:border-zinc-600 dark:bg-zinc-800 dark:ring-offset-zinc-900">
+                    <label for="modal-necessita-cerca" class="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        Exige preenchimento de cerca
+                    </label>
+                </div>
+                <div class="flex items-center gap-2">
                     <input id="modal-ativo" type="checkbox" name="ativo" value="1" checked
                            class="h-4 w-4 rounded border-slate-300 text-zinc-900 focus:ring-zinc-900/20
                                   dark:border-zinc-600 dark:bg-zinc-800 dark:ring-offset-zinc-900">
@@ -206,6 +226,7 @@
             document.getElementById('modal-method').value              = '';
             document.getElementById('tipo-form').action               = storeUrl;
             document.getElementById('modal-nome').value               = '';
+            document.getElementById('modal-necessita-cerca').checked  = false;
             document.getElementById('modal-ativo').checked            = true;
             openModal();
             document.getElementById('modal-nome').focus();
@@ -221,6 +242,7 @@
             document.getElementById('modal-method').value              = 'PUT';
             document.getElementById('tipo-form').action               = updateBase + '/' + data.id;
             document.getElementById('modal-nome').value               = data.nome;
+            document.getElementById('modal-necessita-cerca').checked  = !! data.necessita_cerca;
             document.getElementById('modal-ativo').checked            = !! data.ativo;
             openModal();
             document.getElementById('modal-nome').focus();
@@ -233,8 +255,9 @@
                 document.getElementById('modal-title').textContent        = 'Editar Tipo de Etapa';
                 document.getElementById('modal-submit-label').textContent = 'Salvar';
             }
-            if (old.nome)  { document.getElementById('modal-nome').value  = old.nome; }
-            if (old.ativo) { document.getElementById('modal-ativo').checked = true; }
+            if (old.nome)            { document.getElementById('modal-nome').value             = old.nome; }
+            if (old.necessita_cerca) { document.getElementById('modal-necessita-cerca').checked = true; }
+            if (old.ativo)           { document.getElementById('modal-ativo').checked           = true; }
             openModal();
         })();
         @endif

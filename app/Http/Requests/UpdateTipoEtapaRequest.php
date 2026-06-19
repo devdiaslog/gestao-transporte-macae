@@ -19,6 +19,7 @@ class UpdateTipoEtapaRequest extends FormRequest
     {
         return [
             'nome' => ['required', 'string', 'max:150', 'unique:tipo_etapas,nome,'.$this->tipoEtapa->id],
+            'necessita_cerca' => ['boolean'],
             'ativo' => ['boolean'],
         ];
     }

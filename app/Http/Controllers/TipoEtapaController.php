@@ -27,6 +27,7 @@ class TipoEtapaController extends Controller
     {
         TipoEtapa::create([
             'nome' => $request->validated('nome'),
+            'necessita_cerca' => $request->boolean('necessita_cerca'),
             'ativo' => $request->boolean('ativo', true),
         ]);
 
@@ -37,6 +38,7 @@ class TipoEtapaController extends Controller
     {
         $tipoEtapa->update([
             'nome' => $request->validated('nome'),
+            'necessita_cerca' => $request->boolean('necessita_cerca'),
             'ativo' => $request->boolean('ativo', true),
         ]);
 

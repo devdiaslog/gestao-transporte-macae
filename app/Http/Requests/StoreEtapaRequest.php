@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Etapa;
+use App\Models\TipoEtapa;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -23,7 +24,7 @@ class StoreEtapaRequest extends FormRequest
         return [
             'equipamento_id' => ['required', 'integer', 'exists:equipamentos,id'],
             'tipo_etapa_id' => ['required', 'integer', 'exists:tipo_etapas,id', $this->validarTipoLocalUnico()],
-            'cerca_id' => ['required', 'integer', 'exists:cercas,id'],
+            'cerca_id' => ['nullable', 'integer', 'exists:cercas,id', $this->validarCercaObrigatoria()],
             'motorista_id' => ['nullable', 'integer', 'exists:motoristas,id'],
             'documento' => ['nullable', 'string', 'max:100'],
             'data_hora_inicio' => [
@@ -45,7 +46,6 @@ class StoreEtapaRequest extends FormRequest
     {
         return [
             'tipo_etapa_id.required' => 'O tipo de etapa é obrigatório.',
-            'cerca_id.required' => 'A cerca é obrigatória.',
             'data_hora_inicio.required' => 'A data/hora de início é obrigatória.',
             'data_hora_inicio.before_or_equal' => 'A data/hora de início não pode ser no futuro.',
             'data_hora_fim.after' => 'A data/hora de fim deve ser posterior ao início.',
@@ -133,6 +133,18 @@ class StoreEtapaRequest extends FormRequest
 
             if (Carbon::parse($fim)->diffInHours(Carbon::parse($inicio)) > 24 && empty($value)) {
                 $fail('A etapa tem duração superior a 24 horas. Informe o motivo.');
+            }
+        };
+    }
+
+    /** Exige a cerca quando o tipo de etapa selecionado a torna obrigatória. */
+    private function validarCercaObrigatoria(): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail): void {
+            $tipo = TipoEtapa::find($this->input('tipo_etapa_id'));
+
+            if ($tipo?->necessita_cerca && empty($value)) {
+                $fail('Este tipo de etapa exige o preenchimento da cerca.');
             }
         };
     }
