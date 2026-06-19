@@ -90,6 +90,7 @@ Route::middleware('auth')->group(function () {
     Route::get('etapas/veiculo/{equipamento}', [EtapaController::class, 'veiculo'])->name('etapas.veiculo');
     Route::post('etapas', [EtapaController::class, 'store'])->name('etapas.store');
     Route::put('etapas/{etapa}', [EtapaController::class, 'update'])->name('etapas.update');
+    Route::post('etapas/{etapa}/finalizar', [EtapaController::class, 'finalize'])->name('etapas.finalizar');
     Route::delete('etapas/{etapa}', [EtapaController::class, 'destroy'])->name('etapas.destroy');
 
     // Bigcore (Elog)

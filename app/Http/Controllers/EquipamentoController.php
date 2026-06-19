@@ -109,7 +109,11 @@ class EquipamentoController extends Controller
     {
         $equipamento->update($request->validated());
 
-        return redirect()->route('equipamentos.index')
+        $destination = $request->input('redirect') === 'control-tower'
+            ? route('control-tower.index')
+            : route('equipamentos.index');
+
+        return redirect($destination)
             ->with('success', 'Equipamento atualizado com sucesso.');
     }
 

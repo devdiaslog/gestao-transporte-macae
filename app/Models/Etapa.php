@@ -22,6 +22,7 @@ class Etapa extends Model
         'data_hora_inicio',
         'data_hora_fim',
         'observacao',
+        'motivo_longa_duracao',
         'emitido_por',
         'finalizado_por',
         'auditado_por',

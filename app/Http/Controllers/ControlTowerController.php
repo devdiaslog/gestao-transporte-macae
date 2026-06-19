@@ -8,6 +8,7 @@ use App\Models\CercaEvento;
 use App\Models\Divisao;
 use App\Models\Equipamento;
 use App\Models\EquipamentoLog;
+use App\Models\Etapa;
 use App\Models\ModeloEquipamento;
 use App\Models\Motorista;
 use App\Models\Reporte;
@@ -16,6 +17,7 @@ use App\Models\StatusEvento;
 use App\Models\StatusOperacional;
 use App\Models\SubDivisao;
 use App\Models\TipoEquipamento;
+use App\Models\TipoEtapa;
 use App\Services\BigcoreService;
 use App\Services\StatusOperacionalService;
 use App\Services\VfleetsService;
@@ -41,7 +43,16 @@ class ControlTowerController extends Controller
             ->when($tipoMotorizado, fn ($q) => $q->where('tipo_id', $tipoMotorizado->id))
             ->when($request->filled('divisao_id'), fn ($q) => $q->where('divisao_id', $request->divisao_id))
             ->when($request->filled('modelo_id'), fn ($q) => $q->where('modelo_id', $request->modelo_id))
-            ->when($request->filled('status_operacional'), fn ($q) => $q->where('status_operacional', $request->status_operacional))
+            ->when($request->filled('tipo_etapa_id'), function ($q) use ($request): void {
+                // Filtra pelo tipo da última etapa registrada para o veículo
+                $q->whereRaw('(
+                    SELECT tipo_etapa_id
+                    FROM etapas
+                    WHERE equipamento_id = equipamentos.id
+                    ORDER BY data_hora_inicio DESC
+                    LIMIT 1
+                ) = ?', [$request->tipo_etapa_id]);
+            })
             ->when($request->filled('implemento_modelo_id'), fn ($q) => $q->whereHas('implemento', fn ($q) => $q->where('modelo_id', $request->implemento_modelo_id)))
             ->when($request->filled('motorista_id'), fn ($q) => $q->where('motorista_id', $request->motorista_id))
             ->when($request->filled('sub_divisao_id'), fn ($q) => $q->whereIn('sub_divisao_id', (array) $request->input('sub_divisao_id')))
@@ -96,6 +107,8 @@ class ControlTowerController extends Controller
                     ];
                 })
             : collect();
+
+        $tiposEtapa = TipoEtapa::where('ativo', true)->orderBy('nome')->get();
 
         $statusOperacionais = StatusOperacional::where('status', true)->orderBy('nome')->get();
         $statusCores = $statusOperacionais->pluck('cor', 'nome');
@@ -157,6 +170,45 @@ class ControlTowerController extends Controller
             ->get()
             ->keyBy(fn ($r) => $r->equipamento_id.'_'.$r->documento);
 
+        // Última etapa por equipamento
+        $ultimasEtapas = Etapa::query()
+            ->with(['tipoEtapa', 'localEtapa', 'motorista'])
+            ->whereIn('equipamento_id', $equipamentoIds)
+            ->latest('data_hora_inicio')
+            ->get()
+            ->unique('equipamento_id')
+            ->keyBy('equipamento_id');
+
+        // Contadores dos blocos de 6h — tempo decorrido desde o início da última etapa
+        $etapaBloco0 = 0;  // 0–6h atrás
+        $etapaBloco6 = 0;  // 6–12h atrás
+        $etapaBloco12 = 0; // 12–18h atrás
+        $etapaBloco18 = 0; // >18h atrás (ou sem etapa)
+
+        $tz = config('app.timezone');
+
+        foreach ($equipamentos as $eq) {
+            $ultimaEtapa = $ultimasEtapas->get($eq->id);
+
+            if (! $ultimaEtapa) {
+                $etapaBloco18++;
+
+                continue;
+            }
+
+            $horas = (int) $ultimaEtapa->data_hora_inicio->setTimezone($tz)->diffInHours(now());
+
+            if ($horas < 6) {
+                $etapaBloco0++;
+            } elseif ($horas < 12) {
+                $etapaBloco6++;
+            } elseif ($horas < 18) {
+                $etapaBloco12++;
+            } else {
+                $etapaBloco18++;
+            }
+        }
+
         // Recentes Elog — frotas que mudaram de status/documento na última hora
         $idsRecentesElog = StatusEvento::query()
             ->whereNotNull('saida_em')
@@ -179,7 +231,13 @@ class ControlTowerController extends Controller
             ])
             ->values();
 
-        return view('control-tower.index', compact('equipamentos', 'divisoes', 'subDivisoes', 'modelos', 'modelosImplemento', 'implementos', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado', 'ultimosReportes', 'recentementeAlterados', 'eventosAbertos', 'statusEventosAbertos', 'minutosAtendimento', 'recentesElog'));
+        return view('control-tower.index', compact(
+            'equipamentos', 'divisoes', 'subDivisoes', 'modelos', 'modelosImplemento',
+            'implementos', 'tiposEtapa', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado',
+            'ultimosReportes', 'recentementeAlterados', 'eventosAbertos', 'statusEventosAbertos',
+            'minutosAtendimento', 'recentesElog', 'ultimasEtapas',
+            'etapaBloco0', 'etapaBloco6', 'etapaBloco12', 'etapaBloco18',
+        ));
     }
 
     public function painel(Request $request): View
@@ -320,7 +378,15 @@ class ControlTowerController extends Controller
             ->when($tipoMotorizado, fn ($q) => $q->where('tipo_id', $tipoMotorizado->id))
             ->when($request->filled('divisao_id'), fn ($q) => $q->where('divisao_id', $request->divisao_id))
             ->when($request->filled('modelo_id'), fn ($q) => $q->where('modelo_id', $request->modelo_id))
-            ->when($request->filled('status_operacional'), fn ($q) => $q->where('status_operacional', $request->status_operacional))
+            ->when($request->filled('tipo_etapa_id'), function ($q) use ($request): void {
+                $q->whereRaw('(
+                    SELECT tipo_etapa_id
+                    FROM etapas
+                    WHERE equipamento_id = equipamentos.id
+                    ORDER BY data_hora_inicio DESC
+                    LIMIT 1
+                ) = ?', [$request->tipo_etapa_id]);
+            })
             ->when($request->filled('implemento_modelo_id'), fn ($q) => $q->whereHas('implemento', fn ($q) => $q->where('modelo_id', $request->implemento_modelo_id)))
             ->when($request->filled('motorista_id'), fn ($q) => $q->where('motorista_id', $request->motorista_id))
             ->orderBy('placa')

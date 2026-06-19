@@ -10,7 +10,7 @@
     @php
         $currentDivisao          = request('divisao_id');
         $currentModelo           = request('modelo_id');
-        $currentStatusOp         = request('status_operacional');
+        $currentTipoEtapa        = request('tipo_etapa_id');
         $currentImplementoModelo = request('implemento_modelo_id');
         $currentMotorista        = request('motorista_id');
         $currentSubDivisoes      = request('sub_divisao_id', []);
@@ -20,7 +20,7 @@
     <div class="mt-4 flex flex-wrap items-center gap-2">
 
         {{-- Exportar CSV --}}
-        <a href="{{ route('control-tower.export', array_filter(['divisao_id' => $currentDivisao, 'modelo_id' => $currentModelo, 'status_operacional' => $currentStatusOp, 'implemento_modelo_id' => $currentImplementoModelo, 'motorista_id' => $currentMotorista])) }}"
+        <a href="{{ route('control-tower.export', array_filter(['divisao_id' => $currentDivisao, 'modelo_id' => $currentModelo, 'tipo_etapa_id' => $currentTipoEtapa, 'implemento_modelo_id' => $currentImplementoModelo, 'motorista_id' => $currentMotorista])) }}"
            title="Exportar para CSV/Excel"
            class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors
                   border-slate-200 bg-white text-zinc-700 hover:border-slate-300 hover:bg-slate-50
@@ -98,12 +98,12 @@
                     @foreach([
                         ['col' => 'placa',           'label' => 'Placa'],
                         ['col' => 'modelo',          'label' => 'Modelo / Implemento'],
+                        ['col' => 'etapa',           'label' => 'Etapa'],
                         ['col' => 'status-op',       'label' => 'Status'],
-                        ['col' => 'tempo-status',    'label' => 'Tempo Status'],
+                        ['col' => 'tempo-status',    'label' => 'Rastreador'],
                         ['col' => 'cerca',           'label' => 'Cerca'],
                         ['col' => 'tempo-cerca',     'label' => 'Tempo Cerca'],
                         ['col' => 'condutor',        'label' => 'Condutor'],
-                        ['col' => 'ultimo-reporte',  'label' => 'Último Reporte'],
                         ['col' => 'documento',       'label' => 'Documento'],
                         ['col' => 'obs',             'label' => 'Observação'],
                         ['col' => 'divisao',         'label' => 'Divisão'],
@@ -153,16 +153,16 @@
                 @endforeach
             </select>
 
-            <select name="status_operacional" onchange="this.form.submit()"
+            <select name="tipo_etapa_id" onchange="this.form.submit()"
                     class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
                            border-slate-200 bg-white text-zinc-700
                            focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
                            dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
                            dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                <option value="">Todos os status</option>
-                @foreach($statusOperacionais as $statusOp)
-                    <option value="{{ $statusOp->nome }}" @selected($currentStatusOp === $statusOp->nome)>
-                        {{ $statusOp->nome }}
+                <option value="">Todos os tipos de etapa</option>
+                @foreach($tiposEtapa as $tipoEtapa)
+                    <option value="{{ $tipoEtapa->id }}" @selected($currentTipoEtapa == $tipoEtapa->id)>
+                        {{ $tipoEtapa->nome }}
                     </option>
                 @endforeach
             </select>
@@ -249,7 +249,7 @@
                 </div>
             @endif
 
-            @if($currentDivisao || $currentModelo || $currentStatusOp || $currentImplementoModelo || $currentMotorista || count($currentSubDivisoes) > 0)
+            @if($currentDivisao || $currentModelo || $currentTipoEtapa || $currentImplementoModelo || $currentMotorista || count($currentSubDivisoes) > 0)
                 <a href="{{ route('control-tower.index') }}"
                    class="flex items-center gap-1 rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors
                           border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700
@@ -274,49 +274,29 @@
         </div>
     @endif
 
-    {{-- ─── Legenda HJ ─────────────────────────────────────────────────────── --}}
-    @php
-        $hjVerde    = 0;
-        $hjAmbar    = 0;
-        $hjVermelho = 0;
-        $hjTz       = config('app.timezone');
-        foreach ($equipamentos as $eq) {
-            $ur    = $ultimosReportes[$eq->prefixo] ?? null;
-            $horas = $ur ? (int) $ur->reporte->data_hora_emissao?->setTimezone($hjTz)->diffInHours(now()) : null;
-            if ($horas !== null && $horas <= 12) {
-                $hjVerde++;
-            } elseif ($horas !== null && $horas <= 24) {
-                $hjAmbar++;
-            } else {
-                $hjVermelho++;
-            }
-        }
-    @endphp
-    <div class="mb-2 mt-4 flex items-center gap-4 px-1">
+    {{-- ─── Legenda HJ — última etapa por tempo decorrido ────────────────── --}}
+    <div class="mb-2 mt-4 flex flex-wrap items-center gap-3 px-1">
         <span class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">HJ:</span>
-        <span class="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-            <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/40">
-                <svg class="h-2.5 w-2.5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
-                </svg>
+        @foreach([
+            ['label' => '0–6h',   'count' => $etapaBloco0,  'tip' => 'Última etapa iniciada há menos de 6h',
+             'cls' => 'bg-emerald-50 text-emerald-600 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-800/40',
+             'num' => 'text-emerald-700 dark:text-emerald-300'],
+            ['label' => '6–12h',  'count' => $etapaBloco6,  'tip' => 'Última etapa iniciada entre 6h e 12h atrás',
+             'cls' => 'bg-sky-50 text-sky-600 ring-sky-200 dark:bg-sky-950/40 dark:text-sky-400 dark:ring-sky-800/40',
+             'num' => 'text-sky-700 dark:text-sky-300'],
+            ['label' => '12–18h', 'count' => $etapaBloco12, 'tip' => 'Última etapa iniciada entre 12h e 18h atrás',
+             'cls' => 'bg-amber-50 text-amber-600 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-800/40',
+             'num' => 'text-amber-700 dark:text-amber-300'],
+            ['label' => '+18h',   'count' => $etapaBloco18, 'tip' => 'Última etapa iniciada há mais de 18h ou sem etapa',
+             'cls' => 'bg-rose-50 text-rose-600 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:ring-rose-800/40',
+             'num' => 'text-rose-700 dark:text-rose-300'],
+        ] as $bloco)
+            <span title="{{ $bloco['tip'] }}"
+                  class="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset {{ $bloco['cls'] }}">
+                <span class="font-semibold {{ $bloco['num'] }}">{{ $bloco['count'] }}</span>
+                {{ $bloco['label'] }}
             </span>
-            <span class="font-semibold text-emerald-600 dark:text-emerald-400">{{ $hjVerde }}</span>
-            <span>— Menos de 12h</span>
-        </span>
-        <span class="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-            <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-950/30">
-                <span class="h-1.5 w-1.5 rounded-full bg-amber-400 dark:bg-amber-500"></span>
-            </span>
-            <span class="font-semibold text-amber-600 dark:text-amber-400">{{ $hjAmbar }}</span>
-            <span>— Entre 12h e 24h</span>
-        </span>
-        <span class="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-            <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950/30">
-                <span class="h-1.5 w-1.5 rounded-full bg-rose-400 dark:bg-rose-500"></span>
-            </span>
-            <span class="font-semibold text-rose-600 dark:text-rose-400">{{ $hjVermelho }}</span>
-            <span>— Mais de 24h ou sem reporte</span>
-        </span>
+        @endforeach
     </div>
 
     {{-- ─── Table card — fixed height + internal scroll ────────────────────── --}}
@@ -332,7 +312,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
                     </svg>
                 </div>
-                @if($currentDivisao || $currentModelo || $currentStatusOp || $currentImplementoModelo || $currentMotorista)
+                @if($currentDivisao || $currentModelo || $currentTipoEtapa || $currentImplementoModelo || $currentMotorista)
                     <h3 class="mt-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">Nenhum equipamento encontrado</h3>
                     <a href="{{ route('control-tower.index') }}"
                        class="mt-4 inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors
@@ -383,6 +363,9 @@
                             <th data-col="status-op" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Status
                             </th>
+                            <th data-col="etapa" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Etapa
+                            </th>
                             <th data-col="tempo-status" data-sortable="tempo-status"
                                 class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap cursor-pointer select-none hover:text-zinc-600 dark:hover:text-zinc-400"
                                 onclick="sortTableByCol('tempo-status')">
@@ -400,9 +383,6 @@
                             </th>
                             <th data-col="condutor" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Condutor
-                            </th>
-                            <th data-col="ultimo-reporte" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
-                                Último Reporte
                             </th>
                             <th data-col="documento" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Documento
@@ -425,22 +405,20 @@
                                     ?? $equipamento->implemento?->modelo?->nome
                                     ?? $equipamento->implemento?->placa;
 
+                                $ultimaEtapa = $ultimasEtapas->get($equipamento->id);
+
                                 $ultimoReporte = $ultimosReportes[$equipamento->prefixo] ?? null;
-                                $repDocumento  = $ultimoReporte?->documento;
-                                $repStatus     = $ultimoReporte?->status_operacional;
-                                $repObservacao = $ultimoReporte?->observacao;
 
                                 $searchText = implode(' ', array_filter([
                                     $equipamento->placa,
                                     $equipamento->prefixo,
                                     $equipamento->modelo?->nome,
                                     $equipamento->divisao?->nome,
-                                    $repStatus ?? $equipamento->status_operacional,
-                                    $equipamento->origem,
-                                    $equipamento->destino,
-                                    $repDocumento ?? $equipamento->documento_demanda,
                                     $impNome,
-                                    $equipamento->motorista?->nome,
+                                    $ultimaEtapa?->tipoEtapa?->nome,
+                                    $ultimaEtapa?->localEtapa?->nome,
+                                    $ultimaEtapa?->motorista?->nome,
+                                    $ultimaEtapa?->documento,
                                 ]));
 
                                 $posicao        = $equipamento->posicao;
@@ -547,6 +525,16 @@
                                 $tempoReporteLabel = $horasDesdeReporte !== null
                                     ? 'Último reporte: ' . intdiv($horasDesdeReporte, 24) . 'd ' . ($horasDesdeReporte % 24) . 'h'
                                     : 'Sem reporte';
+
+                                // Dados calculados da última etapa
+                                $horasDesdeEtapa  = $ultimaEtapa
+                                    ? (int) $ultimaEtapa->data_hora_inicio->setTimezone($tz)->diffInHours(now())
+                                    : null;
+                                $etapaAberta      = $ultimaEtapa && is_null($ultimaEtapa->data_hora_fim);
+                                $etapaLabel       = $horasDesdeEtapa !== null
+                                    ? ($ultimaEtapa->tipoEtapa?->nome ?? '?') . ' · ' . ($ultimaEtapa->localEtapa?->nome ?? '?')
+                                      . ' (' . ($etapaAberta ? 'aberta' : 'fechada') . ')'
+                                    : 'Sem etapa';
                             @endphp
 
                             {{-- ─── Data row ──────────────────────────────── --}}
@@ -555,25 +543,22 @@
                                 data-tracker-state="{{ $semSinal ? 'Desconhecido' : ($posicao?->tracker_state ?? '') }}"
                                 class="ct-row transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/30">
 
-                                {{-- Sinalizador HJ --}}
+                                {{-- Sinalizador HJ — baseado na última etapa --}}
                                 <td class="px-3 py-2 text-center">
-                                    @if($horasDesdeReporte !== null && $horasDesdeReporte <= 12)
-                                        {{-- Verde: reporte há menos de 12h --}}
-                                        <span title="{{ $tempoReporteLabel }}"
+                                    @if($horasDesdeEtapa !== null && $horasDesdeEtapa <= 12)
+                                        <span title="{{ $etapaLabel }}"
                                               class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/40">
                                             <svg class="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
                                             </svg>
                                         </span>
-                                    @elseif($horasDesdeReporte !== null && $horasDesdeReporte <= 24)
-                                        {{-- Laranja: reporte entre 12h e 24h --}}
-                                        <span title="{{ $tempoReporteLabel }}"
+                                    @elseif($horasDesdeEtapa !== null && $horasDesdeEtapa <= 24)
+                                        <span title="{{ $etapaLabel }}"
                                               class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-950/30">
                                             <span class="h-2 w-2 rounded-full bg-amber-400 dark:bg-amber-500"></span>
                                         </span>
                                     @else
-                                        {{-- Vermelho: sem reporte ou há mais de 24h --}}
-                                        <span title="{{ $tempoReporteLabel }}"
+                                        <span title="{{ $etapaLabel }}"
                                               class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950/30">
                                             <span class="h-2 w-2 rounded-full bg-rose-400 dark:bg-rose-500"></span>
                                         </span>
@@ -582,14 +567,14 @@
 
                                 <td class="px-3 py-2 whitespace-nowrap">
                                     <p class="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-100">{{ $equipamento->prefixo ?? '—' }}</p>
-                                    @if($ultimoReporte)
-                                        <a href="{{ route('reportes.show', $ultimoReporte->reporte) }}" target="_blank"
-                                           class="font-mono text-[10px] text-zinc-400 hover:text-zinc-600 dark:text-zinc-600 dark:hover:text-zinc-400 underline decoration-dotted">
-                                            {{ $ultimoReporte->reporte->numero_reporte }}
-                                        </a>
-                                    @else
-                                        <span class="text-[10px] font-medium text-rose-400 dark:text-rose-600">sem reporte</span>
-                                    @endif
+                                    <a href="{{ route('equipamentos.edit', $equipamento) }}?redirect=control-tower"
+                                       title="Editar dados do veículo"
+                                       class="inline-flex items-center gap-0.5 text-[10px] text-zinc-400 transition-colors hover:text-indigo-600 dark:text-zinc-600 dark:hover:text-indigo-400">
+                                        <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"/>
+                                        </svg>
+                                        editar veículo
+                                    </a>
                                 </td>
 
 
@@ -628,17 +613,48 @@
                                 </td>
 
                                 <td data-col="status-op" class="px-3 py-2 whitespace-nowrap">
-                                    @if($repStatus)
-                                        @php $cor = $statusCores[$repStatus] ?? '#71717A'; @endphp
-                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
-                                              style="background-color: {{ $cor }}1A; color: {{ $cor }}; box-shadow: inset 0 0 0 1px {{ $cor }}33;">
-                                            {{ $repStatus }}
+                                    @if($ultimaEtapa?->tipoEtapa)
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium
+                                                     bg-zinc-100 text-zinc-700 ring-1 ring-inset ring-zinc-300/60
+                                                     dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-600/40">
+                                            {{ $ultimaEtapa->tipoEtapa->nome }}
                                         </span>
                                     @else
                                         <span class="text-zinc-300 dark:text-zinc-700">—</span>
                                     @endif
                                 </td>
 
+
+                                <td data-col="etapa" class="px-3 py-2">
+                                    @if($ultimaEtapa)
+                                        @php
+                                            $etapaTipoNome  = $ultimaEtapa->tipoEtapa?->nome ?? '—';
+                                            $etapaLocalNome = $ultimaEtapa->localEtapa?->nome ?? '—';
+                                            $etapaInicioFmt = $ultimaEtapa->data_hora_inicio->setTimezone($tz)->format('d/m H:i');
+                                        @endphp
+                                        <a href="{{ route('etapas.veiculo', $equipamento) }}"
+                                           class="group block min-w-[140px]">
+                                            <p class="truncate text-xs font-medium text-zinc-700 group-hover:text-zinc-900
+                                                       dark:text-zinc-300 dark:group-hover:text-zinc-100">
+                                                {{ $etapaTipoNome }}
+                                            </p>
+                                            <p class="truncate text-[11px] text-zinc-400 dark:text-zinc-600">
+                                                {{ $etapaLocalNome }}
+                                            </p>
+                                            <div class="mt-0.5 flex items-center gap-1.5">
+                                                @if($etapaAberta)
+                                                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                                    <span class="text-[10px] text-emerald-600 dark:text-emerald-500">Aberta</span>
+                                                @else
+                                                    <span class="h-1.5 w-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600"></span>
+                                                    <span class="text-[10px] text-zinc-400 dark:text-zinc-600">{{ $etapaInicioFmt }}</span>
+                                                @endif
+                                            </div>
+                                        </a>
+                                    @else
+                                        <span class="text-zinc-300 dark:text-zinc-700">—</span>
+                                    @endif
+                                </td>
 
                                 <td data-col="tempo-status" class="px-3 py-2 whitespace-nowrap"
                                     data-mins="{{ $semSinal ? ($semSinalMins ?? 0) : ($stateMins ?? 0) }}">
@@ -677,44 +693,21 @@
                                 </td>
 
                                 <td data-col="condutor" class="px-3 py-2 whitespace-nowrap">
-                                    @if($equipamento->motorista)
-                                        <p class="text-sm text-zinc-700 dark:text-zinc-300">{{ $equipamento->motorista->nome }}</p>
-                                        @php $telefone = $equipamento->motorista->contatos->where('status', true)->first()?->telefone; @endphp
-                                        @if($telefone)
-                                            <p class="text-[11px] text-zinc-400 dark:text-zinc-600">{{ $telefone }}</p>
-                                        @endif
+                                    @if($ultimaEtapa?->motorista)
+                                        <p class="text-sm text-zinc-700 dark:text-zinc-300">{{ $ultimaEtapa->motorista->nome }}</p>
                                     @else
                                         <span class="text-zinc-300 dark:text-zinc-700">—</span>
                                     @endif
                                 </td>
 
-                                <td data-col="ultimo-reporte" class="px-3 py-2 whitespace-nowrap">
-                                    @if($ultimoReporte)
-                                        <a href="{{ route('reportes.show', $ultimoReporte->reporte) }}" target="_blank"
-                                           class="flex flex-col gap-0.5 group">
-                                            <span class="font-mono text-xs font-semibold text-zinc-600 underline decoration-dotted underline-offset-2
-                                                         group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-zinc-200">
-                                                {{ $ultimoReporte->reporte->numero_reporte }}
-                                            </span>
-                                            <span class="text-[11px] text-zinc-400 dark:text-zinc-600">
-                                                {{ $ultimoReporte->reporte->data_hora_emissao?->setTimezone(config('app.timezone'))->format('d/m/Y H:i') }}
-                                            </span>
-                                        </a>
-                                    @else
-                                        <span class="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-600
-                                                     ring-1 ring-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:ring-rose-800/40">
-                                            Sem reporte
-                                        </span>
-                                    @endif
-                                </td>
 
                                 <td data-col="documento" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
-                                    {{ $repDocumento ?? '—' }}
+                                    {{ $ultimaEtapa?->documento ?? '—' }}
                                 </td>
 
 
                                 <td data-col="obs" class="px-3 py-2 text-zinc-600 dark:text-zinc-400">
-                                    <span class="line-clamp-2 min-w-[540px] block">{{ $repObservacao ?? '—' }}</span>
+                                    <span class="line-clamp-2 min-w-[540px] block">{{ $ultimaEtapa?->observacao ?? '—' }}</span>
                                 </td>
 
                                 <td data-col="divisao" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
@@ -758,7 +751,7 @@
     @if(!$equipamentos->isEmpty())
         <p class="mt-2 text-xs text-zinc-400 dark:text-zinc-600">
             {{ $equipamentos->total() }} {{ $equipamentos->total() === 1 ? 'equipamento' : 'equipamentos' }} no total
-            @if($currentDivisao || $currentModelo || $currentStatusOp || $currentImplementoModelo || $currentMotorista) · filtros ativos @endif
+            @if($currentDivisao || $currentModelo || $currentTipoEtapa || $currentImplementoModelo || $currentMotorista) · filtros ativos @endif
         </p>
     @endif
 
@@ -1178,11 +1171,15 @@
     <script>
     (function () {
         // ─── Column visibility (localStorage) ──────────────────────────────
-        var STORE_KEY = 'ct_hidden_cols';
-        var ALL_COLS  = ['placa', 'modelo', 'status-op', 'tempo-status', 'condutor', 'ultimo-reporte', 'documento', 'obs', 'divisao'];
+        var STORE_KEY     = 'ct_hidden_cols';
+        var ALL_COLS      = ['placa', 'modelo', 'etapa', 'status-op', 'tempo-status', 'cerca', 'tempo-cerca', 'condutor', 'documento', 'obs', 'divisao'];
+        var DEFAULT_HIDDEN = ['placa', 'modelo', 'status-op', 'tempo-status', 'cerca', 'tempo-cerca', 'condutor', 'divisao'];
 
         function hiddenCols() {
-            try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch (e) { return []; }
+            try {
+                var stored = localStorage.getItem(STORE_KEY);
+                return stored !== null ? (JSON.parse(stored) || []) : DEFAULT_HIDDEN;
+            } catch (e) { return DEFAULT_HIDDEN; }
         }
 
         function applyColVisibility() {

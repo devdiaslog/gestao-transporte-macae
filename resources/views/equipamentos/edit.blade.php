@@ -24,6 +24,7 @@
         <form method="POST" action="{{ route('equipamentos.update', $equipamento) }}" class="space-y-5" novalidate>
             @csrf
             @method('PUT')
+            <input type="hidden" name="redirect" value="{{ old('redirect', request('redirect')) }}">
 
             {{-- Linha: Tipo + Modelo --}}
             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">

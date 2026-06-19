@@ -18,6 +18,8 @@ class DatabaseSeeder extends Seeder
             TipoOcorrenciaSeeder::class,
             JustificativaSeeder::class,
             EquipamentoSeeder::class,
+            TipoEtapaSeeder::class,
+            LocalEtapaSeeder::class,
         ]);
     }
 }
