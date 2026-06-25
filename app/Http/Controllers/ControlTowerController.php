@@ -44,11 +44,10 @@ class ControlTowerController extends Controller
             ->when($request->filled('sub_divisao_id'), fn ($q) => $q->whereIn('sub_divisao_id', (array) $request->input('sub_divisao_id')))
             ->when($request->filled('status_operacional'), fn ($q) => $q->whereIn('status_operacional', (array) $request->input('status_operacional')))
             ->orderByRaw("(
-                SELECT MAX(r.data_hora_emissao)
-                FROM reporte_itens ri
-                JOIN reportes r ON r.id = ri.reporte_id
-                WHERE ri.prefixo = equipamentos.prefixo
-                AND r.status = 'publicado'
+                SELECT MAX(el.created_at)
+                FROM equipamento_logs el
+                WHERE el.equipamento_id = equipamentos.id
+                AND el.campo IN ('Status Operacional', 'Documento de Demanda')
             ) ASC")
             ->orderBy('placa')
             ->paginate(100)

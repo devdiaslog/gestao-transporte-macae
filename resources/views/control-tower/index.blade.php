@@ -357,8 +357,10 @@
                             <th data-col="modelo" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Modelo / Implemento
                             </th>
-                            <th data-col="status-op" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
-                                Status Operacional
+                            <th data-col="status-op" data-sortable="status-op"
+                                class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap cursor-pointer select-none hover:text-zinc-600 dark:hover:text-zinc-400"
+                                onclick="sortTableByCol('status-op')">
+                                Status Operacional <span id="sort-icon-status-op" class="ml-0.5 opacity-40">↕</span>
                             </th>
                             <th data-col="status-elog" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Status Elog
@@ -595,7 +597,8 @@
                                     </div>
                                 </td>
 
-                                <td data-col="status-op" class="px-3 py-2 whitespace-nowrap">
+                                <td data-col="status-op" class="px-3 py-2 whitespace-nowrap"
+                                    data-status="{{ strtolower($equipamento->status_operacional ?? '') }}">
                                     <button type="button"
                                             onclick="openStatusModal(this)"
                                             class="group inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors
@@ -1117,7 +1120,7 @@
 
         // ─── Sort de colunas ────────────────────────────────────────────────
         var _sortState = {}; // col → 'asc' | 'desc'
-        var _SORT_COLS  = ['tempo-status', 'tempo-cerca', 'cerca'];
+        var _SORT_COLS  = ['tempo-status', 'tempo-cerca', 'cerca', 'status-op'];
 
         // Prioridade de agrupamento: Parado → Desconhecido → Em Movimento → demais
         var _STATE_PRIORITY = { 'Parado': 0, 'Desconhecido': 1, 'Em Movimento': 2 };
@@ -1157,6 +1160,16 @@
                     if (nA && !nB) { return -1; }
                     if (nA === nB) { return 0; }
                     return dir === 'asc' ? nA.localeCompare(nB) : nB.localeCompare(nA);
+                }
+
+                if (col === 'status-op') {
+                    // Ordenação alfabética, agrupando veículos do mesmo status; vazios vão para o final
+                    var sA = tdA ? (tdA.getAttribute('data-status') || '') : '';
+                    var sB = tdB ? (tdB.getAttribute('data-status') || '') : '';
+                    if (!sA && sB) { return 1; }
+                    if (sA && !sB) { return -1; }
+                    if (sA === sB) { return 0; }
+                    return dir === 'asc' ? sA.localeCompare(sB) : sB.localeCompare(sA);
                 }
 
                 // Colunas de tempo: agrupa por status, depois ordena por minutos
