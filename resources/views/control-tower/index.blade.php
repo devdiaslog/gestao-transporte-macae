@@ -1005,7 +1005,7 @@
             {{-- Observação --}}
             <div>
                 <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Observação</label>
-                <textarea id="status-observacao" rows="3" placeholder="Observações adicionais"
+                <textarea id="status-observacao" rows="6" placeholder="Observações adicionais"
                           class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
                                  border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10"></textarea>
