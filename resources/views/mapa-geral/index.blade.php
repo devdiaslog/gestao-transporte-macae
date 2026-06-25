@@ -24,7 +24,8 @@
                                   placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 focus:ring-zinc-900/10
                                   dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500">
                     <div id="mapa-geral-search-dropdown"
-                         class="absolute left-0 right-0 top-full z-50 mt-1 hidden max-h-52 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg
+                         style="z-index:2000;"
+                         class="absolute left-0 right-0 top-full mt-1 hidden max-h-52 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg
                                 dark:border-zinc-700 dark:bg-zinc-800">
                     </div>
                 </div>
