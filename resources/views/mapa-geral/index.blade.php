@@ -53,7 +53,8 @@
                             </svg>
                         </button>
                         <div id="subdivisao-picker-panel"
-                             class="absolute left-0 top-full z-30 mt-1.5 hidden min-w-[200px] overflow-hidden rounded-xl border shadow-lg
+                             style="z-index:2000;"
+                             class="absolute left-0 top-full mt-1.5 hidden min-w-[200px] overflow-hidden rounded-xl border shadow-lg
                                     border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
                             <div class="py-1.5">
                                 @foreach($subDivisoes as $sd)
@@ -82,7 +83,8 @@
                             </svg>
                         </button>
                         <div id="status-op-picker-panel"
-                             class="absolute left-0 top-full z-30 mt-1.5 hidden min-w-[200px] overflow-hidden rounded-xl border shadow-lg
+                             style="z-index:2000;"
+                             class="absolute left-0 top-full mt-1.5 hidden min-w-[200px] overflow-hidden rounded-xl border shadow-lg
                                     border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
                             <div class="py-1.5">
                                 @foreach($statusOperacionais as $statusOp)
@@ -98,16 +100,32 @@
                     </div>
                 @endif
 
-                {{-- Rastreador (chips) --}}
-                <div class="flex items-center gap-1">
-                    @foreach(['Em Movimento', 'Parado', 'Sem Sinal'] as $estado)
-                        <button type="button" data-tracker-chip="{{ $estado }}" onclick="toggleTrackerChip(this)"
-                                class="tracker-chip rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors
-                                       border-slate-200 bg-white text-zinc-500 hover:border-slate-300
-                                       dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
-                            {{ $estado }}
-                        </button>
-                    @endforeach
+                {{-- Rastreador (multi-select dropdown) --}}
+                <div class="relative" id="tracker-picker-wrapper">
+                    <button type="button" onclick="togglePicker('tracker-picker-panel')"
+                            class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium outline-none transition-all
+                                   border-slate-200 bg-white text-zinc-600
+                                   dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+                        <span id="tracker-picker-label">Todos os rastreadores</span>
+                        <svg class="h-3 w-3 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                        </svg>
+                    </button>
+                    <div id="tracker-picker-panel"
+                         style="z-index:2000;"
+                         class="absolute left-0 top-full mt-1.5 hidden min-w-[200px] overflow-hidden rounded-xl border shadow-lg
+                                border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+                        <div class="py-1.5">
+                            @foreach(['Em Movimento', 'Parado', 'Sem Sinal'] as $estado)
+                                <label class="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/50">
+                                    <input type="checkbox" data-filtro="tracker_state" value="{{ $estado }}"
+                                           class="h-4 w-4 rounded border-slate-300 accent-zinc-900 dark:accent-zinc-100"
+                                           onchange="atualizarFiltrosMapaGeral()">
+                                    <span class="text-xs text-zinc-700 dark:text-zinc-300">{{ $estado }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
 
                 {{-- Modo Interativo --}}
@@ -400,7 +418,7 @@
         };
 
         document.addEventListener('click', function (e) {
-            ['subdivisao-picker', 'status-op-picker'].forEach(function (key) {
+            ['subdivisao-picker', 'status-op-picker', 'tracker-picker'].forEach(function (key) {
                 var wrapper = document.getElementById(key + '-wrapper');
                 var panel   = document.getElementById(key + '-panel');
                 if (wrapper && panel && !wrapper.contains(e.target)) {
@@ -408,29 +426,6 @@
                 }
             });
         });
-
-        var _TRACKER_CHIP_CORES = {
-            'Em Movimento': { border: '#34d399', bg: '#ecfdf5', text: '#047857' },
-            'Parado':       { border: '#fb7185', bg: '#fff1f2', text: '#be123c' },
-            'Sem Sinal':    { border: '#a1a1aa', bg: '#fafafa', text: '#3f3f46' },
-        };
-
-        window.toggleTrackerChip = function (btn) {
-            var ativo = btn.classList.toggle('tracker-chip-active');
-            var cor   = _TRACKER_CHIP_CORES[btn.dataset.trackerChip] || _TRACKER_CHIP_CORES['Sem Sinal'];
-
-            if (ativo) {
-                btn.style.borderColor = cor.border;
-                btn.style.background  = cor.bg;
-                btn.style.color       = cor.text;
-            } else {
-                btn.style.borderColor = '';
-                btn.style.background  = '';
-                btn.style.color       = '';
-            }
-
-            atualizarFiltrosMapaGeral();
-        };
 
         function _valoresFiltro(name) {
             return Array.prototype.slice.call(document.querySelectorAll('[data-filtro="' + name + '"]:checked'))
@@ -440,6 +435,7 @@
         window.atualizarFiltrosMapaGeral = function () {
             var subDivisoes = _valoresFiltro('sub_divisao_id');
             var statusOps   = _valoresFiltro('status_operacional');
+            var trackers    = _valoresFiltro('tracker_state');
 
             var subLabel = document.getElementById('subdivisao-picker-label');
             if (subLabel) {
@@ -448,6 +444,10 @@
             var statusLabel = document.getElementById('status-op-picker-label');
             if (statusLabel) {
                 statusLabel.textContent = statusOps.length === 0 ? 'Todos os status' : statusOps.length + ' status';
+            }
+            var trackerLabel = document.getElementById('tracker-picker-label');
+            if (trackerLabel) {
+                trackerLabel.textContent = trackers.length === 0 ? 'Todos os rastreadores' : trackers.length + ' rastreador(es)';
             }
 
             _fetchEPlotarMarcadores();
@@ -461,10 +461,7 @@
 
             _valoresFiltro('sub_divisao_id').forEach(function (v) { params.append('sub_divisao_id[]', v); });
             _valoresFiltro('status_operacional').forEach(function (v) { params.append('status_operacional[]', v); });
-
-            Array.prototype.slice.call(document.querySelectorAll('.tracker-chip-active')).forEach(function (el) {
-                params.append('tracker_state[]', el.dataset.trackerChip);
-            });
+            _valoresFiltro('tracker_state').forEach(function (v) { params.append('tracker_state[]', v); });
 
             var qs = params.toString();
 
