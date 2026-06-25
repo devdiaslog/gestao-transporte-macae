@@ -2,7 +2,35 @@
 
     {{-- Leaflet.js CSS --}}
     <link rel="stylesheet" href="/vendor/leaflet/leaflet.css"/>
-    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+    <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ─── Modo escuro do mapa ─────────────────────────────────────────── */
+        .dark .leaflet-popup-content-wrapper,
+        .dark .leaflet-popup-tip {
+            background: #18181b;
+            color: #e4e4e7;
+            box-shadow: 0 3px 16px rgba(0, 0, 0, .55);
+        }
+        .dark .leaflet-popup-content hr { border-top-color: #3f3f46 !important; }
+        .dark .leaflet-container a.leaflet-popup-close-button { color: #a1a1aa; }
+        .dark .leaflet-container a.leaflet-popup-close-button:hover { color: #f4f4f5; }
+
+        /* Controles (zoom, layers) no escuro */
+        .dark .leaflet-bar a,
+        .dark .leaflet-control-layers {
+            background: #27272a;
+            color: #e4e4e7;
+            border-color: #3f3f46;
+        }
+        .dark .leaflet-bar a:hover { background: #3f3f46; }
+        .dark .leaflet-control-layers-toggle { filter: invert(1) hue-rotate(180deg); }
+        .dark .leaflet-control-attribution {
+            background: rgba(24, 24, 27, .8) !important;
+            color: #71717a;
+        }
+        .dark .leaflet-control-attribution a { color: #a1a1aa; }
+    </style>
 
     <div class="-mx-4 mt-4 flex flex-col overflow-hidden rounded-none border-0 bg-white sm:-mx-6 lg:-mx-8 dark:bg-zinc-900"
          style="height: calc(100vh - 5rem)">
@@ -537,16 +565,26 @@
                             maxZoom: 21,
                             maxNativeZoom: 19
                         });
+                        var layerEscuro = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                            subdomains: 'abcd',
+                            maxZoom: 21,
+                            maxNativeZoom: 19
+                        });
                         var layerSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                             attribution: 'Tiles &copy; Esri',
                             maxZoom: 21,
                             maxNativeZoom: 19
                         });
-                        layerRua.addTo(_leafletMapGeral);
+
+                        // Usa o mapa escuro por padrão quando o tema da aplicação está em dark
+                        var temaDark = document.documentElement.classList.contains('dark');
+                        (temaDark ? layerEscuro : layerRua).addTo(_leafletMapGeral);
+
                         _leafletLayerCercas = L.layerGroup().addTo(_leafletMapGeral);
                         _leafletLayerGeral  = L.layerGroup().addTo(_leafletMapGeral);
                         L.control.layers(
-                            { 'Mapa': layerRua, 'Satélite': layerSatelite },
+                            { 'Mapa': layerRua, 'Escuro': layerEscuro, 'Satélite': layerSatelite },
                             { 'Cercas': _leafletLayerCercas },
                             { position: 'topright' }
                         ).addTo(_leafletMapGeral);
