@@ -202,6 +202,24 @@
 
     <script>
     (function () {
+        // Move o dropdown de busca para o body com posição fixa, escapando de
+        // qualquer contexto de empilhamento criado pelo mapa Leaflet.
+        var _searchInput    = document.getElementById('mapa-geral-search');
+        var _searchDropdown = document.getElementById('mapa-geral-search-dropdown');
+        if (_searchDropdown && _searchInput) {
+            _searchDropdown.classList.remove('absolute', 'left-0', 'right-0', 'top-full', 'mt-1');
+            _searchDropdown.style.position = 'fixed';
+            document.body.appendChild(_searchDropdown);
+        }
+
+        function _posicionarSearchDropdown() {
+            if (! _searchInput || ! _searchDropdown) { return; }
+            var r = _searchInput.getBoundingClientRect();
+            _searchDropdown.style.top   = (r.bottom + 4) + 'px';
+            _searchDropdown.style.left  = r.left + 'px';
+            _searchDropdown.style.width = r.width + 'px';
+        }
+
         var _leafletMapGeral        = null;
         var _leafletLayerGeral      = null;
         var _leafletLayerCercas     = null;
@@ -276,6 +294,7 @@
 
             if (matches.length === 0) {
                 dropdown.innerHTML = '<div class="px-3 py-2.5 text-xs text-zinc-400 dark:text-zinc-500">Nenhum veículo encontrado</div>';
+                _posicionarSearchDropdown();
                 dropdown.classList.remove('hidden');
                 return;
             }
@@ -288,6 +307,7 @@
                     + '</div>';
             }).join('');
 
+            _posicionarSearchDropdown();
             dropdown.classList.remove('hidden');
         };
 
@@ -316,6 +336,8 @@
                 drop.classList.add('hidden');
             }
         });
+
+        window.addEventListener('resize', _posicionarSearchDropdown);
 
         // ─── Modo Interativo ─────────────────────────────────────────────────────
         var _miAtivo         = false;
