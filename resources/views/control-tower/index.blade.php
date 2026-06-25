@@ -548,7 +548,7 @@
                                 ]) }}"
                                 title="{{ $statusDivergente ? 'Status Operacional e Status Elog estão diferentes' : '' }}"
                                 class="ct-row transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/30
-                                       {{ $statusDivergente ? 'bg-amber-50 dark:bg-amber-950/20 hover:bg-amber-100 dark:hover:bg-amber-950/30' : '' }}">
+                                       {{ $statusDivergente ? 'bg-rose-100 dark:bg-rose-950/40 hover:bg-rose-200 dark:hover:bg-rose-950/60' : '' }}">
 
                                 <td class="px-3 py-2 whitespace-nowrap">
                                     <p class="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-100">{{ $equipamento->prefixo ?? '—' }}</p>
