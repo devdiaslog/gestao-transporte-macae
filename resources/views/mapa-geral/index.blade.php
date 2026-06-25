@@ -11,8 +11,7 @@
         <div style="flex-shrink:0;"
              class="flex items-center justify-between border-b px-5 py-3.5 border-slate-200 dark:border-zinc-800">
             <div>
-                <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Mapa Geral</h3>
-                <p id="mapa-geral-info" class="text-xs text-zinc-500 dark:text-zinc-400">Carregando…</p>
+                <p id="mapa-geral-info" class="text-sm text-zinc-500 dark:text-zinc-400">Carregando…</p>
             </div>
             <div class="flex items-center gap-2">
                 {{-- Recarregar posições --}}
