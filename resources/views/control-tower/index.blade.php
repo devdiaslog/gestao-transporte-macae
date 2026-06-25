@@ -483,6 +483,11 @@
                                 $tempoReporteLabel = $horasDesdeReporte !== null
                                     ? 'Último reporte: ' . intdiv($horasDesdeReporte, 24) . 'd ' . ($horasDesdeReporte % 24) . 'h'
                                     : 'Sem reporte';
+
+                                // Status Operacional (manual) divergente do Status Elog (automático)
+                                $statusDivergente = $equipamento->status_operacional
+                                    && $statusEvento?->status_operacional
+                                    && $equipamento->status_operacional !== $statusEvento->status_operacional;
                             @endphp
 
                             {{-- ─── Data row ──────────────────────────────── --}}
@@ -498,7 +503,9 @@
                                     'observacao'      => $equipamento->observacao_operacional,
                                     'url_editar'      => route('control-tower.editar-status', $equipamento),
                                 ]) }}"
-                                class="ct-row transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/30">
+                                title="{{ $statusDivergente ? 'Status Operacional e Status Elog estão diferentes' : '' }}"
+                                class="ct-row transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/30
+                                       {{ $statusDivergente ? 'bg-amber-50 dark:bg-amber-950/20 hover:bg-amber-100 dark:hover:bg-amber-950/30' : '' }}">
 
                                 <td class="px-3 py-2 whitespace-nowrap">
                                     <p class="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-100">{{ $equipamento->prefixo ?? '—' }}</p>
