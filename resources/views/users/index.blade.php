@@ -222,7 +222,8 @@
                                     <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1
                                         @if($roleColor === 'violet') bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-400 dark:ring-violet-800/50 @endif
                                         @if($roleColor === 'blue')   bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:ring-blue-800/50 @endif
-                                        @if($roleColor === 'zinc')   bg-zinc-50 text-zinc-700 ring-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:ring-zinc-700 @endif">
+                                        @if($roleColor === 'zinc')   bg-zinc-50 text-zinc-700 ring-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:ring-zinc-700 @endif
+                                        @if($roleColor === 'emerald') bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-800/50 @endif">
                                         {{ $user->role->label() }}
                                     </span>
                                 </td>

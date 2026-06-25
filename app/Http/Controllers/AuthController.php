@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Http\Requests\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,7 +14,7 @@ class AuthController extends Controller
     public function showLogin(): View|RedirectResponse
     {
         if (Auth::check()) {
-            return redirect()->route('control-tower.index');
+            return redirect()->route($this->homeRouteFor(Auth::user()));
         }
 
         return view('auth.login');
@@ -26,7 +27,7 @@ class AuthController extends Controller
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 
-            return redirect()->intended(route('control-tower.index'));
+            return redirect()->intended(route($this->homeRouteFor(Auth::user())));
         }
 
         return back()->withErrors([
@@ -42,5 +43,10 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
+    }
+
+    private function homeRouteFor(mixed $user): string
+    {
+        return $user->role === UserRole::Visualizador ? 'mapa-geral.index' : 'control-tower.index';
     }
 }

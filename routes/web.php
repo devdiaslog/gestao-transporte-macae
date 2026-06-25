@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserRole;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BigcoreController;
 use App\Http\Controllers\CercaController;
@@ -22,7 +23,15 @@ use App\Services\StatusOperacionalService;
 use App\Services\VfleetsService;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect()->route('control-tower.index'));
+Route::get('/', function () {
+    $user = auth()->user();
+
+    if (! $user) {
+        return redirect()->route('login');
+    }
+
+    return redirect()->route($user->role === UserRole::Visualizador ? 'mapa-geral.index' : 'control-tower.index');
+});
 
 // Sincronização de posições — protegida por chave secreta
 Route::get('sync/posicoes', function (VfleetsService $vfleets) {
@@ -63,15 +72,20 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
-// Protected routes
+// Mapa Geral — acessível a todos os perfis, inclusive Visualizador (acesso restrito apenas a isto)
 Route::middleware('auth')->group(function () {
-    // Torre de Controle — acessível a todos os perfis
-    Route::get('torre-de-controle', [ControlTowerController::class, 'index'])->name('control-tower.index');
-    Route::get('torre-de-controle/painel', [ControlTowerController::class, 'painel'])->name('control-tower.painel');
-    Route::get('torre-de-controle-export', [ControlTowerController::class, 'export'])->name('control-tower.export');
+    Route::get('mapa-geral', [ControlTowerController::class, 'mapaGeralPagina'])->name('mapa-geral.index');
     Route::get('torre-de-controle/mapa-geral', [ControlTowerController::class, 'mapaGeral'])->name('control-tower.mapa-geral');
     Route::post('torre-de-controle/sincronizar-posicoes', [ControlTowerController::class, 'sincronizarPosicoes'])->name('control-tower.sincronizar-posicoes');
     Route::post('torre-de-controle/sincronizar-status-operacional', [ControlTowerController::class, 'sincronizarStatusOperacional'])->name('control-tower.sincronizar-status-operacional');
+});
+
+// Protected routes — todo o restante do sistema, indisponivel ao perfil Visualizador
+Route::middleware(['auth', 'can:access-app'])->group(function () {
+    // Torre de Controle — acessível a todos os perfis (exceto Visualizador)
+    Route::get('torre-de-controle', [ControlTowerController::class, 'index'])->name('control-tower.index');
+    Route::get('torre-de-controle/painel', [ControlTowerController::class, 'painel'])->name('control-tower.painel');
+    Route::get('torre-de-controle-export', [ControlTowerController::class, 'export'])->name('control-tower.export');
     Route::get('torre-de-controle/posicao/{plate}', [ControlTowerController::class, 'posicao'])->name('control-tower.posicao');
     Route::patch('torre-de-controle/{equipamento}/implemento', [ControlTowerController::class, 'updateImplemento'])->name('control-tower.implemento');
     Route::get('torre-de-controle/{equipamento}/historico', [ControlTowerController::class, 'historico'])->name('control-tower.historico');

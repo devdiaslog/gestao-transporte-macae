@@ -27,5 +27,8 @@ class AppServiceProvider extends ServiceProvider
 
         /** Administrador e Supervisor podem auditar ocorrências fechadas. */
         Gate::define('auditar-ocorrencias', fn (User $user) => in_array($user->role, [UserRole::Administrador, UserRole::Supervisor]));
+
+        /** Visualizador tem acesso apenas ao Mapa Geral; demais perfis acessam o restante do sistema. */
+        Gate::define('access-app', fn (User $user) => $user->role !== UserRole::Visualizador);
     }
 }

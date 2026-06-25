@@ -407,6 +407,11 @@ class ControlTowerController extends Controller
         return response()->json(['ok' => true, 'processados' => count($registros), 'alteracoes' => $alteracoes]);
     }
 
+    public function mapaGeralPagina(): View
+    {
+        return view('mapa-geral.index');
+    }
+
     public function mapaGeral(): JsonResponse
     {
         $tz = config('app.timezone');

@@ -7,6 +7,7 @@ enum UserRole: string
     case Administrador = 'administrador';
     case Supervisor = 'supervisor';
     case Operador = 'operador';
+    case Visualizador = 'visualizador';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum UserRole: string
             self::Administrador => 'Administrador',
             self::Supervisor => 'Supervisor',
             self::Operador => 'Operador',
+            self::Visualizador => 'Visualizador',
         };
     }
 
@@ -23,6 +25,7 @@ enum UserRole: string
             self::Administrador => 'violet',
             self::Supervisor => 'blue',
             self::Operador => 'zinc',
+            self::Visualizador => 'emerald',
         };
     }
 }
