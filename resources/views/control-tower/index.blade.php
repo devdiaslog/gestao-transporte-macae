@@ -950,7 +950,7 @@
          class="fixed inset-0 z-40 hidden bg-black/40 backdrop-blur-sm"></div>
 
     <div id="status-modal"
-         class="fixed inset-x-4 top-1/2 z-50 hidden w-full max-w-md -translate-y-1/2 overflow-hidden
+         class="fixed inset-x-4 top-1/2 z-50 hidden w-full max-w-2xl -translate-y-1/2 overflow-hidden
                 rounded-2xl border shadow-2xl
                 border-slate-200 bg-white
                 dark:border-zinc-700 dark:bg-zinc-900
@@ -978,27 +978,28 @@
             <div id="status-errors" class="hidden rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700
                                        dark:border-rose-800/50 dark:bg-rose-950/40 dark:text-rose-400"></div>
 
-            {{-- Status Operacional --}}
-            <div>
-                <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Status Operacional <span class="text-red-500">*</span></label>
-                <select id="status-operacional"
-                        class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
-                               border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                               dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                    <option value="">— Selecione —</option>
-                    @foreach($statusOperacionais as $statusOp)
-                        <option value="{{ $statusOp->nome }}">{{ $statusOp->nome }}</option>
-                    @endforeach
-                </select>
-            </div>
+            {{-- Status Operacional + Documento --}}
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Status Operacional <span class="text-red-500">*</span></label>
+                    <select id="status-operacional"
+                            class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
+                                   border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                   dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                        <option value="">— Selecione —</option>
+                        @foreach($statusOperacionais as $statusOp)
+                            <option value="{{ $statusOp->nome }}">{{ $statusOp->nome }}</option>
+                        @endforeach
+                    </select>
+                </div>
 
-            {{-- Documento --}}
-            <div>
-                <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Documento</label>
-                <input id="status-documento" type="text" placeholder="Nº do documento"
-                       class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
-                              border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                              dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                <div>
+                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Documento</label>
+                    <input id="status-documento" type="text" placeholder="Nº do documento"
+                           class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
+                                  border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                </div>
             </div>
 
             {{-- Observação --}}
