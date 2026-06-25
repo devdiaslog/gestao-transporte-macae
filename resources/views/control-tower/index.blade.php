@@ -482,6 +482,17 @@
                             <tr id="row-{{ $equipamento->id }}"
                                 data-search="{{ strtolower($searchText) }}"
                                 data-tracker-state="{{ $semSinal ? 'Desconhecido' : ($posicao?->tracker_state ?? '') }}"
+                                data-equipamento="{{ json_encode([
+                                    'id'              => $equipamento->id,
+                                    'placa'           => $equipamento->placa,
+                                    'prefixo'         => $equipamento->prefixo,
+                                    'status_operacional' => $equipamento->status_operacional,
+                                    'documento'       => $documento,
+                                    'observacao'      => $statusEvento?->observacao,
+                                    'status_manual'   => (bool) $equipamento->status_manual,
+                                    'url_editar'      => route('control-tower.editar-status', $equipamento),
+                                    'url_automatico'  => route('control-tower.status-automatico', $equipamento),
+                                ]) }}"
                                 class="ct-row transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/30">
 
                                 <td class="px-3 py-2 whitespace-nowrap">
@@ -534,17 +545,6 @@
                                 <td data-col="status-op" class="px-3 py-2 whitespace-nowrap">
                                     <button type="button"
                                             onclick="openStatusModal(this)"
-                                            data-equipamento="{{ json_encode([
-                                                'id'              => $equipamento->id,
-                                                'placa'           => $equipamento->placa,
-                                                'prefixo'         => $equipamento->prefixo,
-                                                'status_operacional' => $equipamento->status_operacional,
-                                                'documento'       => $documento,
-                                                'observacao'      => $statusEvento?->observacao,
-                                                'status_manual'   => (bool) $equipamento->status_manual,
-                                                'url_editar'      => route('control-tower.editar-status', $equipamento),
-                                                'url_automatico'  => route('control-tower.status-automatico', $equipamento),
-                                            ]) }}"
                                             class="group inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors
                                                    bg-zinc-100 text-zinc-700 ring-1 ring-inset ring-zinc-300/60 hover:ring-indigo-400
                                                    dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-600/40 dark:hover:ring-indigo-500">
@@ -621,16 +621,29 @@
                                 </td>
 
                                 <td class="px-3 py-2 text-right whitespace-nowrap">
-                                    <a href="{{ route('control-tower.historico', $equipamento) }}"
-                                       title="Ver histórico do veículo"
-                                       class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
-                                              border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700
-                                              dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300">
-                                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
-                                        </svg>
-                                        Histórico
-                                    </a>
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        <button type="button"
+                                                onclick="openStatusModal(this)"
+                                                title="Atualizar status, documento e observação"
+                                                class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
+                                                       border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700
+                                                       dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300">
+                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"/>
+                                            </svg>
+                                            Status
+                                        </button>
+                                        <a href="{{ route('control-tower.historico', $equipamento) }}"
+                                           title="Ver histórico do veículo"
+                                           class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
+                                                  border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700
+                                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300">
+                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
+                                            </svg>
+                                            Histórico
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
 
