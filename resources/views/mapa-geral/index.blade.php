@@ -4,8 +4,8 @@
     <link rel="stylesheet" href="/vendor/leaflet/leaflet.css"/>
     <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
 
-    <div class="-mx-4 -mt-4 flex flex-col overflow-hidden rounded-none border-0 bg-white sm:-mx-6 lg:-mx-8 dark:bg-zinc-900"
-         style="height: calc(100vh - 4rem)">
+    <div class="-mx-4 mt-4 flex flex-col overflow-hidden rounded-none border-0 bg-white sm:-mx-6 lg:-mx-8 dark:bg-zinc-900"
+         style="height: calc(100vh - 5rem)">
 
         {{-- Barra de filtros + busca --}}
         <div style="flex-shrink:0;" class="border-b px-4 py-2 border-slate-200 dark:border-zinc-800">
@@ -36,7 +36,7 @@
                                dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
                     <option value="">Todas as divisões</option>
                     @foreach($divisoes as $divisao)
-                        <option value="{{ $divisao->id }}">{{ $divisao->nome }}</option>
+                        <option value="{{ $divisao->id }}" @selected($divisao->nome === 'Poli Macaé')>{{ $divisao->nome }}</option>
                     @endforeach
                 </select>
 
