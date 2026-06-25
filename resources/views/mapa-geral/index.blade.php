@@ -206,6 +206,7 @@
         // qualquer contexto de empilhamento criado pelo mapa Leaflet.
         var _searchInput    = document.getElementById('mapa-geral-search');
         var _searchDropdown = document.getElementById('mapa-geral-search-dropdown');
+        var _searchMatches  = [];
         if (_searchDropdown && _searchInput) {
             _searchDropdown.classList.remove('absolute', 'left-0', 'right-0', 'top-full', 'mt-1');
             _searchDropdown.style.position = 'fixed';
@@ -293,15 +294,17 @@
             });
 
             if (matches.length === 0) {
+                _searchMatches = [];
                 dropdown.innerHTML = '<div class="px-3 py-2.5 text-xs text-zinc-400 dark:text-zinc-500">Nenhum veículo encontrado</div>';
                 _posicionarSearchDropdown();
                 dropdown.classList.remove('hidden');
                 return;
             }
 
-            dropdown.innerHTML = matches.slice(0, 12).map(function (v) {
-                return '<div class="cursor-pointer px-3 py-2 text-sm text-zinc-800 hover:bg-slate-50 dark:text-zinc-200 dark:hover:bg-zinc-700/60"'
-                    + ' onmousedown="event.preventDefault(); navegarMapaGeral(' + JSON.stringify(v.label) + ')">'
+            _searchMatches = matches.slice(0, 12);
+            dropdown.innerHTML = _searchMatches.map(function (v, i) {
+                return '<div data-mg-idx="' + i + '"'
+                    + ' class="cursor-pointer px-3 py-2 text-sm text-zinc-800 hover:bg-slate-50 dark:text-zinc-200 dark:hover:bg-zinc-700/60">'
                     + '<span class="font-semibold">' + _escHtml(v.label) + '</span>'
                     + (v.placa_orig && v.placa_orig !== v.label ? '<span class="ml-2 text-xs text-zinc-400 dark:text-zinc-500">— ' + _escHtml(v.placa_orig) + '</span>' : '')
                     + '</div>';
@@ -311,29 +314,41 @@
             dropdown.classList.remove('hidden');
         };
 
-        window.navegarMapaGeral = function (label) {
-            var v = _mapaGeralIndex.find(function (v) { return v.label === label; });
+        // Listener delegado no dropdown — escapa de qualquer interferência do Leaflet
+        if (_searchDropdown) {
+            _searchDropdown.addEventListener('mousedown', function (e) {
+                var item = e.target.closest('[data-mg-idx]');
+                if (! item) { return; }
+                e.preventDefault();
+                e.stopPropagation();
+                _irParaVeiculo(_searchMatches[parseInt(item.dataset.mgIdx, 10)]);
+            });
+        }
+
+        function _irParaVeiculo(v) {
             if (! v || ! _leafletMapGeral) { return; }
 
-            document.getElementById('mapa-geral-search').value = label;
-            document.getElementById('mapa-geral-search-dropdown').classList.add('hidden');
+            document.getElementById('mapa-geral-search').value = v.label;
+            _searchDropdown.classList.add('hidden');
 
             _leafletMapGeral.flyTo([v.lat, v.lng], 17, { duration: 0.7 });
             setTimeout(function () { v.marker.openPopup(); }, 750);
+        }
+
+        window.navegarMapaGeral = function (label) {
+            _irParaVeiculo(_mapaGeralIndex.find(function (v) { return v.label === label; }));
         };
 
         window.navegarMapaGeralPrimeiro = function () {
             var q = (document.getElementById('mapa-geral-search').value || '').trim().toLowerCase();
             if (! q) { return; }
-            var v = _mapaGeralIndex.find(function (v) { return v.prefixo.includes(q) || v.placa.includes(q); });
-            if (v) { navegarMapaGeral(v.label); }
+            _irParaVeiculo(_mapaGeralIndex.find(function (v) { return v.prefixo.includes(q) || v.placa.includes(q); }));
         };
 
         document.addEventListener('click', function (e) {
             var wrapper = document.getElementById('mapa-geral-search');
-            var drop    = document.getElementById('mapa-geral-search-dropdown');
-            if (wrapper && drop && ! wrapper.contains(e.target) && ! drop.contains(e.target)) {
-                drop.classList.add('hidden');
+            if (wrapper && _searchDropdown && ! wrapper.contains(e.target) && ! _searchDropdown.contains(e.target)) {
+                _searchDropdown.classList.add('hidden');
             }
         });
 
