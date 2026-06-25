@@ -1035,7 +1035,7 @@
     <script>
     (function () {
         // ─── Column visibility (localStorage) ──────────────────────────────
-        var STORE_KEY     = 'ct_hidden_cols';
+        var STORE_KEY     = 'ct_hidden_cols_v2';
         var ALL_COLS      = ['placa', 'modelo', 'status-op', 'status-elog', 'tempo-status', 'cerca', 'tempo-cerca', 'condutor', 'documento', 'obs', 'divisao'];
         var DEFAULT_HIDDEN = ['placa', 'modelo', 'tempo-status', 'cerca', 'tempo-cerca', 'condutor', 'divisao'];
 
