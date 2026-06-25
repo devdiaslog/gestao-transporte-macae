@@ -10,7 +10,6 @@
     @php
         $currentDivisao          = request('divisao_id');
         $currentModelo           = request('modelo_id');
-        $currentTipoEtapa        = request('tipo_etapa_id');
         $currentImplementoModelo = request('implemento_modelo_id');
         $currentMotorista        = request('motorista_id');
         $currentSubDivisoes      = request('sub_divisao_id', []);
@@ -20,7 +19,7 @@
     <div class="mt-4 flex flex-wrap items-center gap-2">
 
         {{-- Exportar CSV --}}
-        <a href="{{ route('control-tower.export', array_filter(['divisao_id' => $currentDivisao, 'modelo_id' => $currentModelo, 'tipo_etapa_id' => $currentTipoEtapa, 'implemento_modelo_id' => $currentImplementoModelo, 'motorista_id' => $currentMotorista])) }}"
+        <a href="{{ route('control-tower.export', array_filter(['divisao_id' => $currentDivisao, 'modelo_id' => $currentModelo, 'implemento_modelo_id' => $currentImplementoModelo, 'motorista_id' => $currentMotorista])) }}"
            title="Exportar para CSV/Excel"
            class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors
                   border-slate-200 bg-white text-zinc-700 hover:border-slate-300 hover:bg-slate-50
@@ -98,8 +97,6 @@
                     @foreach([
                         ['col' => 'placa',           'label' => 'Placa'],
                         ['col' => 'modelo',          'label' => 'Modelo / Implemento'],
-                        ['col' => 'etapa',           'label' => 'Etapa'],
-                        ['col' => 'tp-etapa',        'label' => 'Tp Etapa'],
                         ['col' => 'status-op',       'label' => 'Status'],
                         ['col' => 'tempo-status',    'label' => 'Rastreador'],
                         ['col' => 'cerca',           'label' => 'Cerca'],
@@ -151,20 +148,6 @@
                 <option value="">Todas as divisões</option>
                 @foreach($divisoes as $divisao)
                     <option value="{{ $divisao->id }}" @selected($currentDivisao == $divisao->id)>{{ $divisao->nome }}</option>
-                @endforeach
-            </select>
-
-            <select name="tipo_etapa_id" onchange="this.form.submit()"
-                    class="rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
-                           border-slate-200 bg-white text-zinc-700
-                           focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                           dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300
-                           dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                <option value="">Todos os tipos de etapa</option>
-                @foreach($tiposEtapa as $tipoEtapa)
-                    <option value="{{ $tipoEtapa->id }}" @selected($currentTipoEtapa == $tipoEtapa->id)>
-                        {{ $tipoEtapa->nome }}
-                    </option>
                 @endforeach
             </select>
 
@@ -250,7 +233,7 @@
                 </div>
             @endif
 
-            @if($currentDivisao || $currentModelo || $currentTipoEtapa || $currentImplementoModelo || $currentMotorista || count($currentSubDivisoes) > 0)
+            @if($currentDivisao || $currentModelo || $currentImplementoModelo || $currentMotorista || count($currentSubDivisoes) > 0)
                 <a href="{{ route('control-tower.index') }}"
                    class="flex items-center gap-1 rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors
                           border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700
@@ -275,31 +258,6 @@
         </div>
     @endif
 
-    {{-- ─── Legenda HJ — última etapa por tempo decorrido ────────────────── --}}
-    <div class="mb-2 mt-4 flex flex-wrap items-center gap-3 px-1">
-        <span class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">HJ:</span>
-        @foreach([
-            ['label' => '0–6h',   'count' => $etapaBloco0,  'tip' => 'Última etapa iniciada há menos de 6h',
-             'cls' => 'bg-emerald-50 text-emerald-600 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-800/40',
-             'num' => 'text-emerald-700 dark:text-emerald-300'],
-            ['label' => '6–12h',  'count' => $etapaBloco6,  'tip' => 'Última etapa iniciada entre 6h e 12h atrás',
-             'cls' => 'bg-sky-50 text-sky-600 ring-sky-200 dark:bg-sky-950/40 dark:text-sky-400 dark:ring-sky-800/40',
-             'num' => 'text-sky-700 dark:text-sky-300'],
-            ['label' => '12–18h', 'count' => $etapaBloco12, 'tip' => 'Última etapa iniciada entre 12h e 18h atrás',
-             'cls' => 'bg-amber-50 text-amber-600 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-800/40',
-             'num' => 'text-amber-700 dark:text-amber-300'],
-            ['label' => '+18h',   'count' => $etapaBloco18, 'tip' => 'Última etapa iniciada há mais de 18h ou sem etapa',
-             'cls' => 'bg-rose-50 text-rose-600 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:ring-rose-800/40',
-             'num' => 'text-rose-700 dark:text-rose-300'],
-        ] as $bloco)
-            <span title="{{ $bloco['tip'] }}"
-                  class="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset {{ $bloco['cls'] }}">
-                <span class="font-semibold {{ $bloco['num'] }}">{{ $bloco['count'] }}</span>
-                {{ $bloco['label'] }}
-            </span>
-        @endforeach
-    </div>
-
     {{-- ─── Table card — fixed height + internal scroll ────────────────────── --}}
     <div id="table-wrapper"
          class="mt-3 overflow-hidden rounded-xl border shadow-sm
@@ -313,7 +271,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
                     </svg>
                 </div>
-                @if($currentDivisao || $currentModelo || $currentTipoEtapa || $currentImplementoModelo || $currentMotorista)
+                @if($currentDivisao || $currentModelo || $currentImplementoModelo || $currentMotorista)
                     <h3 class="mt-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">Nenhum equipamento encontrado</h3>
                     <a href="{{ route('control-tower.index') }}"
                        class="mt-4 inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors
@@ -348,10 +306,6 @@
                 <table id="ct-table" class="w-full text-sm">
                     <thead class="sticky top-0 z-10">
                         <tr class="border-b border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-                            <th class="w-8 px-3 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap"
-                                title="Reporte do dia">
-                                Hj
-                            </th>
                             <th class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Prefixo
                             </th>
@@ -363,14 +317,6 @@
                             </th>
                             <th data-col="status-op" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
                                 Status
-                            </th>
-                            <th data-col="etapa" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
-                                Etapa
-                            </th>
-                            <th data-col="tp-etapa" data-sortable="tp-etapa"
-                                class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap cursor-pointer select-none hover:text-zinc-600 dark:hover:text-zinc-400"
-                                onclick="sortTableByCol('tp-etapa')">
-                                Tp Etapa <span id="sort-icon-tp-etapa" class="ml-0.5 opacity-40">↕</span>
                             </th>
                             <th data-col="tempo-status" data-sortable="tempo-status"
                                 class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap cursor-pointer select-none hover:text-zinc-600 dark:hover:text-zinc-400"
@@ -411,21 +357,7 @@
                                     ?? $equipamento->implemento?->modelo?->nome
                                     ?? $equipamento->implemento?->placa;
 
-                                $ultimaEtapa = $ultimasEtapas->get($equipamento->id);
-
                                 $ultimoReporte = $ultimosReportes[$equipamento->prefixo] ?? null;
-
-                                $searchText = implode(' ', array_filter([
-                                    $equipamento->placa,
-                                    $equipamento->prefixo,
-                                    $equipamento->modelo?->nome,
-                                    $equipamento->divisao?->nome,
-                                    $impNome,
-                                    $ultimaEtapa?->tipoEtapa?->nome,
-                                    $ultimaEtapa?->cerca?->nome,
-                                    $ultimaEtapa?->motorista?->nome,
-                                    $ultimaEtapa?->documento,
-                                ]));
 
                                 $posicao        = $equipamento->posicao;
                                 $hasLocation    = $posicao && $posicao->latitude && $posicao->longitude;
@@ -494,6 +426,19 @@
                                 }
 
                                 $documento        = $statusEvento?->documento;
+
+                                $searchText = implode(' ', array_filter([
+                                    $equipamento->placa,
+                                    $equipamento->prefixo,
+                                    $equipamento->modelo?->nome,
+                                    $equipamento->divisao?->nome,
+                                    $impNome,
+                                    $equipamento->status_operacional,
+                                    $equipamento->motorista?->nome,
+                                    $documento,
+                                    $statusEvento?->observacao,
+                                ]));
+
                                 $minutosPassados  = $documento
                                     ? (int) ($minutosAtendimento->get($equipamento->id . '_' . $documento)?->total_minutos ?? 0)
                                     : 0;
@@ -531,31 +476,6 @@
                                 $tempoReporteLabel = $horasDesdeReporte !== null
                                     ? 'Último reporte: ' . intdiv($horasDesdeReporte, 24) . 'd ' . ($horasDesdeReporte % 24) . 'h'
                                     : 'Sem reporte';
-
-                                // Dados calculados da última etapa
-                                $horasDesdeEtapa  = $ultimaEtapa
-                                    ? (int) $ultimaEtapa->data_hora_inicio->setTimezone($tz)->diffInHours(now())
-                                    : null;
-                                $etapaAberta      = $ultimaEtapa && is_null($ultimaEtapa->data_hora_fim);
-                                $etapaLabel       = $horasDesdeEtapa !== null
-                                    ? ($ultimaEtapa->tipoEtapa?->nome ?? '?') . ' · ' . ($ultimaEtapa->cerca?->nome ?? '?')
-                                      . ' (' . ($etapaAberta ? 'aberta' : 'fechada') . ')'
-                                    : 'Sem etapa';
-
-                                // Tp Etapa — duração da última etapa: agora-início (aberta) ou fim-início (fechada)
-                                $tpEtapaMins = $ultimaEtapa
-                                    ? (int) $ultimaEtapa->data_hora_inicio->setTimezone($tz)->diffInMinutes(
-                                        $etapaAberta ? now() : $ultimaEtapa->data_hora_fim->setTimezone($tz)
-                                    )
-                                    : null;
-                                if ($tpEtapaMins !== null) {
-                                    $ted = intdiv($tpEtapaMins, 1440);
-                                    $teh = intdiv($tpEtapaMins % 1440, 60);
-                                    $tem = $tpEtapaMins % 60;
-                                    $tpEtapaDuration = $ted > 0 ? "{$ted}d {$teh}h {$tem}m" : ($teh > 0 ? "{$teh}h {$tem}m" : "{$tem}m");
-                                } else {
-                                    $tpEtapaDuration = null;
-                                }
                             @endphp
 
                             {{-- ─── Data row ──────────────────────────────── --}}
@@ -563,28 +483,6 @@
                                 data-search="{{ strtolower($searchText) }}"
                                 data-tracker-state="{{ $semSinal ? 'Desconhecido' : ($posicao?->tracker_state ?? '') }}"
                                 class="ct-row transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/30">
-
-                                {{-- Sinalizador HJ — baseado na última etapa --}}
-                                <td class="px-3 py-2 text-center">
-                                    @if($horasDesdeEtapa !== null && $horasDesdeEtapa <= 12)
-                                        <span title="{{ $etapaLabel }}"
-                                              class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/40">
-                                            <svg class="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
-                                            </svg>
-                                        </span>
-                                    @elseif($horasDesdeEtapa !== null && $horasDesdeEtapa <= 24)
-                                        <span title="{{ $etapaLabel }}"
-                                              class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-950/30">
-                                            <span class="h-2 w-2 rounded-full bg-amber-400 dark:bg-amber-500"></span>
-                                        </span>
-                                    @else
-                                        <span title="{{ $etapaLabel }}"
-                                              class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950/30">
-                                            <span class="h-2 w-2 rounded-full bg-rose-400 dark:bg-rose-500"></span>
-                                        </span>
-                                    @endif
-                                </td>
 
                                 <td class="px-3 py-2 whitespace-nowrap">
                                     <p class="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-100">{{ $equipamento->prefixo ?? '—' }}</p>
@@ -634,58 +532,34 @@
                                 </td>
 
                                 <td data-col="status-op" class="px-3 py-2 whitespace-nowrap">
-                                    @if($ultimaEtapa?->tipoEtapa)
-                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium
-                                                     bg-zinc-100 text-zinc-700 ring-1 ring-inset ring-zinc-300/60
-                                                     dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-600/40">
-                                            {{ $ultimaEtapa->tipoEtapa->nome }}
-                                        </span>
-                                    @else
-                                        <span class="text-zinc-300 dark:text-zinc-700">—</span>
-                                    @endif
-                                </td>
-
-
-                                <td data-col="etapa" class="px-3 py-2">
-                                    @if($ultimaEtapa)
-                                        @php
-                                            $etapaTipoNome  = $ultimaEtapa->tipoEtapa?->nome ?? '—';
-                                            $etapaLocalNome = $ultimaEtapa->cerca?->nome ?? '—';
-                                            $etapaInicioFmt = $ultimaEtapa->data_hora_inicio->setTimezone($tz)->format('d/m H:i');
-                                        @endphp
-                                        <a href="{{ route('etapas.veiculo', $equipamento) }}"
-                                           class="group block min-w-[140px]">
-                                            <p class="truncate text-xs font-medium text-zinc-700 group-hover:text-zinc-900
-                                                       dark:text-zinc-300 dark:group-hover:text-zinc-100">
-                                                {{ $etapaTipoNome }}
-                                            </p>
-                                            <p class="truncate text-[11px] text-zinc-400 dark:text-zinc-600">
-                                                {{ $etapaLocalNome }}
-                                            </p>
-                                            <div class="mt-0.5 flex items-center gap-1.5">
-                                                @if($etapaAberta)
-                                                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                                                    <span class="text-[10px] text-emerald-600 dark:text-emerald-500">Aberta</span>
-                                                @else
-                                                    <span class="h-1.5 w-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600"></span>
-                                                    <span class="text-[10px] text-zinc-400 dark:text-zinc-600">{{ $etapaInicioFmt }}</span>
-                                                @endif
-                                            </div>
-                                        </a>
-                                    @else
-                                        <span class="text-zinc-300 dark:text-zinc-700">—</span>
-                                    @endif
-                                </td>
-
-                                <td data-col="tp-etapa" class="px-3 py-2 whitespace-nowrap" data-mins="{{ $tpEtapaMins ?? 0 }}">
-                                    @if($tpEtapaDuration !== null)
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="h-1.5 w-1.5 rounded-full {{ $etapaAberta ? 'bg-emerald-500' : 'bg-zinc-400' }}"></span>
-                                            <span class="text-xs text-zinc-700 dark:text-zinc-300">{{ $tpEtapaDuration }}</span>
-                                        </div>
-                                    @else
-                                        <span class="text-zinc-300 dark:text-zinc-700">—</span>
-                                    @endif
+                                    <button type="button"
+                                            onclick="openStatusModal(this)"
+                                            data-equipamento="{{ json_encode([
+                                                'id'              => $equipamento->id,
+                                                'placa'           => $equipamento->placa,
+                                                'prefixo'         => $equipamento->prefixo,
+                                                'status_operacional' => $equipamento->status_operacional,
+                                                'documento'       => $documento,
+                                                'observacao'      => $statusEvento?->observacao,
+                                                'status_manual'   => (bool) $equipamento->status_manual,
+                                                'url_editar'      => route('control-tower.editar-status', $equipamento),
+                                                'url_automatico'  => route('control-tower.status-automatico', $equipamento),
+                                            ]) }}"
+                                            class="group inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors
+                                                   bg-zinc-100 text-zinc-700 ring-1 ring-inset ring-zinc-300/60 hover:ring-indigo-400
+                                                   dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-600/40 dark:hover:ring-indigo-500">
+                                        @if($equipamento->status_operacional)
+                                            {{ $equipamento->status_operacional }}
+                                        @else
+                                            <span class="text-zinc-400 dark:text-zinc-600">Definir status</span>
+                                        @endif
+                                        @if($equipamento->status_manual)
+                                            <span title="Edição manual — sincronização automática pausada" class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                                        @endif
+                                        <svg class="h-2.5 w-2.5 text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"/>
+                                        </svg>
+                                    </button>
                                 </td>
 
                                 <td data-col="tempo-status" class="px-3 py-2 whitespace-nowrap"
@@ -725,8 +599,8 @@
                                 </td>
 
                                 <td data-col="condutor" class="px-3 py-2 whitespace-nowrap">
-                                    @if($ultimaEtapa?->motorista)
-                                        <p class="text-sm text-zinc-700 dark:text-zinc-300">{{ $ultimaEtapa->motorista->nome }}</p>
+                                    @if($equipamento->motorista)
+                                        <p class="text-sm text-zinc-700 dark:text-zinc-300">{{ $equipamento->motorista->nome }}</p>
                                     @else
                                         <span class="text-zinc-300 dark:text-zinc-700">—</span>
                                     @endif
@@ -734,12 +608,12 @@
 
 
                                 <td data-col="documento" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
-                                    {{ $ultimaEtapa?->documento ?? '—' }}
+                                    {{ $documento ?? '—' }}
                                 </td>
 
 
                                 <td data-col="obs" class="px-3 py-2 text-zinc-600 dark:text-zinc-400">
-                                    <span class="line-clamp-2 min-w-[540px] block">{{ $ultimaEtapa?->observacao ?? '—' }}</span>
+                                    <span class="line-clamp-2 min-w-[540px] block">{{ $statusEvento?->observacao ?? '—' }}</span>
                                 </td>
 
                                 <td data-col="divisao" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
@@ -747,15 +621,15 @@
                                 </td>
 
                                 <td class="px-3 py-2 text-right whitespace-nowrap">
-                                    <a href="{{ route('etapas.veiculo', $equipamento) }}"
-                                       title="Ver etapas do veículo"
+                                    <a href="{{ route('control-tower.historico', $equipamento) }}"
+                                       title="Ver histórico do veículo"
                                        class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
                                               border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700
                                               dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300">
                                         <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
                                         </svg>
-                                        Etapas
+                                        Histórico
                                     </a>
                                 </td>
                             </tr>
@@ -783,7 +657,7 @@
     @if(!$equipamentos->isEmpty())
         <p class="mt-2 text-xs text-zinc-400 dark:text-zinc-600">
             {{ $equipamentos->total() }} {{ $equipamentos->total() === 1 ? 'equipamento' : 'equipamentos' }} no total
-            @if($currentDivisao || $currentModelo || $currentTipoEtapa || $currentImplementoModelo || $currentMotorista) · filtros ativos @endif
+            @if($currentDivisao || $currentModelo || $currentImplementoModelo || $currentMotorista) · filtros ativos @endif
         </p>
     @endif
 
@@ -1041,12 +915,12 @@
         </div>
     </div>
 
-    {{-- ─── Modal: Reporte Rápido ─────────────────────────────────────────── --}}
-    <div id="reporte-rapido-backdrop" onclick="closeReporteRapidoModal()"
+    {{-- ─── Modal: Editar Status ───────────────────────────────────────────── --}}
+    <div id="status-backdrop" onclick="closeStatusModal()"
          class="fixed inset-0 z-40 hidden bg-black/40 backdrop-blur-sm"></div>
 
-    <div id="reporte-rapido-modal"
-         class="fixed inset-x-4 top-1/2 z-50 hidden max-h-[92vh] w-full max-w-xl -translate-y-1/2 overflow-hidden
+    <div id="status-modal"
+         class="fixed inset-x-4 top-1/2 z-50 hidden w-full max-w-md -translate-y-1/2 overflow-hidden
                 rounded-2xl border shadow-2xl
                 border-slate-200 bg-white
                 dark:border-zinc-700 dark:bg-zinc-900
@@ -1055,10 +929,10 @@
         {{-- Header --}}
         <div class="flex items-center justify-between border-b px-5 py-3.5 border-slate-200 dark:border-zinc-800">
             <div>
-                <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Novo Reporte</h3>
-                <p id="rr-subtitle" class="text-xs text-zinc-500 dark:text-zinc-400"></p>
+                <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Editar Status</h3>
+                <p id="status-subtitle" class="text-xs text-zinc-500 dark:text-zinc-400"></p>
             </div>
-            <button type="button" onclick="closeReporteRapidoModal()"
+            <button type="button" onclick="closeStatusModal()"
                     class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700
                            dark:hover:bg-zinc-800 dark:hover:text-zinc-300">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -1068,133 +942,72 @@
         </div>
 
         {{-- Body --}}
-        <div class="overflow-y-auto px-5 py-4 space-y-4" style="max-height: calc(92vh - 130px)">
+        <div class="overflow-y-auto px-5 py-4 space-y-4" style="max-height: calc(85vh - 130px)">
 
             {{-- Erros --}}
-            <div id="rr-errors" class="hidden rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700
+            <div id="status-errors" class="hidden rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700
                                        dark:border-rose-800/50 dark:bg-rose-950/40 dark:text-rose-400"></div>
 
-            {{-- Nome --}}
+            {{-- Aviso de edição manual --}}
+            <div id="status-manual-aviso" class="hidden flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700
+                                       dark:border-amber-800/50 dark:bg-amber-950/40 dark:text-amber-400">
+                <span>Este veículo está em edição manual — a sincronização automática está pausada.</span>
+                <button type="button" onclick="voltarSincronizacaoAutomatica()"
+                        class="shrink-0 whitespace-nowrap rounded-md border border-amber-300 px-2 py-1 font-medium hover:bg-amber-100
+                               dark:border-amber-700 dark:hover:bg-amber-900/40">
+                    Voltar ao automático
+                </button>
+            </div>
+
+            {{-- Status Operacional --}}
             <div>
-                <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Nome do Reporte <span class="text-red-500">*</span></label>
-                <input id="rr-nome" type="text" placeholder="Ex: Reporte Interno 2021"
+                <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Status Operacional <span class="text-red-500">*</span></label>
+                <select id="status-operacional"
+                        class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
+                               border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                               dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                    <option value="">— Selecione —</option>
+                    @foreach($statusOperacionais as $statusOp)
+                        <option value="{{ $statusOp->nome }}">{{ $statusOp->nome }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Documento --}}
+            <div>
+                <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Documento</label>
+                <input id="status-documento" type="text" placeholder="Nº do documento"
                        class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
                               border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
                               dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-            </div>
-
-            {{-- Status + 1º Contato --}}
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Status Operacional <span class="text-red-500">*</span></label>
-                    <select id="rr-status"
-                            class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
-                                   border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                                   dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                        <option value="">— Selecione —</option>
-                        @foreach($statusOperacionais as $statusOp)
-                            <option value="{{ $statusOp->nome }}">{{ $statusOp->nome }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">1º Contato <span class="text-red-500">*</span></label>
-                    <input id="rr-primeiro-contato" type="text" placeholder="Nome do responsável"
-                           class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
-                                  border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                </div>
-            </div>
-
-            {{-- Documento (+ Elog) + Tempo Parado --}}
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Documento</label>
-                    <input id="rr-documento" type="text" placeholder="Nº do documento"
-                           class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
-                                  border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                    <div class="mt-1.5 flex items-center gap-3">
-                        <button type="button" id="btn-elog-rapido" onclick="buscarElogRapido()"
-                                class="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600
-                                       hover:text-blue-800 disabled:opacity-40 dark:text-blue-400 dark:hover:text-blue-300">
-                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 0Z"/>
-                            </svg>
-                            Pesquisar no Elog
-                        </button>
-                        <a id="btn-pesquisar-reporte" href="#" target="_blank"
-                           class="inline-flex items-center gap-1 text-[11px] font-medium text-violet-600
-                                  hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-300">
-                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
-                            </svg>
-                            Ver Reportes
-                        </a>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Tempo Parado</label>
-                    <input id="rr-tempo-parado" type="text" placeholder="Ex: 2h30"
-                           class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
-                                  border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                </div>
-            </div>
-
-            {{-- 2º Contato + Previsão --}}
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">2º Contato</label>
-                    <input id="rr-segundo-contato" type="text" placeholder="Nome do segundo responsável"
-                           class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
-                                  border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Previsão</label>
-                    <input id="rr-previsao" type="datetime-local"
-                           class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
-                                  border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                                  dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
-                </div>
             </div>
 
             {{-- Observação --}}
             <div>
-                <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Observação <span class="text-red-500">*</span></label>
-                <input id="rr-observacao" type="text" placeholder="Observações adicionais"
-                       class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
-                              border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
-                              dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+                <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Observação</label>
+                <textarea id="status-observacao" rows="3" placeholder="Observações adicionais"
+                          class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
+                                 border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10"></textarea>
             </div>
         </div>
 
         {{-- Footer --}}
         <div class="flex items-center justify-end gap-3 border-t px-5 py-3.5 border-slate-200 dark:border-zinc-800">
-            <button type="button" onclick="closeReporteRapidoModal()"
+            <button type="button" onclick="closeStatusModal()"
                     class="inline-flex items-center rounded-lg border px-4 py-2 text-sm font-medium transition-all
                            border-slate-200 text-zinc-700 hover:border-slate-300 hover:bg-slate-50
                            dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800">
                 Cancelar
             </button>
-            <button type="button" onclick="submitReporteRapido('rascunho')"
-                    class="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all
-                           border-zinc-300 bg-white text-zinc-700 hover:bg-slate-50
-                           dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700">
-                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
-                </svg>
-                Rascunho
-            </button>
-            <button type="button" onclick="submitReporteRapido('publicado')"
+            <button type="button" onclick="submitStatusModal()"
                     class="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-all
                            hover:bg-zinc-700 active:scale-[0.98]
                            dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                 </svg>
-                Publicar
+                Salvar
             </button>
         </div>
     </div>
@@ -1204,8 +1017,8 @@
     (function () {
         // ─── Column visibility (localStorage) ──────────────────────────────
         var STORE_KEY     = 'ct_hidden_cols';
-        var ALL_COLS      = ['placa', 'modelo', 'etapa', 'tp-etapa', 'status-op', 'tempo-status', 'cerca', 'tempo-cerca', 'condutor', 'documento', 'obs', 'divisao'];
-        var DEFAULT_HIDDEN = ['placa', 'modelo', 'status-op', 'tempo-status', 'cerca', 'tempo-cerca', 'condutor', 'divisao'];
+        var ALL_COLS      = ['placa', 'modelo', 'status-op', 'tempo-status', 'cerca', 'tempo-cerca', 'condutor', 'documento', 'obs', 'divisao'];
+        var DEFAULT_HIDDEN = ['placa', 'modelo', 'tempo-status', 'cerca', 'tempo-cerca', 'condutor', 'divisao'];
 
         function hiddenCols() {
             try {
@@ -1236,7 +1049,7 @@
 
         // ─── Sort de colunas ────────────────────────────────────────────────
         var _sortState = {}; // col → 'asc' | 'desc'
-        var _SORT_COLS  = ['tempo-status', 'tempo-cerca', 'cerca', 'tp-etapa'];
+        var _SORT_COLS  = ['tempo-status', 'tempo-cerca', 'cerca'];
 
         // Prioridade de agrupamento: Parado → Desconhecido → Em Movimento → demais
         var _STATE_PRIORITY = { 'Parado': 0, 'Desconhecido': 1, 'Em Movimento': 2 };
@@ -1276,13 +1089,6 @@
                     if (nA && !nB) { return -1; }
                     if (nA === nB) { return 0; }
                     return dir === 'asc' ? nA.localeCompare(nB) : nB.localeCompare(nA);
-                }
-
-                if (col === 'tp-etapa') {
-                    // Ordenação direta por duração da etapa, sem agrupamento por status do rastreador
-                    var mA = tdA ? parseInt(tdA.getAttribute('data-mins') || '0', 10) : 0;
-                    var mB = tdB ? parseInt(tdB.getAttribute('data-mins') || '0', 10) : 0;
-                    return dir === 'asc' ? mA - mB : mB - mA;
                 }
 
                 // Colunas de tempo: agrupa por status, depois ordena por minutos
@@ -1486,7 +1292,7 @@
             closeImplementoModal();
             closeConfirmModal();
             closeMapModal();
-            closeReporteRapidoModal();
+            closeStatusModal();
         }
     });
     </script>
@@ -1981,104 +1787,57 @@
     var _sincronizarUrl         = '{{ route("control-tower.sincronizar-posicoes") }}';
     var _sincronizarStatusUrl   = '{{ route("control-tower.sincronizar-status-operacional") }}';
     var _csrfToken              = '{{ csrf_token() }}';
-    var _BIGCORE_URL            = '{{ route("bigcore.veiculo") }}';
 
-    // ─── Reporte Rápido ─────────────────────────────────────────────────────
-    var _rrUrl      = null;
-    var _rrPlaca    = null;
-    var _rrPrefixo  = null;
-    var _reportesUrl = '{{ route("reportes.index") }}';
+    // ─── Editar Status ──────────────────────────────────────────────────────
+    var _statusEditUrl = null;
+    var _statusAutoUrl = null;
 
-    window.openReporteRapidoModal = function (equipamentoId, prefixo, placa, url) {
-        _rrUrl     = url;
-        _rrPlaca   = placa;
-        _rrPrefixo = prefixo || placa;
+    window.openStatusModal = function (btn) {
+        var el = btn.closest('[data-equipamento]');
+        if (! el) { return; }
+        var d = JSON.parse(el.dataset.equipamento);
 
-        var busca = encodeURIComponent(prefixo || placa);
-        document.getElementById('btn-pesquisar-reporte').href = _reportesUrl + '?busca=' + busca;
+        _statusEditUrl = d.url_editar;
+        _statusAutoUrl = d.url_automatico;
 
-        document.getElementById('rr-subtitle').textContent = 'Veículo: ' + (prefixo ? prefixo + ' / ' + placa : placa);
-        document.getElementById('rr-nome').value            = 'Reporte Interno ' + (prefixo || placa);
-        document.getElementById('rr-status').value          = '';
-        document.getElementById('rr-primeiro-contato').value = '';
-        document.getElementById('rr-observacao').value      = '';
-        document.getElementById('rr-documento').value       = '';
-        document.getElementById('rr-tempo-parado').value    = '';
-        document.getElementById('rr-segundo-contato').value = '';
-        document.getElementById('rr-previsao').value        = '';
+        document.getElementById('status-subtitle').textContent = 'Veículo: ' + (d.prefixo ? d.prefixo + ' / ' + d.placa : d.placa);
+        document.getElementById('status-operacional').value = d.status_operacional || '';
+        document.getElementById('status-documento').value   = d.documento || '';
+        document.getElementById('status-observacao').value  = d.observacao || '';
 
-        var errEl = document.getElementById('rr-errors');
+        var aviso = document.getElementById('status-manual-aviso');
+        aviso.classList.toggle('hidden', ! d.status_manual);
+
+        var errEl = document.getElementById('status-errors');
         errEl.classList.add('hidden');
         errEl.textContent = '';
 
-        document.getElementById('reporte-rapido-backdrop').classList.remove('hidden');
-        document.getElementById('reporte-rapido-modal').classList.remove('hidden');
+        document.getElementById('status-backdrop').classList.remove('hidden');
+        document.getElementById('status-modal').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
-        document.getElementById('rr-nome').focus();
+        document.getElementById('status-operacional').focus();
     };
 
-    window.closeReporteRapidoModal = function () {
-        document.getElementById('reporte-rapido-backdrop').classList.add('hidden');
-        document.getElementById('reporte-rapido-modal').classList.add('hidden');
+    window.closeStatusModal = function () {
+        document.getElementById('status-backdrop').classList.add('hidden');
+        document.getElementById('status-modal').classList.add('hidden');
         document.body.style.overflow = '';
     };
 
-    window.buscarElogRapido = function () {
-        if (! _rrPlaca) { return; }
-        var btn     = document.getElementById('btn-elog-rapido');
-        var svgBusy = '<svg class="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>';
-        btn.disabled  = true;
-        btn.innerHTML = svgBusy + ' Buscando…';
+    window.submitStatusModal = function () {
+        if (! _statusEditUrl) { return; }
 
-        fetch(_BIGCORE_URL + '?placa=' + encodeURIComponent(_rrPlaca), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-        })
-        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
-        .then(function (res) {
-            if (! res.ok) {
-                var errEl = document.getElementById('rr-errors');
-                errEl.textContent = res.data.erro || 'Veículo não localizado no Elog.';
-                errEl.classList.remove('hidden');
-                return;
-            }
-            var d = res.data;
-            if (d.tempo_parado)       { document.getElementById('rr-tempo-parado').value    = d.tempo_parado; }
-            if (d.status_operacional) { document.getElementById('rr-status').value          = d.status_operacional; }
-            if (d.documento)          { document.getElementById('rr-documento').value       = d.documento; }
-            if (d.observacao)         { document.getElementById('rr-observacao').value      = d.observacao; }
-        })
-        .catch(function () {
-            var errEl = document.getElementById('rr-errors');
-            errEl.textContent = 'Não foi possível conectar ao Elog. Tente novamente.';
-            errEl.classList.remove('hidden');
-        })
-        .finally(function () {
-            var svgSearch = '<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 0Z"/></svg>';
-            btn.disabled  = false;
-            btn.innerHTML = svgSearch + ' Pesquisar no Elog';
-        });
-    };
-
-    window.submitReporteRapido = function (salvarComo) {
-        if (! _rrUrl) { return; }
-
-        var errEl = document.getElementById('rr-errors');
+        var errEl = document.getElementById('status-errors');
         errEl.classList.add('hidden');
         errEl.textContent = '';
 
         var body = JSON.stringify({
-            nome:               document.getElementById('rr-nome').value.trim(),
-            salvar_como:        salvarComo,
-            status_operacional: document.getElementById('rr-status').value,
-            primeiro_contato:   document.getElementById('rr-primeiro-contato').value.trim(),
-            observacao:         document.getElementById('rr-observacao').value.trim(),
-            documento:          document.getElementById('rr-documento').value.trim() || null,
-            tempo_parado:       document.getElementById('rr-tempo-parado').value.trim() || null,
-            segundo_contato:    document.getElementById('rr-segundo-contato').value.trim() || null,
-            data_hora_previsao: document.getElementById('rr-previsao').value || null,
+            status_operacional: document.getElementById('status-operacional').value,
+            documento:          document.getElementById('status-documento').value.trim() || null,
+            observacao:         document.getElementById('status-observacao').value.trim() || null,
         });
 
-        fetch(_rrUrl, {
+        fetch(_statusEditUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2093,15 +1852,34 @@
             if (! res.data.ok) {
                 var msgs = res.data.errors
                     ? Object.values(res.data.errors).flat().join(' ')
-                    : (res.data.message || 'Erro ao salvar reporte.');
+                    : (res.data.message || 'Erro ao salvar status.');
                 errEl.textContent = msgs;
                 errEl.classList.remove('hidden');
                 return;
             }
-            closeReporteRapidoModal();
+            closeStatusModal();
             window.location.reload();
         })
         .catch(function () {
+            errEl.textContent = 'Erro de conexão. Tente novamente.';
+            errEl.classList.remove('hidden');
+        });
+    };
+
+    window.voltarSincronizacaoAutomatica = function () {
+        if (! _statusAutoUrl) { return; }
+
+        fetch(_statusAutoUrl, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': _csrfToken,
+            },
+        })
+        .then(function () { window.location.reload(); })
+        .catch(function () {
+            var errEl = document.getElementById('status-errors');
             errEl.textContent = 'Erro de conexão. Tente novamente.';
             errEl.classList.remove('hidden');
         });

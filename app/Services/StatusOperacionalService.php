@@ -54,7 +54,7 @@ class StatusOperacionalService
 
             $equipamento = $equipamentos->get($placa);
 
-            if (! $equipamento) {
+            if (! $equipamento || $equipamento->status_manual) {
                 continue;
             }
 

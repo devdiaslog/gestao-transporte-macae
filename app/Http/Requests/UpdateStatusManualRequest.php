@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreTipoEtapaRequest extends FormRequest
+class UpdateStatusManualRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -18,9 +18,9 @@ class StoreTipoEtapaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nome' => ['required', 'string', 'max:150', 'unique:tipo_etapas,nome'],
-            'necessita_cerca' => ['boolean'],
-            'ativo' => ['boolean'],
+            'status_operacional' => ['required', 'string', 'max:255'],
+            'documento' => ['nullable', 'string', 'max:100'],
+            'observacao' => ['nullable', 'string', 'max:2000'],
         ];
     }
 
@@ -28,8 +28,7 @@ class StoreTipoEtapaRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'nome.required' => 'O nome do tipo de etapa é obrigatório.',
-            'nome.unique' => 'Já existe um tipo de etapa com este nome.',
+            'status_operacional.required' => 'Informe o status operacional.',
         ];
     }
 }

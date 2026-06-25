@@ -28,6 +28,7 @@ class Equipamento extends Model
         'placa',
         'status',
         'status_operacional',
+        'status_manual',
         'documento_demanda',
         'observacao_operacional',
         'origem',
@@ -38,6 +39,7 @@ class Equipamento extends Model
     {
         return [
             'status' => 'boolean',
+            'status_manual' => 'boolean',
         ];
     }
 

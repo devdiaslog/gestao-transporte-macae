@@ -2,22 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreReporteRapidoRequest;
+use App\Http\Requests\UpdateStatusManualRequest;
 use App\Models\Cerca;
 use App\Models\CercaEvento;
 use App\Models\Divisao;
 use App\Models\Equipamento;
 use App\Models\EquipamentoLog;
-use App\Models\Etapa;
 use App\Models\ModeloEquipamento;
 use App\Models\Motorista;
-use App\Models\Reporte;
 use App\Models\ReporteItem;
 use App\Models\StatusEvento;
 use App\Models\StatusOperacional;
 use App\Models\SubDivisao;
 use App\Models\TipoEquipamento;
-use App\Models\TipoEtapa;
 use App\Services\BigcoreService;
 use App\Services\StatusOperacionalService;
 use App\Services\VfleetsService;
@@ -43,16 +40,6 @@ class ControlTowerController extends Controller
             ->when($tipoMotorizado, fn ($q) => $q->where('tipo_id', $tipoMotorizado->id))
             ->when($request->filled('divisao_id'), fn ($q) => $q->where('divisao_id', $request->divisao_id))
             ->when($request->filled('modelo_id'), fn ($q) => $q->where('modelo_id', $request->modelo_id))
-            ->when($request->filled('tipo_etapa_id'), function ($q) use ($request): void {
-                // Filtra pelo tipo da última etapa registrada para o veículo
-                $q->whereRaw('(
-                    SELECT tipo_etapa_id
-                    FROM etapas
-                    WHERE equipamento_id = equipamentos.id
-                    ORDER BY data_hora_inicio DESC
-                    LIMIT 1
-                ) = ?', [$request->tipo_etapa_id]);
-            })
             ->when($request->filled('implemento_modelo_id'), fn ($q) => $q->whereHas('implemento', fn ($q) => $q->where('modelo_id', $request->implemento_modelo_id)))
             ->when($request->filled('motorista_id'), fn ($q) => $q->where('motorista_id', $request->motorista_id))
             ->when($request->filled('sub_divisao_id'), fn ($q) => $q->whereIn('sub_divisao_id', (array) $request->input('sub_divisao_id')))
@@ -107,8 +94,6 @@ class ControlTowerController extends Controller
                     ];
                 })
             : collect();
-
-        $tiposEtapa = TipoEtapa::where('ativo', true)->orderBy('nome')->get();
 
         $statusOperacionais = StatusOperacional::where('status', true)->orderBy('nome')->get();
         $statusCores = $statusOperacionais->pluck('cor', 'nome');
@@ -170,45 +155,6 @@ class ControlTowerController extends Controller
             ->get()
             ->keyBy(fn ($r) => $r->equipamento_id.'_'.$r->documento);
 
-        // Última etapa por equipamento
-        $ultimasEtapas = Etapa::query()
-            ->with(['tipoEtapa', 'cerca', 'motorista'])
-            ->whereIn('equipamento_id', $equipamentoIds)
-            ->latest('data_hora_inicio')
-            ->get()
-            ->unique('equipamento_id')
-            ->keyBy('equipamento_id');
-
-        // Contadores dos blocos de 6h — tempo decorrido desde o início da última etapa
-        $etapaBloco0 = 0;  // 0–6h atrás
-        $etapaBloco6 = 0;  // 6–12h atrás
-        $etapaBloco12 = 0; // 12–18h atrás
-        $etapaBloco18 = 0; // >18h atrás (ou sem etapa)
-
-        $tz = config('app.timezone');
-
-        foreach ($equipamentos as $eq) {
-            $ultimaEtapa = $ultimasEtapas->get($eq->id);
-
-            if (! $ultimaEtapa) {
-                $etapaBloco18++;
-
-                continue;
-            }
-
-            $horas = (int) $ultimaEtapa->data_hora_inicio->setTimezone($tz)->diffInHours(now());
-
-            if ($horas < 6) {
-                $etapaBloco0++;
-            } elseif ($horas < 12) {
-                $etapaBloco6++;
-            } elseif ($horas < 18) {
-                $etapaBloco12++;
-            } else {
-                $etapaBloco18++;
-            }
-        }
-
         // Recentes Elog — frotas que mudaram de status/documento na última hora
         $idsRecentesElog = StatusEvento::query()
             ->whereNotNull('saida_em')
@@ -233,10 +179,9 @@ class ControlTowerController extends Controller
 
         return view('control-tower.index', compact(
             'equipamentos', 'divisoes', 'subDivisoes', 'modelos', 'modelosImplemento',
-            'implementos', 'tiposEtapa', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado',
+            'implementos', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado',
             'ultimosReportes', 'recentementeAlterados', 'eventosAbertos', 'statusEventosAbertos',
-            'minutosAtendimento', 'recentesElog', 'ultimasEtapas',
-            'etapaBloco0', 'etapaBloco6', 'etapaBloco12', 'etapaBloco18',
+            'minutosAtendimento', 'recentesElog',
         ));
     }
 
@@ -364,7 +309,7 @@ class ControlTowerController extends Controller
                 $equipamento->placa,
                 $equipamento->divisao?->nome,
             ]))),
-            'reporteUrl' => route('control-tower.reporte-rapido', $equipamento),
+            'statusUrl' => route('control-tower.editar-status', $equipamento),
         ];
     }
 
@@ -378,15 +323,6 @@ class ControlTowerController extends Controller
             ->when($tipoMotorizado, fn ($q) => $q->where('tipo_id', $tipoMotorizado->id))
             ->when($request->filled('divisao_id'), fn ($q) => $q->where('divisao_id', $request->divisao_id))
             ->when($request->filled('modelo_id'), fn ($q) => $q->where('modelo_id', $request->modelo_id))
-            ->when($request->filled('tipo_etapa_id'), function ($q) use ($request): void {
-                $q->whereRaw('(
-                    SELECT tipo_etapa_id
-                    FROM etapas
-                    WHERE equipamento_id = equipamentos.id
-                    ORDER BY data_hora_inicio DESC
-                    LIMIT 1
-                ) = ?', [$request->tipo_etapa_id]);
-            })
             ->when($request->filled('implemento_modelo_id'), fn ($q) => $q->whereHas('implemento', fn ($q) => $q->where('modelo_id', $request->implemento_modelo_id)))
             ->when($request->filled('motorista_id'), fn ($q) => $q->where('motorista_id', $request->motorista_id))
             ->orderBy('placa')
@@ -710,38 +646,51 @@ class ControlTowerController extends Controller
         return view('control-tower.historico', compact('equipamento', 'logs', 'campos'));
     }
 
-    public function reporteRapido(StoreReporteRapidoRequest $request, Equipamento $equipamento): JsonResponse
+    /**
+     * Atualiza manualmente status operacional, documento e observação do veículo,
+     * registrando o histórico via StatusEvento (entrada/saída) e marcando o veículo
+     * como controlado manualmente — a sincronização automática da Bigcore passa a
+     * ignorá-lo até alguém reverter via voltarSincronizacaoAutomatica().
+     */
+    public function editarStatus(UpdateStatusManualRequest $request, Equipamento $equipamento): JsonResponse
     {
         $validated = $request->validated();
-        $now = Carbon::now();
+        $agora = Carbon::now();
 
-        $prefix = $now->format('Ymd');
-        $ultimo = Reporte::where('numero_reporte', 'like', $prefix.'-%')->max('numero_reporte');
-        $seq = $ultimo ? ((int) substr($ultimo, -3)) + 1 : 1;
-        $numero = $prefix.'-'.str_pad($seq, 3, '0', STR_PAD_LEFT);
+        $novoStatus = $validated['status_operacional'];
+        $novoDocumento = $validated['documento'] ?? null;
+        $novaObservacao = $validated['observacao'] ?? null;
 
-        $reporte = Reporte::create([
-            'numero_reporte' => $numero,
-            'nome' => $validated['nome'],
-            'status' => $validated['salvar_como'],
-            'data_hora_emissao' => $now,
-            'created_by' => auth()->id(),
-        ]);
+        $aberto = StatusEvento::query()
+            ->where('equipamento_id', $equipamento->id)
+            ->whereNull('saida_em')
+            ->latest('entrada_em')
+            ->first();
 
-        ReporteItem::create([
-            'reporte_id' => $reporte->id,
-            'prefixo' => $equipamento->prefixo,
-            'status_operacional' => $validated['status_operacional'],
-            'primeiro_contato' => $validated['primeiro_contato'],
-            'observacao' => $validated['observacao'],
-            'documento' => $validated['documento'] ?? null,
-            'tempo_parado' => $validated['tempo_parado'] ?? null,
-            'segundo_contato' => $validated['segundo_contato'] ?? null,
-            'data_hora_previsao' => $validated['data_hora_previsao'] ?? null,
-        ]);
+        $mudouStatusOuDocumento = ! $aberto
+            || $aberto->status_operacional !== $novoStatus
+            || ($aberto->documento ?: null) !== ($novoDocumento ?: null);
+
+        if ($mudouStatusOuDocumento) {
+            if ($aberto) {
+                $aberto->update([
+                    'saida_em' => $agora,
+                    'duracao_minutos' => (int) $aberto->entrada_em->diffInMinutes($agora),
+                ]);
+            }
+
+            StatusEvento::create([
+                'equipamento_id' => $equipamento->id,
+                'status_operacional' => $novoStatus,
+                'documento' => $novoDocumento,
+                'observacao' => $novaObservacao,
+                'entrada_em' => $agora,
+            ]);
+        } elseif (($aberto->observacao ?: null) !== ($novaObservacao ?: null)) {
+            $aberto->update(['observacao' => $novaObservacao]);
+        }
 
         $statusAnterior = $equipamento->status_operacional;
-        $novoStatus = $validated['status_operacional'];
 
         if ($statusAnterior !== $novoStatus) {
             EquipamentoLog::create([
@@ -753,18 +702,20 @@ class ControlTowerController extends Controller
             ]);
         }
 
-        $equipamento->update(['status_operacional' => $novoStatus]);
-
-        $reporteUrl = $validated['salvar_como'] === 'publicado'
-            ? route('reportes.show', $reporte)
-            : null;
-
-        return response()->json([
-            'ok' => true,
-            'numero' => $reporte->numero_reporte,
-            'status' => $novoStatus,
-            'reporte_url' => $reporteUrl,
+        $equipamento->update([
+            'status_operacional' => $novoStatus,
+            'status_manual' => true,
         ]);
+
+        return response()->json(['ok' => true, 'status' => $novoStatus]);
+    }
+
+    /** Devolve o veículo para a sincronização automática via Bigcore. */
+    public function voltarSincronizacaoAutomatica(Equipamento $equipamento): JsonResponse
+    {
+        $equipamento->update(['status_manual' => false]);
+
+        return response()->json(['ok' => true]);
     }
 
     public function updateImplemento(Request $request, Equipamento $equipamento): RedirectResponse
