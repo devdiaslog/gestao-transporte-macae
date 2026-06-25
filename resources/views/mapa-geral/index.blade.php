@@ -163,7 +163,19 @@
         </div>
 
         {{-- Container do mapa geral --}}
-        <div id="leaflet-map-geral" style="flex:1;"></div>
+        <div class="relative" style="flex:1;">
+            <div id="leaflet-map-geral" style="position:absolute; inset:0;"></div>
+
+            {{-- Overlay de carregamento --}}
+            <div id="mapa-geral-loading"
+                 style="position:absolute; inset:0; z-index:1000; display:flex;"
+                 class="flex-col items-center justify-center gap-3 bg-white/80 backdrop-blur-sm dark:bg-zinc-900/80">
+                <svg class="h-8 w-8 animate-spin text-zinc-400 dark:text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                </svg>
+                <p id="mapa-geral-loading-text" class="text-sm font-medium text-zinc-600 dark:text-zinc-300">Carregando mapa…</p>
+            </div>
+        </div>
     </div>
 
     {{-- Leaflet.js --}}
@@ -459,9 +471,22 @@
             return qs ? _mapaGeralUrl + '?' + qs : _mapaGeralUrl;
         }
 
+        function _mostrarLoadingMapa(texto) {
+            var overlay = document.getElementById('mapa-geral-loading');
+            var textoEl = document.getElementById('mapa-geral-loading-text');
+            if (textoEl) { textoEl.textContent = texto || 'Atualizando mapa…'; }
+            if (overlay) { overlay.style.display = 'flex'; }
+        }
+
+        function _ocultarLoadingMapa() {
+            var overlay = document.getElementById('mapa-geral-loading');
+            if (overlay) { overlay.style.display = 'none'; }
+        }
+
         function _fetchEPlotarMarcadores() {
             var info = document.getElementById('mapa-geral-info');
             info.textContent = 'Atualizando mapa…';
+            _mostrarLoadingMapa('Atualizando mapa…');
 
             return fetch(_buildMapaGeralUrl(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(function (r) { return r.json(); })
@@ -722,6 +747,9 @@
                 })
                 .catch(function () {
                     document.getElementById('mapa-geral-info').textContent = 'Erro ao carregar posições.';
+                })
+                .finally(function () {
+                    _ocultarLoadingMapa();
                 });
         }
 
@@ -732,6 +760,7 @@
             btn.disabled         = true;
             icon.style.animation = 'spin 1s linear infinite';
             info.textContent     = 'Sincronizando com a API…';
+            _mostrarLoadingMapa('Sincronizando com a API…');
 
             // Sincroniza status operacional em paralelo (fire-and-forget)
             if (!_sincStatusEmAndamento) {
