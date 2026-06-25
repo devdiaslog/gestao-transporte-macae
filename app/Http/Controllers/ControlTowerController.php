@@ -42,6 +42,7 @@ class ControlTowerController extends Controller
             ->when($request->filled('implemento_modelo_id'), fn ($q) => $q->whereHas('implemento', fn ($q) => $q->where('modelo_id', $request->implemento_modelo_id)))
             ->when($request->filled('motorista_id'), fn ($q) => $q->where('motorista_id', $request->motorista_id))
             ->when($request->filled('sub_divisao_id'), fn ($q) => $q->whereIn('sub_divisao_id', (array) $request->input('sub_divisao_id')))
+            ->when($request->filled('status_operacional'), fn ($q) => $q->whereIn('status_operacional', (array) $request->input('status_operacional')))
             ->orderByRaw("(
                 SELECT MAX(r.data_hora_emissao)
                 FROM reporte_itens ri
@@ -324,6 +325,7 @@ class ControlTowerController extends Controller
             ->when($request->filled('modelo_id'), fn ($q) => $q->where('modelo_id', $request->modelo_id))
             ->when($request->filled('implemento_modelo_id'), fn ($q) => $q->whereHas('implemento', fn ($q) => $q->where('modelo_id', $request->implemento_modelo_id)))
             ->when($request->filled('motorista_id'), fn ($q) => $q->where('motorista_id', $request->motorista_id))
+            ->when($request->filled('status_operacional'), fn ($q) => $q->whereIn('status_operacional', (array) $request->input('status_operacional')))
             ->orderBy('placa')
             ->get();
 

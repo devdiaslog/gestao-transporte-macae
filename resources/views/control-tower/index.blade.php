@@ -13,13 +13,14 @@
         $currentImplementoModelo = request('implemento_modelo_id');
         $currentMotorista        = request('motorista_id');
         $currentSubDivisoes      = request('sub_divisao_id', []);
+        $currentStatusOp         = request('status_operacional', []);
     @endphp
 
     {{-- Linha 1: Botões --}}
     <div class="mt-4 flex flex-wrap items-center gap-2">
 
         {{-- Exportar CSV --}}
-        <a href="{{ route('control-tower.export', array_filter(['divisao_id' => $currentDivisao, 'modelo_id' => $currentModelo, 'implemento_modelo_id' => $currentImplementoModelo, 'motorista_id' => $currentMotorista])) }}"
+        <a href="{{ route('control-tower.export', array_filter(['divisao_id' => $currentDivisao, 'modelo_id' => $currentModelo, 'implemento_modelo_id' => $currentImplementoModelo, 'motorista_id' => $currentMotorista, 'status_operacional' => $currentStatusOp])) }}"
            title="Exportar para CSV/Excel"
            class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors
                   border-slate-200 bg-white text-zinc-700 hover:border-slate-300 hover:bg-slate-50
@@ -234,7 +235,47 @@
                 </div>
             @endif
 
-            @if($currentDivisao || $currentModelo || $currentImplementoModelo || $currentMotorista || count($currentSubDivisoes) > 0)
+            {{-- Status Operacional (multi-select dropdown) --}}
+            @if($statusOperacionais->isNotEmpty())
+                <div class="relative" id="status-op-picker-wrapper">
+                    <button type="button" id="status-op-picker-btn" onclick="toggleStatusOpPicker()"
+                            class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium outline-none transition-all
+                                   border-slate-200 bg-white text-zinc-700
+                                   dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
+                        <span id="status-op-picker-label">
+                            @if(count($currentStatusOp) === 0)
+                                Todos os status
+                            @elseif(count($currentStatusOp) === 1)
+                                {{ $currentStatusOp[0] }}
+                            @else
+                                {{ count($currentStatusOp) }} status
+                            @endif
+                        </span>
+                        <svg class="h-3.5 w-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                        </svg>
+                    </button>
+
+                    <div id="status-op-picker-panel"
+                         class="absolute left-0 top-full z-30 mt-1.5 hidden min-w-[200px] overflow-hidden rounded-xl border shadow-lg
+                                border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+                        <div class="py-1.5">
+                            @foreach($statusOperacionais as $statusOp)
+                                <label class="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/50">
+                                    <input type="checkbox" name="status_operacional[]"
+                                           value="{{ $statusOp->nome }}"
+                                           class="h-4 w-4 rounded border-slate-300 accent-zinc-900 dark:accent-zinc-100"
+                                           @if(in_array($statusOp->nome, (array)$currentStatusOp)) checked @endif
+                                           onchange="document.getElementById('filter-form').submit()">
+                                    <span class="text-xs text-zinc-700 dark:text-zinc-300">{{ $statusOp->nome }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            @if($currentDivisao || $currentModelo || $currentImplementoModelo || $currentMotorista || count($currentSubDivisoes) > 0 || count($currentStatusOp) > 0)
                 <a href="{{ route('control-tower.index') }}"
                    class="flex items-center gap-1 rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors
                           border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700
@@ -272,7 +313,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
                     </svg>
                 </div>
-                @if($currentDivisao || $currentModelo || $currentImplementoModelo || $currentMotorista)
+                @if($currentDivisao || $currentModelo || $currentImplementoModelo || $currentMotorista || count($currentSubDivisoes) > 0 || count($currentStatusOp) > 0)
                     <h3 class="mt-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">Nenhum equipamento encontrado</h3>
                     <a href="{{ route('control-tower.index') }}"
                        class="mt-4 inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors
@@ -694,7 +735,7 @@
     @if(!$equipamentos->isEmpty())
         <p class="mt-2 text-xs text-zinc-400 dark:text-zinc-600">
             {{ $equipamentos->total() }} {{ $equipamentos->total() === 1 ? 'equipamento' : 'equipamentos' }} no total
-            @if($currentDivisao || $currentModelo || $currentImplementoModelo || $currentMotorista) · filtros ativos @endif
+            @if($currentDivisao || $currentModelo || $currentImplementoModelo || $currentMotorista || count($currentSubDivisoes) > 0 || count($currentStatusOp) > 0) · filtros ativos @endif
         </p>
     @endif
 
@@ -1142,6 +1183,20 @@
         document.addEventListener('click', function (e) {
             var wrapper = document.getElementById('subdivisao-picker-wrapper');
             var panel   = document.getElementById('subdivisao-picker-panel');
+            if (wrapper && panel && !wrapper.contains(e.target)) {
+                panel.classList.add('hidden');
+            }
+        });
+
+        // ─── Status Operacional picker dropdown ─────────────────────────────
+        window.toggleStatusOpPicker = function () {
+            var panel = document.getElementById('status-op-picker-panel');
+            if (panel) { panel.classList.toggle('hidden'); }
+        };
+
+        document.addEventListener('click', function (e) {
+            var wrapper = document.getElementById('status-op-picker-wrapper');
+            var panel   = document.getElementById('status-op-picker-panel');
             if (wrapper && panel && !wrapper.contains(e.target)) {
                 panel.classList.add('hidden');
             }
