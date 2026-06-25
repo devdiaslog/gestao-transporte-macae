@@ -22,7 +22,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use Throwable;
@@ -647,75 +646,42 @@ class ControlTowerController extends Controller
     }
 
     /**
-     * Atualiza manualmente status operacional, documento e observação do veículo,
-     * registrando o histórico via StatusEvento (entrada/saída) e marcando o veículo
-     * como controlado manualmente — a sincronização automática da Bigcore passa a
-     * ignorá-lo até alguém reverter via voltarSincronizacaoAutomatica().
+     * Atualiza manualmente o Status Operacional (e documento/observação) do veículo.
+     * Independente do Status Elog, que continua sendo atualizado automaticamente
+     * pelo cron de sincronização com a Bigcore (StatusOperacionalService).
      */
     public function editarStatus(UpdateStatusManualRequest $request, Equipamento $equipamento): JsonResponse
     {
         $validated = $request->validated();
-        $agora = Carbon::now();
 
-        $novoStatus = $validated['status_operacional'];
-        $novoDocumento = $validated['documento'] ?? null;
-        $novaObservacao = $validated['observacao'] ?? null;
+        $campos = [
+            'status_operacional' => ['label' => 'Status Operacional', 'valor' => $validated['status_operacional']],
+            'documento_demanda' => ['label' => 'Documento de Demanda', 'valor' => $validated['documento'] ?? null],
+            'observacao_operacional' => ['label' => 'Observação', 'valor' => $validated['observacao'] ?? null],
+        ];
 
-        $aberto = StatusEvento::query()
-            ->where('equipamento_id', $equipamento->id)
-            ->whereNull('saida_em')
-            ->latest('entrada_em')
-            ->first();
+        foreach ($campos as $field => $info) {
+            $anterior = $equipamento->$field ?: null;
+            $novo = $info['valor'] ?: null;
 
-        $mudouStatusOuDocumento = ! $aberto
-            || $aberto->status_operacional !== $novoStatus
-            || ($aberto->documento ?: null) !== ($novoDocumento ?: null);
-
-        if ($mudouStatusOuDocumento) {
-            if ($aberto) {
-                $aberto->update([
-                    'saida_em' => $agora,
-                    'duracao_minutos' => (int) $aberto->entrada_em->diffInMinutes($agora),
+            if ($anterior !== $novo) {
+                EquipamentoLog::create([
+                    'equipamento_id' => $equipamento->id,
+                    'user_id' => auth()->id(),
+                    'campo' => $info['label'],
+                    'valor_anterior' => $anterior,
+                    'valor_novo' => $novo,
                 ]);
             }
-
-            StatusEvento::create([
-                'equipamento_id' => $equipamento->id,
-                'status_operacional' => $novoStatus,
-                'documento' => $novoDocumento,
-                'observacao' => $novaObservacao,
-                'entrada_em' => $agora,
-            ]);
-        } elseif (($aberto->observacao ?: null) !== ($novaObservacao ?: null)) {
-            $aberto->update(['observacao' => $novaObservacao]);
-        }
-
-        $statusAnterior = $equipamento->status_operacional;
-
-        if ($statusAnterior !== $novoStatus) {
-            EquipamentoLog::create([
-                'equipamento_id' => $equipamento->id,
-                'user_id' => auth()->id(),
-                'campo' => 'Status Operacional',
-                'valor_anterior' => $statusAnterior,
-                'valor_novo' => $novoStatus,
-            ]);
         }
 
         $equipamento->update([
-            'status_operacional' => $novoStatus,
-            'status_manual' => true,
+            'status_operacional' => $validated['status_operacional'],
+            'documento_demanda' => $validated['documento'] ?? null,
+            'observacao_operacional' => $validated['observacao'] ?? null,
         ]);
 
-        return response()->json(['ok' => true, 'status' => $novoStatus]);
-    }
-
-    /** Devolve o veículo para a sincronização automática via Bigcore. */
-    public function voltarSincronizacaoAutomatica(Equipamento $equipamento): JsonResponse
-    {
-        $equipamento->update(['status_manual' => false]);
-
-        return response()->json(['ok' => true]);
+        return response()->json(['ok' => true, 'status' => $equipamento->status_operacional]);
     }
 
     public function updateImplemento(Request $request, Equipamento $equipamento): RedirectResponse

@@ -97,7 +97,8 @@
                     @foreach([
                         ['col' => 'placa',           'label' => 'Placa'],
                         ['col' => 'modelo',          'label' => 'Modelo / Implemento'],
-                        ['col' => 'status-op',       'label' => 'Status'],
+                        ['col' => 'status-op',       'label' => 'Status Operacional'],
+                        ['col' => 'status-elog',     'label' => 'Status Elog'],
                         ['col' => 'tempo-status',    'label' => 'Rastreador'],
                         ['col' => 'cerca',           'label' => 'Cerca'],
                         ['col' => 'tempo-cerca',     'label' => 'Tempo Cerca'],
@@ -316,7 +317,10 @@
                                 Modelo / Implemento
                             </th>
                             <th data-col="status-op" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
-                                Status
+                                Status Operacional
+                            </th>
+                            <th data-col="status-elog" class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap">
+                                Status Elog
                             </th>
                             <th data-col="tempo-status" data-sortable="tempo-status"
                                 class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 whitespace-nowrap cursor-pointer select-none hover:text-zinc-600 dark:hover:text-zinc-400"
@@ -434,7 +438,10 @@
                                     $equipamento->divisao?->nome,
                                     $impNome,
                                     $equipamento->status_operacional,
+                                    $statusEvento?->status_operacional,
                                     $equipamento->motorista?->nome,
+                                    $equipamento->documento_demanda,
+                                    $equipamento->observacao_operacional,
                                     $documento,
                                     $statusEvento?->observacao,
                                 ]));
@@ -487,11 +494,9 @@
                                     'placa'           => $equipamento->placa,
                                     'prefixo'         => $equipamento->prefixo,
                                     'status_operacional' => $equipamento->status_operacional,
-                                    'documento'       => $documento,
-                                    'observacao'      => $statusEvento?->observacao,
-                                    'status_manual'   => (bool) $equipamento->status_manual,
+                                    'documento'       => $equipamento->documento_demanda,
+                                    'observacao'      => $equipamento->observacao_operacional,
                                     'url_editar'      => route('control-tower.editar-status', $equipamento),
-                                    'url_automatico'  => route('control-tower.status-automatico', $equipamento),
                                 ]) }}"
                                 class="ct-row transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/30">
 
@@ -553,13 +558,25 @@
                                         @else
                                             <span class="text-zinc-400 dark:text-zinc-600">Definir status</span>
                                         @endif
-                                        @if($equipamento->status_manual)
-                                            <span title="Edição manual — sincronização automática pausada" class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                                        @endif
                                         <svg class="h-2.5 w-2.5 text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"/>
                                         </svg>
                                     </button>
+                                </td>
+
+                                <td data-col="status-elog" class="px-3 py-2 whitespace-nowrap">
+                                    @if($statusEvento?->status_operacional)
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium
+                                                     bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200
+                                                     dark:bg-sky-950/40 dark:text-sky-400 dark:ring-sky-800/40">
+                                            {{ $statusEvento->status_operacional }}
+                                        </span>
+                                        @if($elogDuracao)
+                                            <p class="mt-0.5 text-[10px] text-zinc-400 dark:text-zinc-600">há {{ $elogDuracao }}</p>
+                                        @endif
+                                    @else
+                                        <span class="text-zinc-300 dark:text-zinc-700">—</span>
+                                    @endif
                                 </td>
 
                                 <td data-col="tempo-status" class="px-3 py-2 whitespace-nowrap"
@@ -608,12 +625,12 @@
 
 
                                 <td data-col="documento" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
-                                    {{ $documento ?? '—' }}
+                                    {{ $equipamento->documento_demanda ?? '—' }}
                                 </td>
 
 
                                 <td data-col="obs" class="px-3 py-2 text-zinc-600 dark:text-zinc-400">
-                                    <span class="line-clamp-2 min-w-[540px] block">{{ $statusEvento?->observacao ?? '—' }}</span>
+                                    <span class="line-clamp-2 min-w-[540px] block">{{ $equipamento->observacao_operacional ?? '—' }}</span>
                                 </td>
 
                                 <td data-col="divisao" class="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
@@ -961,17 +978,6 @@
             <div id="status-errors" class="hidden rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700
                                        dark:border-rose-800/50 dark:bg-rose-950/40 dark:text-rose-400"></div>
 
-            {{-- Aviso de edição manual --}}
-            <div id="status-manual-aviso" class="hidden flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700
-                                       dark:border-amber-800/50 dark:bg-amber-950/40 dark:text-amber-400">
-                <span>Este veículo está em edição manual — a sincronização automática está pausada.</span>
-                <button type="button" onclick="voltarSincronizacaoAutomatica()"
-                        class="shrink-0 whitespace-nowrap rounded-md border border-amber-300 px-2 py-1 font-medium hover:bg-amber-100
-                               dark:border-amber-700 dark:hover:bg-amber-900/40">
-                    Voltar ao automático
-                </button>
-            </div>
-
             {{-- Status Operacional --}}
             <div>
                 <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Status Operacional <span class="text-red-500">*</span></label>
@@ -1030,7 +1036,7 @@
     (function () {
         // ─── Column visibility (localStorage) ──────────────────────────────
         var STORE_KEY     = 'ct_hidden_cols';
-        var ALL_COLS      = ['placa', 'modelo', 'status-op', 'tempo-status', 'cerca', 'tempo-cerca', 'condutor', 'documento', 'obs', 'divisao'];
+        var ALL_COLS      = ['placa', 'modelo', 'status-op', 'status-elog', 'tempo-status', 'cerca', 'tempo-cerca', 'condutor', 'documento', 'obs', 'divisao'];
         var DEFAULT_HIDDEN = ['placa', 'modelo', 'tempo-status', 'cerca', 'tempo-cerca', 'condutor', 'divisao'];
 
         function hiddenCols() {
@@ -1803,7 +1809,6 @@
 
     // ─── Editar Status ──────────────────────────────────────────────────────
     var _statusEditUrl = null;
-    var _statusAutoUrl = null;
 
     window.openStatusModal = function (btn) {
         var el = btn.closest('[data-equipamento]');
@@ -1811,15 +1816,11 @@
         var d = JSON.parse(el.dataset.equipamento);
 
         _statusEditUrl = d.url_editar;
-        _statusAutoUrl = d.url_automatico;
 
         document.getElementById('status-subtitle').textContent = 'Veículo: ' + (d.prefixo ? d.prefixo + ' / ' + d.placa : d.placa);
         document.getElementById('status-operacional').value = d.status_operacional || '';
         document.getElementById('status-documento').value   = d.documento || '';
         document.getElementById('status-observacao').value  = d.observacao || '';
-
-        var aviso = document.getElementById('status-manual-aviso');
-        aviso.classList.toggle('hidden', ! d.status_manual);
 
         var errEl = document.getElementById('status-errors');
         errEl.classList.add('hidden');
@@ -1874,25 +1875,6 @@
             window.location.reload();
         })
         .catch(function () {
-            errEl.textContent = 'Erro de conexão. Tente novamente.';
-            errEl.classList.remove('hidden');
-        });
-    };
-
-    window.voltarSincronizacaoAutomatica = function () {
-        if (! _statusAutoUrl) { return; }
-
-        fetch(_statusAutoUrl, {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': _csrfToken,
-            },
-        })
-        .then(function () { window.location.reload(); })
-        .catch(function () {
-            var errEl = document.getElementById('status-errors');
             errEl.textContent = 'Erro de conexão. Tente novamente.';
             errEl.classList.remove('hidden');
         });

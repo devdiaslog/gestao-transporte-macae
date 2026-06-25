@@ -76,7 +76,6 @@ Route::middleware('auth')->group(function () {
     Route::patch('torre-de-controle/{equipamento}/implemento', [ControlTowerController::class, 'updateImplemento'])->name('control-tower.implemento');
     Route::get('torre-de-controle/{equipamento}/historico', [ControlTowerController::class, 'historico'])->name('control-tower.historico');
     Route::post('torre-de-controle/{equipamento}/status', [ControlTowerController::class, 'editarStatus'])->name('control-tower.editar-status');
-    Route::post('torre-de-controle/{equipamento}/status/automatico', [ControlTowerController::class, 'voltarSincronizacaoAutomatica'])->name('control-tower.status-automatico');
 
     // Ocorrências — acessível a todos os perfis (restrições de edição/exclusão tratadas no controller)
     Route::get('ocorrencias-export', [OcorrenciaController::class, 'export'])->name('ocorrencias.export');
