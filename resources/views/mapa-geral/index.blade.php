@@ -7,29 +7,11 @@
     <div class="-mx-4 -mt-4 flex flex-col overflow-hidden rounded-none border-0 bg-white sm:-mx-6 lg:-mx-8 dark:bg-zinc-900"
          style="height: calc(100vh - 4rem)">
 
-        {{-- Cabeçalho --}}
-        <div style="flex-shrink:0;"
-             class="flex items-center justify-between border-b px-5 py-3.5 border-slate-200 dark:border-zinc-800">
-            <div>
-                <p id="mapa-geral-info" class="text-sm text-zinc-500 dark:text-zinc-400">Carregando…</p>
-            </div>
-            <div class="flex items-center gap-2">
-                {{-- Recarregar posições --}}
-                <button type="button" id="mapa-geral-btn-refresh" onclick="sincronizarERecarregar()" title="Sincronizar posições com a API"
-                        class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700
-                               dark:hover:bg-zinc-800 dark:hover:text-zinc-300">
-                    <svg id="mapa-geral-refresh-icon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
-                    </svg>
-                </button>
-            </div>
-        </div>
-
-        {{-- Busca rápida + Modo Interativo --}}
+        {{-- Barra de filtros + busca --}}
         <div style="flex-shrink:0;" class="border-b px-4 py-2 border-slate-200 dark:border-zinc-800">
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
                 {{-- Input de busca --}}
-                <div class="relative flex-1">
+                <div class="relative min-w-[180px] flex-1">
                     <svg class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
                          fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
@@ -45,6 +27,87 @@
                          class="absolute left-0 right-0 top-full z-50 mt-1 hidden max-h-52 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg
                                 dark:border-zinc-700 dark:bg-zinc-800">
                     </div>
+                </div>
+
+                {{-- Divisão --}}
+                <select id="filtro-divisao" onchange="atualizarFiltrosMapaGeral()"
+                        class="rounded-lg border border-slate-200 bg-white py-1.5 px-2 text-xs text-zinc-600 outline-none
+                               focus:border-zinc-400 focus:ring-2 focus:ring-zinc-900/10
+                               dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+                    <option value="">Todas as divisões</option>
+                    @foreach($divisoes as $divisao)
+                        <option value="{{ $divisao->id }}">{{ $divisao->nome }}</option>
+                    @endforeach
+                </select>
+
+                {{-- Subdivisões (multi-select dropdown) --}}
+                @if($subDivisoes->isNotEmpty())
+                    <div class="relative" id="subdivisao-picker-wrapper">
+                        <button type="button" onclick="togglePicker('subdivisao-picker-panel')"
+                                class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium outline-none transition-all
+                                       border-slate-200 bg-white text-zinc-600
+                                       dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+                            <span id="subdivisao-picker-label">Todas as subdivisões</span>
+                            <svg class="h-3 w-3 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                            </svg>
+                        </button>
+                        <div id="subdivisao-picker-panel"
+                             class="absolute left-0 top-full z-30 mt-1.5 hidden min-w-[200px] overflow-hidden rounded-xl border shadow-lg
+                                    border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+                            <div class="py-1.5">
+                                @foreach($subDivisoes as $sd)
+                                    <label class="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/50">
+                                        <input type="checkbox" data-filtro="sub_divisao_id" value="{{ $sd->id }}"
+                                               class="h-4 w-4 rounded border-slate-300 accent-zinc-900 dark:accent-zinc-100"
+                                               onchange="atualizarFiltrosMapaGeral()">
+                                        <span class="text-xs text-zinc-700 dark:text-zinc-300">{{ $sd->nome }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- Status Operacional (multi-select dropdown) --}}
+                @if($statusOperacionais->isNotEmpty())
+                    <div class="relative" id="status-op-picker-wrapper">
+                        <button type="button" onclick="togglePicker('status-op-picker-panel')"
+                                class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium outline-none transition-all
+                                       border-slate-200 bg-white text-zinc-600
+                                       dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+                            <span id="status-op-picker-label">Todos os status</span>
+                            <svg class="h-3 w-3 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                            </svg>
+                        </button>
+                        <div id="status-op-picker-panel"
+                             class="absolute left-0 top-full z-30 mt-1.5 hidden min-w-[200px] overflow-hidden rounded-xl border shadow-lg
+                                    border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+                            <div class="py-1.5">
+                                @foreach($statusOperacionais as $statusOp)
+                                    <label class="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/50">
+                                        <input type="checkbox" data-filtro="status_operacional" value="{{ $statusOp->nome }}"
+                                               class="h-4 w-4 rounded border-slate-300 accent-zinc-900 dark:accent-zinc-100"
+                                               onchange="atualizarFiltrosMapaGeral()">
+                                        <span class="text-xs text-zinc-700 dark:text-zinc-300">{{ $statusOp->nome }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- Rastreador (chips) --}}
+                <div class="flex items-center gap-1">
+                    @foreach(['Em Movimento', 'Parado', 'Sem Sinal'] as $estado)
+                        <button type="button" data-tracker-chip="{{ $estado }}" onclick="toggleTrackerChip(this)"
+                                class="tracker-chip rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors
+                                       border-slate-200 bg-white text-zinc-500 hover:border-slate-300
+                                       dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+                            {{ $estado }}
+                        </button>
+                    @endforeach
                 </div>
 
                 {{-- Modo Interativo --}}
@@ -75,7 +138,18 @@
                     <span id="mi-dot" class="h-2 w-2 rounded-full bg-zinc-300 dark:bg-zinc-600 transition-colors"></span>
                     <span id="mi-label">Modo Interativo</span>
                 </button>
+
+                {{-- Recarregar posições --}}
+                <button type="button" id="mapa-geral-btn-refresh" onclick="sincronizarERecarregar()" title="Sincronizar posições com a API"
+                        class="ml-auto rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700
+                               dark:hover:bg-zinc-800 dark:hover:text-zinc-300">
+                    <svg id="mapa-geral-refresh-icon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                    </svg>
+                </button>
             </div>
+
+            <p id="mapa-geral-info" class="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">Carregando…</p>
         </div>
 
         {{-- Faixa de alterações recentes Vfleets --}}
@@ -307,11 +381,89 @@
         var _csrfToken            = '{{ csrf_token() }}';
         var _sincStatusEmAndamento = false;
 
+        // ─── Filtros ─────────────────────────────────────────────────────────────
+        window.togglePicker = function (panelId) {
+            var panel = document.getElementById(panelId);
+            if (panel) { panel.classList.toggle('hidden'); }
+        };
+
+        document.addEventListener('click', function (e) {
+            ['subdivisao-picker', 'status-op-picker'].forEach(function (key) {
+                var wrapper = document.getElementById(key + '-wrapper');
+                var panel   = document.getElementById(key + '-panel');
+                if (wrapper && panel && !wrapper.contains(e.target)) {
+                    panel.classList.add('hidden');
+                }
+            });
+        });
+
+        var _TRACKER_CHIP_CORES = {
+            'Em Movimento': { border: '#34d399', bg: '#ecfdf5', text: '#047857' },
+            'Parado':       { border: '#fb7185', bg: '#fff1f2', text: '#be123c' },
+            'Sem Sinal':    { border: '#a1a1aa', bg: '#fafafa', text: '#3f3f46' },
+        };
+
+        window.toggleTrackerChip = function (btn) {
+            var ativo = btn.classList.toggle('tracker-chip-active');
+            var cor   = _TRACKER_CHIP_CORES[btn.dataset.trackerChip] || _TRACKER_CHIP_CORES['Sem Sinal'];
+
+            if (ativo) {
+                btn.style.borderColor = cor.border;
+                btn.style.background  = cor.bg;
+                btn.style.color       = cor.text;
+            } else {
+                btn.style.borderColor = '';
+                btn.style.background  = '';
+                btn.style.color       = '';
+            }
+
+            atualizarFiltrosMapaGeral();
+        };
+
+        function _valoresFiltro(name) {
+            return Array.prototype.slice.call(document.querySelectorAll('[data-filtro="' + name + '"]:checked'))
+                .map(function (el) { return el.value; });
+        }
+
+        window.atualizarFiltrosMapaGeral = function () {
+            var subDivisoes = _valoresFiltro('sub_divisao_id');
+            var statusOps   = _valoresFiltro('status_operacional');
+
+            var subLabel = document.getElementById('subdivisao-picker-label');
+            if (subLabel) {
+                subLabel.textContent = subDivisoes.length === 0 ? 'Todas as subdivisões' : subDivisoes.length + ' subdivisão(ões)';
+            }
+            var statusLabel = document.getElementById('status-op-picker-label');
+            if (statusLabel) {
+                statusLabel.textContent = statusOps.length === 0 ? 'Todos os status' : statusOps.length + ' status';
+            }
+
+            _fetchEPlotarMarcadores();
+        };
+
+        function _buildMapaGeralUrl() {
+            var params = new URLSearchParams();
+
+            var divisao = document.getElementById('filtro-divisao').value;
+            if (divisao) { params.append('divisao_id', divisao); }
+
+            _valoresFiltro('sub_divisao_id').forEach(function (v) { params.append('sub_divisao_id[]', v); });
+            _valoresFiltro('status_operacional').forEach(function (v) { params.append('status_operacional[]', v); });
+
+            Array.prototype.slice.call(document.querySelectorAll('.tracker-chip-active')).forEach(function (el) {
+                params.append('tracker_state[]', el.dataset.trackerChip);
+            });
+
+            var qs = params.toString();
+
+            return qs ? _mapaGeralUrl + '?' + qs : _mapaGeralUrl;
+        }
+
         function _fetchEPlotarMarcadores() {
             var info = document.getElementById('mapa-geral-info');
             info.textContent = 'Atualizando mapa…';
 
-            return fetch(_mapaGeralUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            return fetch(_buildMapaGeralUrl(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
                     var veiculos = data.veiculos || [];

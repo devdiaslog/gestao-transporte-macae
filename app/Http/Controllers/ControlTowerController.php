@@ -409,10 +409,14 @@ class ControlTowerController extends Controller
 
     public function mapaGeralPagina(): View
     {
-        return view('mapa-geral.index');
+        $divisoes = Divisao::where('status', true)->orderBy('nome')->get();
+        $subDivisoes = SubDivisao::where('status', true)->orderBy('nome')->get();
+        $statusOperacionais = StatusOperacional::where('status', true)->orderBy('nome')->get();
+
+        return view('mapa-geral.index', compact('divisoes', 'subDivisoes', 'statusOperacionais'));
     }
 
-    public function mapaGeral(): JsonResponse
+    public function mapaGeral(Request $request): JsonResponse
     {
         $tz = config('app.timezone');
         $tipoMotorizado = TipoEquipamento::where('nome', 'Motorizado')->first();
@@ -443,6 +447,9 @@ class ControlTowerController extends Controller
             ->with(['posicao', 'motorista'])
             ->where('status', true)
             ->when($tipoMotorizado, fn ($q) => $q->where('tipo_id', $tipoMotorizado->id))
+            ->when($request->filled('divisao_id'), fn ($q) => $q->where('divisao_id', $request->divisao_id))
+            ->when($request->filled('sub_divisao_id'), fn ($q) => $q->whereIn('sub_divisao_id', (array) $request->input('sub_divisao_id')))
+            ->when($request->filled('status_operacional'), fn ($q) => $q->whereIn('status_operacional', (array) $request->input('status_operacional')))
             ->get()
             ->filter(fn ($e) => $e->posicao?->latitude && $e->posicao?->longitude)
             ->map(function ($e) use ($tz, $eventosAbertos, $statusEventosAbertos, $minutosAtendimento) {
@@ -552,6 +559,11 @@ class ControlTowerController extends Controller
                     'tempo_cerca_duracao' => $tempoCercaDuracao,
                     'cerca_bar_color' => $cercaBarColor,
                 ];
+            })
+            ->when($request->filled('tracker_state'), function (Collection $collection) use ($request) {
+                $estados = (array) $request->input('tracker_state');
+
+                return $collection->filter(fn (array $v) => in_array($v['sem_sinal'] ? 'Sem Sinal' : ($v['tracker_state'] ?: 'Sem Sinal'), $estados, true));
             })
             ->values();
 
