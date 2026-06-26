@@ -2,7 +2,17 @@
 
     {{-- Leaflet.js CSS --}}
     <link rel="stylesheet" href="/vendor/leaflet/leaflet.css"/>
-    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+    <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes alertaSino {
+            0%, 100% { transform: rotate(0); }
+            20%      { transform: rotate(-12deg); }
+            40%      { transform: rotate(10deg); }
+            60%      { transform: rotate(-6deg); }
+            80%      { transform: rotate(4deg); }
+        }
+        .alerta-sino svg { animation: alertaSino 1.6s ease-in-out infinite; transform-origin: 50% 10%; }
+    </style>
 
 
 
@@ -540,7 +550,19 @@
                                        {{ $statusDivergente ? 'bg-rose-100 dark:bg-rose-950/40 hover:bg-rose-200 dark:hover:bg-rose-950/60' : '' }}">
 
                                 <td class="px-3 py-2 whitespace-nowrap">
-                                    <p class="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-100">{{ $equipamento->prefixo ?? '—' }}</p>
+                                    <div class="flex items-center gap-1.5">
+                                        <p class="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-100">{{ $equipamento->prefixo ?? '—' }}</p>
+                                        @php $qtdAlertas = (int) ($alertasDisparados[$equipamento->id] ?? 0); @endphp
+                                        @if($qtdAlertas > 0)
+                                            <a href="{{ route('alertas.index') }}"
+                                               title="{{ $qtdAlertas }} alerta(s) disparado(s) para este veículo"
+                                               class="alerta-sino inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600 ring-1 ring-amber-300 dark:bg-amber-950/50 dark:text-amber-400 dark:ring-amber-700/60">
+                                                <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M12 2a6 6 0 0 0-6 6v3.586l-1.707 1.707A1 1 0 0 0 5 15h14a1 1 0 0 0 .707-1.707L18 11.586V8a6 6 0 0 0-6-6Zm0 20a3 3 0 0 0 2.83-2H9.17A3 3 0 0 0 12 22Z"/>
+                                                </svg>
+                                            </a>
+                                        @endif
+                                    </div>
                                     <a href="{{ route('equipamentos.edit', $equipamento) }}?redirect=control-tower"
                                        title="Editar dados do veículo"
                                        class="inline-flex items-center gap-0.5 text-[10px] text-zinc-400 transition-colors hover:text-indigo-600 dark:text-zinc-600 dark:hover:text-indigo-400">

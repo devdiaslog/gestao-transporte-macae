@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateStatusManualRequest;
+use App\Models\Alerta;
 use App\Models\Cerca;
 use App\Models\CercaEvento;
 use App\Models\Divisao;
@@ -154,6 +155,17 @@ class ControlTowerController extends Controller
             ->get()
             ->keyBy(fn ($r) => $r->equipamento_id.'_'.$r->documento);
 
+        // Alertas disparados (pendentes com hora vencida) visíveis ao usuário, por veículo
+        $alertasDisparados = Alerta::query()
+            ->where('status', 'pendente')
+            ->whereNotNull('data_hora_alerta')
+            ->where('data_hora_alerta', '<=', now())
+            ->visivelPara(auth()->id())
+            ->whereIn('equipamento_id', $equipamentoIds)
+            ->selectRaw('equipamento_id, COUNT(*) as total')
+            ->groupBy('equipamento_id')
+            ->pluck('total', 'equipamento_id');
+
         // Recentes Elog — frotas que mudaram de status/documento na última hora
         $idsRecentesElog = StatusEvento::query()
             ->whereNotNull('saida_em')
@@ -180,7 +192,7 @@ class ControlTowerController extends Controller
             'equipamentos', 'divisoes', 'subDivisoes', 'modelos', 'modelosImplemento',
             'implementos', 'statusOperacionais', 'statusCores', 'motoristas', 'motoristaOcupado',
             'ultimosReportes', 'recentementeAlterados', 'eventosAbertos', 'statusEventosAbertos',
-            'minutosAtendimento', 'recentesElog',
+            'minutosAtendimento', 'recentesElog', 'alertasDisparados',
         ));
     }
 

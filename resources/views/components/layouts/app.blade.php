@@ -717,6 +717,34 @@
     if (! btn) { return; }
 
     var _pendentesUrl = '{{ route('alertas.pendentes') }}';
+    var _disparadosAnterior = null;
+
+    // ── Som de alerta (Web Audio) — destravado na 1ª interação do usuário ──
+    var _audioCtx = null;
+    function _initAudio() {
+        if (! _audioCtx) {
+            try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+        }
+        if (_audioCtx && _audioCtx.state === 'suspended') { _audioCtx.resume(); }
+    }
+    document.addEventListener('click', _initAudio);
+    document.addEventListener('keydown', _initAudio);
+
+    function _tocarBeep() {
+        if (! _audioCtx) { return; }
+        [0, 0.22].forEach(function (offset) {
+            var osc  = _audioCtx.createOscillator();
+            var gain = _audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = 880;
+            var t = _audioCtx.currentTime + offset;
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+            osc.connect(gain); gain.connect(_audioCtx.destination);
+            osc.start(t); osc.stop(t + 0.2);
+        });
+    }
 
     function escHtml(s) {
         return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -724,6 +752,13 @@
 
     function render(data) {
         var disparados = data.disparados || 0;
+
+        // Toca o som quando surge um novo alerta disparado (ou ja ha algum no 1º load)
+        if ((_disparadosAnterior === null && disparados > 0) || (_disparadosAnterior !== null && disparados > _disparadosAnterior)) {
+            _tocarBeep();
+        }
+        _disparadosAnterior = disparados;
+
         if (disparados > 0) {
             badge.textContent = disparados > 99 ? '99+' : disparados;
             badge.classList.remove('hidden');
