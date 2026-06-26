@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Http\Controllers\AlertaController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BigcoreController;
 use App\Http\Controllers\CercaController;
@@ -90,6 +91,15 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
     Route::patch('torre-de-controle/{equipamento}/implemento', [ControlTowerController::class, 'updateImplemento'])->name('control-tower.implemento');
     Route::get('torre-de-controle/{equipamento}/historico', [ControlTowerController::class, 'historico'])->name('control-tower.historico');
     Route::post('torre-de-controle/{equipamento}/status', [ControlTowerController::class, 'editarStatus'])->name('control-tower.editar-status');
+
+    // Alertas da frota
+    Route::get('alertas', [AlertaController::class, 'index'])->name('alertas.index');
+    Route::get('alertas/pendentes', [AlertaController::class, 'pendentes'])->name('alertas.pendentes');
+    Route::post('alertas', [AlertaController::class, 'store'])->name('alertas.store');
+    Route::put('alertas/{alerta}', [AlertaController::class, 'update'])->name('alertas.update');
+    Route::post('alertas/{alerta}/prorrogar', [AlertaController::class, 'prorrogar'])->name('alertas.prorrogar');
+    Route::post('alertas/{alerta}/resolver', [AlertaController::class, 'resolver'])->name('alertas.resolver');
+    Route::delete('alertas/{alerta}', [AlertaController::class, 'destroy'])->name('alertas.destroy');
 
     // Ocorrências — acessível a todos os perfis (restrições de edição/exclusão tratadas no controller)
     Route::get('ocorrencias-export', [OcorrenciaController::class, 'export'])->name('ocorrencias.export');

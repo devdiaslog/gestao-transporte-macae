@@ -203,6 +203,22 @@
                 <span class="nav-label hidden whitespace-nowrap">Mapa Geral</span>
             </a>
 
+            {{-- Alertas — indisponível para o perfil Visualizador --}}
+            @unless($isVisualizador)
+            <a href="{{ route('alertas.index') }}"
+               title="Alertas"
+               class="nav-link flex items-center justify-center rounded-lg py-2.5 text-sm font-medium
+                      transition-all duration-200
+                      {{ request()->routeIs('alertas.*')
+                          ? 'bg-zinc-900 text-white dark:bg-zinc-800 dark:text-zinc-100'
+                          : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/>
+                </svg>
+                <span class="nav-label hidden whitespace-nowrap">Alertas</span>
+            </a>
+            @endunless
+
         </nav>
 
         {{-- User footer --}}
@@ -290,6 +306,35 @@
             </h1>
 
             <div class="ml-auto flex items-center gap-2">
+
+                {{-- Sino de alertas — oculto para o perfil Visualizador --}}
+                @unless($isVisualizador)
+                <div class="relative" id="alertas-bell-wrapper">
+                    <button id="alertas-bell-btn" type="button" aria-label="Alertas"
+                            class="relative h-8 w-8 rounded-lg text-zinc-500 transition-colors duration-200
+                                   hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/70">
+                        <svg class="absolute inset-0 m-auto h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/>
+                        </svg>
+                        <span id="alertas-bell-badge"
+                              class="absolute -right-0.5 -top-0.5 hidden min-w-[16px] rounded-full bg-rose-600 px-1 text-center text-[10px] font-bold leading-4 text-white">0</span>
+                    </button>
+
+                    {{-- Dropdown --}}
+                    <div id="alertas-bell-dropdown"
+                         class="absolute right-0 top-full z-50 mt-2 hidden w-80 overflow-hidden rounded-xl border bg-white shadow-xl
+                                border-slate-200 dark:border-zinc-800 dark:bg-zinc-900">
+                        <div class="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 dark:border-zinc-800">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-600">Alertas</p>
+                            <a href="{{ route('alertas.index') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">Ver todos</a>
+                        </div>
+                        <div id="alertas-bell-list" class="max-h-80 overflow-y-auto py-1">
+                            <p class="px-4 py-6 text-center text-xs text-zinc-400 dark:text-zinc-600">Carregando…</p>
+                        </div>
+                    </div>
+                </div>
+                @endunless
+
                 {{-- Theme toggle (Sun/Moon) --}}
                 <button id="theme-toggle" aria-label="Alternar tema"
                         class="relative h-8 w-8 rounded-lg text-zinc-500 transition-colors duration-200
@@ -660,6 +705,75 @@
     });
 })();
 </script>
+
+@unless($isVisualizador)
+<script>
+(function () {
+    var btn      = document.getElementById('alertas-bell-btn');
+    var dropdown = document.getElementById('alertas-bell-dropdown');
+    var badge    = document.getElementById('alertas-bell-badge');
+    var list     = document.getElementById('alertas-bell-list');
+    var wrapper  = document.getElementById('alertas-bell-wrapper');
+    if (! btn) { return; }
+
+    var _pendentesUrl = '{{ route('alertas.pendentes') }}';
+
+    function escHtml(s) {
+        return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function render(data) {
+        var disparados = data.disparados || 0;
+        if (disparados > 0) {
+            badge.textContent = disparados > 99 ? '99+' : disparados;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+
+        var alertas = data.alertas || [];
+        if (alertas.length === 0) {
+            list.innerHTML = '<p class="px-4 py-6 text-center text-xs text-zinc-400 dark:text-zinc-600">Nenhum alerta pendente.</p>';
+            return;
+        }
+
+        list.innerHTML = alertas.map(function (a) {
+            var cor = a.disparado
+                ? 'text-rose-600 dark:text-rose-400'
+                : 'text-sky-600 dark:text-sky-400';
+            var ponto = a.disparado ? 'bg-rose-500' : 'bg-sky-500';
+            return '<div class="border-b border-slate-50 px-4 py-2.5 last:border-0 dark:border-zinc-800/60">'
+                + '<div class="flex items-center gap-1.5">'
+                + '<span class="h-1.5 w-1.5 shrink-0 rounded-full ' + ponto + '"></span>'
+                + '<span class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">' + escHtml(a.veiculo || '—') + '</span>'
+                + '<span class="ml-auto text-[11px] ' + cor + '">' + escHtml(a.data_hora) + '</span>'
+                + '</div>'
+                + '<p class="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-500">' + escHtml(a.lembrete) + '</p>'
+                + '</div>';
+        }).join('');
+    }
+
+    function carregar() {
+        fetch(_pendentesUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.json(); })
+            .then(render)
+            .catch(function () {});
+    }
+
+    btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        dropdown.classList.toggle('hidden');
+        if (! dropdown.classList.contains('hidden')) { carregar(); }
+    });
+    document.addEventListener('click', function (e) {
+        if (wrapper && ! wrapper.contains(e.target)) { dropdown.classList.add('hidden'); }
+    });
+
+    carregar();
+    setInterval(carregar, 60000);
+})();
+</script>
+@endunless
 
 @stack('scripts')
 

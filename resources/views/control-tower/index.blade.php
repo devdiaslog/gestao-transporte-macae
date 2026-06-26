@@ -690,6 +690,21 @@
                                             </svg>
                                             Status
                                         </button>
+                                        <button type="button"
+                                                onclick="openAlertaModal(this)"
+                                                data-alerta-veiculo="{{ json_encode([
+                                                    'id' => $equipamento->id,
+                                                    'rotulo' => trim(($equipamento->prefixo ?? '').' '.$equipamento->placa),
+                                                ]) }}"
+                                                title="Criar alerta para o veículo"
+                                                class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
+                                                       border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700
+                                                       dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300">
+                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/>
+                                            </svg>
+                                            Alerta
+                                        </button>
                                         <a href="{{ route('control-tower.historico', $equipamento) }}"
                                            title="Ver histórico do veículo"
                                            class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-medium transition-colors
@@ -954,6 +969,61 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                 </svg>
                 Salvar
+            </button>
+        </div>
+    </div>
+
+    {{-- ─── Modal: Novo alerta ─────────────────────────────────────────────── --}}
+    <div id="alerta-backdrop" onclick="closeAlertaModal()"
+         class="fixed inset-0 z-40 hidden bg-black/40 backdrop-blur-sm"></div>
+
+    <div id="alerta-modal"
+         class="fixed inset-x-4 top-1/2 z-50 hidden w-full max-w-md -translate-y-1/2 overflow-hidden
+                rounded-2xl border shadow-2xl border-slate-200 bg-white dark:border-zinc-700 dark:bg-zinc-900
+                sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2">
+        <div class="flex items-center justify-between border-b px-5 py-3.5 border-slate-200 dark:border-zinc-800">
+            <div>
+                <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Novo alerta</h3>
+                <p id="alerta-subtitle" class="text-xs text-zinc-500 dark:text-zinc-400"></p>
+            </div>
+            <button type="button" onclick="closeAlertaModal()"
+                    class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-300">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <div class="space-y-4 px-5 py-4">
+            <div id="alerta-errors" class="hidden rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700 dark:border-rose-800/50 dark:bg-rose-950/40 dark:text-rose-400"></div>
+
+            <div>
+                <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Lembrete <span class="text-red-500">*</span></label>
+                <textarea id="alerta-lembrete" rows="3" maxlength="500" placeholder="Ex.: Cobrar previsão de carregamento"
+                          class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
+                                 border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                                 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Data e hora <span class="text-red-500">*</span></label>
+                <input id="alerta-data" type="datetime-local"
+                       class="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none transition-all
+                              border-slate-300 bg-white text-zinc-900 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+                              dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10">
+            </div>
+            <label class="flex items-center gap-2">
+                <input id="alerta-todos" type="checkbox" value="1"
+                       class="h-4 w-4 rounded border-slate-300 accent-zinc-900 dark:accent-zinc-100">
+                <span class="text-sm text-zinc-700 dark:text-zinc-300">Alertar todos os usuários</span>
+            </label>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 border-t px-5 py-3.5 border-slate-200 dark:border-zinc-800">
+            <button type="button" onclick="closeAlertaModal()"
+                    class="rounded-lg border px-4 py-2 text-sm font-medium border-slate-200 text-zinc-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                Cancelar
+            </button>
+            <button type="button" onclick="submitAlertaModal()"
+                    class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
+                Criar alerta
             </button>
         </div>
     </div>
@@ -1263,6 +1333,7 @@
             closeConfirmModal();
             closeMapModal();
             closeStatusModal();
+            if (window.closeAlertaModal) { window.closeAlertaModal(); }
         }
     });
     </script>
@@ -1610,6 +1681,77 @@
             }
             closeStatusModal();
             window.location.reload();
+        })
+        .catch(function () {
+            errEl.textContent = 'Erro de conexão. Tente novamente.';
+            errEl.classList.remove('hidden');
+        });
+    };
+
+    // ─── Novo alerta ─────────────────────────────────────────────────────────
+    var _alertaStoreUrl = '{{ route('alertas.store') }}';
+    var _alertaEquipId  = null;
+
+    window.openAlertaModal = function (btn) {
+        var d = JSON.parse(btn.dataset.alertaVeiculo);
+        _alertaEquipId = d.id;
+
+        document.getElementById('alerta-subtitle').textContent = 'Veículo: ' + (d.rotulo || '');
+        document.getElementById('alerta-lembrete').value = '';
+        document.getElementById('alerta-data').value     = '';
+        document.getElementById('alerta-todos').checked  = false;
+
+        var errEl = document.getElementById('alerta-errors');
+        errEl.classList.add('hidden');
+        errEl.textContent = '';
+
+        document.getElementById('alerta-backdrop').classList.remove('hidden');
+        document.getElementById('alerta-modal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        document.getElementById('alerta-lembrete').focus();
+    };
+
+    window.closeAlertaModal = function () {
+        document.getElementById('alerta-backdrop').classList.add('hidden');
+        document.getElementById('alerta-modal').classList.add('hidden');
+        document.body.style.overflow = '';
+    };
+
+    window.submitAlertaModal = function () {
+        if (! _alertaEquipId) { return; }
+
+        var errEl = document.getElementById('alerta-errors');
+        errEl.classList.add('hidden');
+        errEl.textContent = '';
+
+        var body = JSON.stringify({
+            equipamento_id:   _alertaEquipId,
+            lembrete:         document.getElementById('alerta-lembrete').value.trim(),
+            data_hora_alerta: document.getElementById('alerta-data').value,
+            para_todos:       document.getElementById('alerta-todos').checked ? 1 : 0,
+        });
+
+        fetch(_alertaStoreUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': _csrfToken,
+            },
+            body: body,
+        })
+        .then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); })
+        .then(function (res) {
+            if (! res.data.ok) {
+                var msgs = res.data.errors
+                    ? Object.values(res.data.errors).flat().join(' ')
+                    : (res.data.message || 'Erro ao criar alerta.');
+                errEl.textContent = msgs;
+                errEl.classList.remove('hidden');
+                return;
+            }
+            closeAlertaModal();
         })
         .catch(function () {
             errEl.textContent = 'Erro de conexão. Tente novamente.';
