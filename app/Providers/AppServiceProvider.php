@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Enums\UserPermission;
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Pagination\Paginator;
@@ -30,5 +31,8 @@ class AppServiceProvider extends ServiceProvider
 
         /** Visualizador tem acesso apenas ao Mapa Geral; demais perfis acessam o restante do sistema. */
         Gate::define('access-app', fn (User $user) => $user->role !== UserRole::Visualizador);
+
+        /** Acesso ao Dashboard de Transporte — controlado por permissão individual. */
+        Gate::define('access-dashboard', fn (User $user) => $user->hasPermission(UserPermission::Dashboard));
     }
 }

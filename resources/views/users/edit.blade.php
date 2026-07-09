@@ -149,6 +149,29 @@
                 @enderror
             </div>
 
+            {{-- Permissões de módulos --}}
+            @if($allPermissions)
+                <div class="border-t border-slate-100 pt-5 dark:border-slate-800">
+                    <p class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300">Módulos com acesso</p>
+                    <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">Independente do perfil, cada módulo pode ser liberado individualmente.</p>
+                    <div class="space-y-2">
+                        @foreach($allPermissions as $perm)
+                            <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 px-3 py-2.5 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+                                <input type="checkbox"
+                                       name="permissions[]"
+                                       value="{{ $perm->value }}"
+                                       @checked($user->permissions->contains('permission', $perm))
+                                       class="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:focus:ring-slate-400">
+                                <div>
+                                    <p class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ $perm->label() }}</p>
+                                    <p class="text-xs text-slate-400 dark:text-slate-500">{{ $perm->description() }}</p>
+                                </div>
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
             {{-- Section: Change password --}}
             <div class="border-t border-slate-100 pt-5 dark:border-slate-800">
                 <div class="mb-4">

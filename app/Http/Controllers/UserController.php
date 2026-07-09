@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserPermission;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Http\Requests\StoreUserRequest;
@@ -40,12 +41,13 @@ class UserController extends Controller
         return view('users.create', [
             'statuses' => UserStatus::cases(),
             'roles' => UserRole::cases(),
+            'allPermissions' => UserPermission::cases(),
         ]);
     }
 
     public function store(StoreUserRequest $request): RedirectResponse
     {
-        User::create([
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
@@ -53,16 +55,21 @@ class UserController extends Controller
             'role' => $request->role,
         ]);
 
+        $this->syncPermissions($user, $request->input('permissions', []));
+
         return redirect()->route('users.index')
             ->with('success', 'Usuário criado com sucesso.');
     }
 
     public function edit(User $user): View
     {
+        $user->load('permissions');
+
         return view('users.edit', [
             'user' => $user,
             'statuses' => UserStatus::cases(),
             'roles' => UserRole::cases(),
+            'allPermissions' => UserPermission::cases(),
         ]);
     }
 
@@ -76,8 +83,21 @@ class UserController extends Controller
 
         $user->update($data);
 
+        $this->syncPermissions($user, $request->input('permissions', []));
+
         return redirect()->route('users.index')
             ->with('success', 'Usuário atualizado com sucesso.');
+    }
+
+    private function syncPermissions(User $user, array $permissions): void
+    {
+        $user->permissions()->delete();
+
+        foreach ($permissions as $permission) {
+            if (UserPermission::tryFrom($permission)) {
+                $user->permissions()->create(['permission' => $permission]);
+            }
+        }
     }
 
     public function destroy(User $user): RedirectResponse

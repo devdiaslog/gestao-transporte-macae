@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BigcoreController;
 use App\Http\Controllers\CercaController;
 use App\Http\Controllers\ControlTowerController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DivisaoController;
 use App\Http\Controllers\EquipamentoController;
 use App\Http\Controllers\JustificativaController;
@@ -49,6 +50,9 @@ Route::get('sync/posicoes', function (VfleetsService $vfleets) {
     }
 })->name('sync.posicoes');
 
+// Captura de snapshot do dashboard — protegida por chave secreta
+Route::get('dashboard/capturar-status', [DashboardController::class, 'capturarStatus'])->name('dashboard.capturar-status');
+
 // Sincronização de status operacional via Bigcore — protegida por chave secreta
 Route::get('sync/status-operacional', function (BigcoreService $bigcore, StatusOperacionalService $service) {
     if (request('key') !== config('services.bigcore.sync_key') || ! config('services.bigcore.sync_key')) {
@@ -91,6 +95,11 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
     Route::patch('torre-de-controle/{equipamento}/implemento', [ControlTowerController::class, 'updateImplemento'])->name('control-tower.implemento');
     Route::get('torre-de-controle/{equipamento}/historico', [ControlTowerController::class, 'historico'])->name('control-tower.historico');
     Route::post('torre-de-controle/{equipamento}/status', [ControlTowerController::class, 'editarStatus'])->name('control-tower.editar-status');
+
+    // Dashboard de Transporte — acesso por permissão individual
+    Route::middleware('can:access-dashboard')->group(function () {
+        Route::get('dashboard', [DashboardController::class, 'status'])->name('dashboard.status');
+    });
 
     // Alertas da frota
     Route::get('alertas', [AlertaController::class, 'index'])->name('alertas.index');
