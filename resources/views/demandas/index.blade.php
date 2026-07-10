@@ -1,9 +1,6 @@
 <x-layouts.app title="Demandas">
 
 @php
-    use App\Enums\StatusDemanda;
-    use App\Enums\TipoDemanda;
-
     $statusColors = [
         'pendente'     => 'zinc',
         'em_andamento' => 'blue',
@@ -55,7 +52,7 @@
                        dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
                        dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
             <option value="">Todos os status</option>
-            @foreach(StatusDemanda::cases() as $s)
+            @foreach(\App\Enums\StatusDemanda::cases() as $s)
                 <option value="{{ $s->value }}" @selected($status === $s->value)>{{ $s->label() }}</option>
             @endforeach
         </select>
@@ -66,7 +63,7 @@
                        dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
                        dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
             <option value="">Todos os tipos</option>
-            @foreach(TipoDemanda::cases() as $t)
+            @foreach(\App\Enums\TipoDemanda::cases() as $t)
                 <option value="{{ $t->value }}" @selected($tipo === $t->value)>{{ $t->label() }}</option>
             @endforeach
         </select>
@@ -311,7 +308,7 @@
                                                dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
                                                dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
                                     <option value="">Selecione…</option>
-                                    @foreach(TipoDemanda::cases() as $t)
+                                    @foreach(\App\Enums\TipoDemanda::cases() as $t)
                                         <option value="{{ $t->value }}">{{ $t->label() }}</option>
                                     @endforeach
                                 </select>
@@ -393,7 +390,7 @@
                                                focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
                                                dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
                                                dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-                                    @foreach(StatusDemanda::cases() as $s)
+                                    @foreach(\App\Enums\StatusDemanda::cases() as $s)
                                         <option value="{{ $s->value }}">{{ $s->label() }}</option>
                                     @endforeach
                                 </select>
