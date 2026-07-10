@@ -7,6 +7,7 @@ use App\Http\Controllers\BigcoreController;
 use App\Http\Controllers\CercaController;
 use App\Http\Controllers\ControlTowerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DemandaController;
 use App\Http\Controllers\DivisaoController;
 use App\Http\Controllers\EquipamentoController;
 use App\Http\Controllers\JustificativaController;
@@ -101,6 +102,12 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
         Route::get('dashboard', [DashboardController::class, 'status'])->name('dashboard.status');
         Route::get('dashboard/graficos', [DashboardController::class, 'graficos'])->name('dashboard.graficos');
     });
+
+    // Demandas de transporte
+    Route::get('demandas', [DemandaController::class, 'index'])->name('demandas.index');
+    Route::post('demandas', [DemandaController::class, 'store'])->name('demandas.store');
+    Route::put('demandas/{demanda}', [DemandaController::class, 'update'])->name('demandas.update');
+    Route::delete('demandas/{demanda}', [DemandaController::class, 'destroy'])->name('demandas.destroy')->middleware('can:delete-demanda');
 
     // Alertas da frota
     Route::get('alertas', [AlertaController::class, 'index'])->name('alertas.index');

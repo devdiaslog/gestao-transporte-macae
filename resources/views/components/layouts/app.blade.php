@@ -236,6 +236,22 @@
             </a>
             @endunless
 
+            {{-- Demandas — indisponível para o perfil Visualizador --}}
+            @unless($isVisualizador)
+            <a href="{{ route('demandas.index') }}"
+               title="Demandas"
+               class="nav-link flex items-center justify-center rounded-lg py-2.5 text-sm font-medium
+                      transition-all duration-200
+                      {{ request()->routeIs('demandas.*')
+                          ? 'bg-zinc-900 text-white dark:bg-zinc-800 dark:text-zinc-100'
+                          : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
+                </svg>
+                <span class="nav-label hidden whitespace-nowrap">Demandas</span>
+            </a>
+            @endunless
+
         </nav>
 
         {{-- User footer --}}

@@ -34,5 +34,8 @@ class AppServiceProvider extends ServiceProvider
 
         /** Acesso ao Dashboard de Transporte — controlado por permissão individual. */
         Gate::define('access-dashboard', fn (User $user) => $user->hasPermission(UserPermission::Dashboard));
+
+        /** Apenas Administrador pode excluir demandas. */
+        Gate::define('delete-demanda', fn (User $user) => $user->role === UserRole::Administrador);
     }
 }
