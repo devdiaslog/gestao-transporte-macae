@@ -198,12 +198,42 @@
             @endif
 
             <script>
+            // TV MODE — detecta ?tv=1 / ?tv=0, persiste no localStorage
+            window.TV_MODE = false;
+            (function () {
+                var p = new URLSearchParams(window.location.search);
+                if (p.get('tv') === '1') { localStorage.setItem('tvMode', '1'); }
+                if (p.get('tv') === '0') { localStorage.removeItem('tvMode'); }
+                window.TV_MODE = localStorage.getItem('tvMode') === '1';
+                if (! window.TV_MODE) { return; }
+
+                // Escala rem para aumentar todas as fontes Tailwind proporcionalmente
+                document.documentElement.style.fontSize = '21px';
+                document.documentElement.classList.add('tv');
+
+                // Remove scrollbars e fixa altura na viewport
+                var s = document.createElement('style');
+                s.textContent = [
+                    'html.tv, html.tv body { overflow: hidden !important; height: 100vh !important; }',
+                    'html.tv .overflow-x-auto { overflow: hidden !important; }',
+                    'html.tv #chart-parados, html.tv #chart-movimento { min-width: 0 !important; width: 100% !important; }',
+                ].join('');
+                document.head.appendChild(s);
+            })();
+            </script>
+
+            <script>
             document.addEventListener('DOMContentLoaded', function () {
                 var isDark  = document.documentElement.classList.contains('dark');
                 var lblClr  = isDark ? '#a1a1aa' : '#71717a';
                 var gridClr = isDark ? '#27272a' : '#f1f5f9';
-                var chartH  = Math.max(200, Math.floor((window.innerHeight - 420) / 2));
+                var tv      = window.TV_MODE;
+                var chartH  = tv
+                    ? Math.max(180, Math.floor((window.innerHeight - 340) / 2))
+                    : Math.max(200, Math.floor((window.innerHeight - 420) / 2));
                 var yMax    = 36; // máximo 36 horas no eixo Y
+                var lblSize = tv ? '14px' : (window.innerWidth >= 1280 ? '11px' : '9px');
+                var axisSize = tv ? '13px' : '10px';
 
                 function fmtMin(m) {
                     m = Math.abs(Math.round(m));
@@ -226,18 +256,18 @@
                         series: [{ name: 'Tempo', data: data }],
                         xaxis: {
                             categories: labels,
-                            labels: { rotate: -45, style: { colors: Array(labels.length).fill(lblClr), fontSize: '10px' } },
+                            labels: { rotate: -45, style: { colors: Array(labels.length).fill(lblClr), fontSize: axisSize } },
                             axisBorder: { color: gridClr }, axisTicks: { color: gridClr },
                         },
                         yaxis: {
                             max: yMax,
-                            labels: { style: { colors: [lblClr] }, formatter: function(v) { return fmtMin(v * 60); } },
+                            labels: { style: { colors: [lblClr], fontSize: axisSize }, formatter: function(v) { return fmtMin(v * 60); } },
                         },
                         colors: colors,
                         plotOptions: { bar: { distributed: true, borderRadius: 3, columnWidth: '60%', dataLabels: { position: 'top' } } },
                         dataLabels: {
                             enabled: true, offsetY: -18,
-                            style: { fontSize: window.innerWidth >= 1280 ? '11px' : '9px', fontWeight: '600', colors: [lblClr] },
+                            style: { fontSize: lblSize, fontWeight: '600', colors: [lblClr] },
                             formatter: function(v) { return fmtMin(v * 60); },
                         },
                         legend: { show: false },

@@ -99,12 +99,35 @@
             @endif
 
             <script>
+            // TV MODE — mesma lógica da página Status
+            window.TV_MODE = window.TV_MODE !== undefined ? window.TV_MODE : false;
+            (function () {
+                var p = new URLSearchParams(window.location.search);
+                if (p.get('tv') === '1') { localStorage.setItem('tvMode', '1'); }
+                if (p.get('tv') === '0') { localStorage.removeItem('tvMode'); }
+                window.TV_MODE = localStorage.getItem('tvMode') === '1';
+                if (! window.TV_MODE) { return; }
+                document.documentElement.style.fontSize = '21px';
+                document.documentElement.classList.add('tv');
+                var s = document.createElement('style');
+                s.textContent = 'html.tv, html.tv body { overflow: hidden !important; height: 100vh !important; }';
+                document.head.appendChild(s);
+            })();
+            </script>
+
+            <script>
             document.addEventListener('DOMContentLoaded', function () {
-                var isDark  = document.documentElement.classList.contains('dark');
-                var lblClr  = isDark ? '#a1a1aa' : '#71717a';
-                var gridClr = isDark ? '#27272a' : '#f1f5f9';
-                var hexMap  = @json($hexPalette);
-                var defHex  = '#a1a1aa';
+                var isDark   = document.documentElement.classList.contains('dark');
+                var lblClr   = isDark ? '#a1a1aa' : '#71717a';
+                var gridClr  = isDark ? '#27272a' : '#f1f5f9';
+                var hexMap   = @json($hexPalette);
+                var defHex   = '#a1a1aa';
+                var tv       = window.TV_MODE;
+                var chartH   = tv
+                    ? Math.max(200, Math.floor((window.innerHeight - 280) / 2))
+                    : Math.max(260, Math.floor((window.innerHeight - 220) * 0.42));
+                var lblSize  = tv ? '14px' : (window.innerWidth >= 1280 ? '12px' : '10px');
+                var axisSize = tv ? '13px' : '10px';
 
                 function fmtMin(m) {
                     m = Math.abs(Math.round(m));
@@ -125,19 +148,19 @@
                     var data     = veiculos.map(function(v) { return +(Math.abs(v.minutos) / 60).toFixed(2); });
 
                     new ApexCharts(document.getElementById('chart-g-{{ $loop->index }}'), {
-                        chart: { type: 'bar', height: Math.max(260, Math.floor((window.innerHeight - 220) * 0.42)), background: 'transparent', toolbar: { show: false } },
+                        chart: { type: 'bar', height: chartH, background: 'transparent', toolbar: { show: false } },
                         series: [{ name: 'Tempo', data: data }],
                         xaxis: {
                             categories: labels,
-                            labels: { rotate: -45, style: { colors: Array(labels.length).fill(lblClr), fontSize: '10px' } },
+                            labels: { rotate: -45, style: { colors: Array(labels.length).fill(lblClr), fontSize: axisSize } },
                             axisBorder: { color: gridClr }, axisTicks: { color: gridClr },
                         },
-                        yaxis: { labels: { style: { colors: [lblClr] }, formatter: function(v) { return fmtMin(v * 60); } } },
+                        yaxis: { labels: { style: { colors: [lblClr], fontSize: axisSize }, formatter: function(v) { return fmtMin(v * 60); } } },
                         colors: [barColor],
                         plotOptions: { bar: { borderRadius: 3, columnWidth: '58%', dataLabels: { position: 'top' } } },
                         dataLabels: {
                             enabled: true, offsetY: -18,
-                            style: { fontSize: window.innerWidth >= 1280 ? '12px' : '10px', fontWeight: '600', colors: [lblClr] },
+                            style: { fontSize: lblSize, fontWeight: '600', colors: [lblClr] },
                             formatter: function(v) { return fmtMin(v * 60); },
                         },
                         legend: { show: false },
