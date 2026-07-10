@@ -161,7 +161,7 @@
             @endphp
 
             @if($veiculosParados->isNotEmpty() || $veiculosMovimento->isNotEmpty())
-            <div class="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <div class="mt-6 grid grid-cols-2 gap-4">
 
                 {{-- Gráfico 1: Parado --}}
                 @if($veiculosParados->isNotEmpty())
