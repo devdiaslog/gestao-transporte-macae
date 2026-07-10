@@ -251,6 +251,9 @@
                     var labels = veiculos.map(function(v) { return v.cm || v.placa; });
                     var data   = veiculos.map(function(v) { return +((v.tracker_minutos || 0) / 60).toFixed(2); });
                     var colors = veiculos.map(colorFn);
+                    var maxVal = data.reduce(function(a, b) { return Math.max(a, b); }, 0);
+                    var yAxisOpts = { labels: { style: { colors: [lblClr], fontSize: axisSize }, formatter: function(v) { return fmtMin(v * 60); } } };
+                    if (maxVal > yMax) { yAxisOpts.max = yMax; }
                     new ApexCharts(el, {
                         chart: { type: 'bar', height: chartH, background: 'transparent', toolbar: { show: false } },
                         series: [{ name: 'Tempo', data: data }],
@@ -259,10 +262,7 @@
                             labels: { rotate: -45, style: { colors: Array(labels.length).fill(lblClr), fontSize: axisSize } },
                             axisBorder: { color: gridClr }, axisTicks: { color: gridClr },
                         },
-                        yaxis: {
-                            max: yMax,
-                            labels: { style: { colors: [lblClr], fontSize: axisSize }, formatter: function(v) { return fmtMin(v * 60); } },
-                        },
+                        yaxis: yAxisOpts,
                         colors: colors,
                         plotOptions: { bar: { distributed: true, borderRadius: 3, columnWidth: '60%', dataLabels: { position: 'top' } } },
                         dataLabels: {
