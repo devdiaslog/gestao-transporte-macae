@@ -99,6 +99,7 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
     // Dashboard de Transporte — acesso por permissão individual
     Route::middleware('can:access-dashboard')->group(function () {
         Route::get('dashboard', [DashboardController::class, 'status'])->name('dashboard.status');
+        Route::get('dashboard/graficos', [DashboardController::class, 'graficos'])->name('dashboard.graficos');
     });
 
     // Alertas da frota

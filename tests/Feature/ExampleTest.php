@@ -10,17 +10,17 @@ class ExampleTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** Rota raiz redireciona visitante para ocorrências (que por sua vez redireciona para login). */
-    public function test_root_redirects_guest_to_ocorrencias(): void
+    /** Rota raiz redireciona visitante para login. */
+    public function test_root_redirects_guest_to_login(): void
     {
-        $this->get('/')->assertRedirect(route('ocorrencias.index'));
+        $this->get('/')->assertRedirect(route('login'));
     }
 
-    /** Rota raiz redireciona usuário autenticado para ocorrências. */
-    public function test_root_redirects_authenticated_user_to_ocorrencias(): void
+    /** Rota raiz redireciona usuário autenticado para a torre de controle. */
+    public function test_root_redirects_authenticated_user_to_control_tower(): void
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->get('/')->assertRedirect(route('ocorrencias.index'));
+        $this->actingAs($user)->get('/')->assertRedirect(route('control-tower.index'));
     }
 }

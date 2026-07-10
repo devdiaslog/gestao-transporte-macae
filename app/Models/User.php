@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\UserPermission;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use App\Models\UserPermission as UserPermissionModel;
 use App\Traits\HasEncryptedRouteKey;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -46,7 +47,7 @@ class User extends Authenticatable
 
     public function permissions(): HasMany
     {
-        return $this->hasMany(UserPermission::class);
+        return $this->hasMany(UserPermissionModel::class);
     }
 
     public function hasPermission(UserPermission $permission): bool

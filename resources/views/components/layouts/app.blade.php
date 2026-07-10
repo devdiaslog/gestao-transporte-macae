@@ -1,3 +1,4 @@
+@props(['title' => 'Dashboard', 'noHeader' => false])
 <!DOCTYPE html>
 <html lang="pt-BR" class="h-full">
 <head>
@@ -305,6 +306,7 @@
     <div id="main-wrapper" class="flex h-full min-w-0 flex-1 flex-col transition-all duration-300 lg:pl-16">
 
         {{-- Header --}}
+        @unless($noHeader)
         <header class="flex h-16 shrink-0 items-center gap-4 px-6
                        border-b border-slate-200 bg-white
                        dark:border-zinc-800 dark:bg-zinc-950">
@@ -368,6 +370,7 @@
                 </button>
             </div>
         </header>
+        @endunless
 
         {{-- Content --}}
         <main class="min-h-0 flex-1 overflow-y-auto [overflow-x:clip] px-4 sm:px-6 lg:px-8">
