@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Local extends Model
 {
+    protected $table = 'locais';
+
     protected $fillable = ['nome', 'ativo'];
 
     protected function casts(): array
