@@ -146,31 +146,54 @@
                 @endforeach
             </div>
 
-            {{-- Gráfico de todos os veículos (Parado/Em Movimento) --}}
+            {{-- Gráficos divididos: Parado | Em Movimento + Sem Sinal --}}
             @php
-                $todosVeiculos = $dados->filter(fn ($d) => ! in_array($d['status'], ['Manutenção', 'Frota Reserva']))
+                $veiculosBase = $dados->filter(fn ($d) => ! in_array($d['status'], ['Manutenção', 'Frota Reserva']))
                     ->flatMap(fn ($d) => $d['veiculos'] ?? [])
                     ->sortByDesc('tracker_minutos')
                     ->values();
-                $chartWidth = max($todosVeiculos->count() * 52, 600);
+
+                $veiculosParados   = $veiculosBase->filter(fn ($v) => ($v['tracker_estado'] ?? -1) === 0)->values();
+                $veiculosMovimento = $veiculosBase->filter(fn ($v) => ($v['tracker_estado'] ?? -1) !== 0)->values();
+
+                $widthParados   = max($veiculosParados->count() * 52, 500);
+                $widthMovimento = max($veiculosMovimento->count() * 52, 500);
             @endphp
 
-            @if($todosVeiculos->isNotEmpty())
-            <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
-                    <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-                        Tempo no Status do Rastreador — todos os veículos
-                        <span class="ml-2 text-[11px] font-normal text-zinc-400 dark:text-zinc-500">(exceto Manutenção e Frota Reserva)</span>
-                    </p>
-                    <div class="flex items-center gap-4 text-xs text-zinc-500 dark:text-zinc-400">
-                        <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-rose-500"></span>Parado</span>
-                        <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-emerald-500"></span>Em Movimento</span>
-                        <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-zinc-400"></span>Sem Sinal</span>
+            @if($veiculosParados->isNotEmpty() || $veiculosMovimento->isNotEmpty())
+            <div class="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
+
+                {{-- Gráfico 1: Parado --}}
+                @if($veiculosParados->isNotEmpty())
+                <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                    <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
+                        <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Rastreador — Parado</p>
+                        <span class="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                            <span class="h-2.5 w-2.5 rounded-sm bg-rose-500"></span>Parado
+                        </span>
+                    </div>
+                    <div class="overflow-x-auto px-2 pb-2 pt-1">
+                        <div id="chart-parados" style="min-width: {{ $widthParados }}px"></div>
                     </div>
                 </div>
-                <div class="overflow-x-auto px-2 pb-2 pt-1">
-                    <div id="chart-todos" style="min-width: {{ $chartWidth }}px"></div>
+                @endif
+
+                {{-- Gráfico 2: Em Movimento + Sem Sinal --}}
+                @if($veiculosMovimento->isNotEmpty())
+                <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                    <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
+                        <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Rastreador — Em Movimento / Sem Sinal</p>
+                        <div class="flex items-center gap-4 text-xs text-zinc-500 dark:text-zinc-400">
+                            <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-emerald-500"></span>Em Movimento</span>
+                            <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-zinc-400"></span>Sem Sinal</span>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto px-2 pb-2 pt-1">
+                        <div id="chart-movimento" style="min-width: {{ $widthMovimento }}px"></div>
+                    </div>
                 </div>
+                @endif
+
             </div>
             @endif
 
@@ -179,6 +202,8 @@
                 var isDark  = document.documentElement.classList.contains('dark');
                 var lblClr  = isDark ? '#a1a1aa' : '#71717a';
                 var gridClr = isDark ? '#27272a' : '#f1f5f9';
+                var chartH  = Math.max(200, Math.floor((window.innerHeight - 420) / 2));
+                var yMax    = 36; // máximo 36 horas no eixo Y
 
                 function fmtMin(m) {
                     m = Math.abs(Math.round(m));
@@ -190,47 +215,48 @@
                     return mn + 'm';
                 }
 
-                var todos = @json($todosVeiculos);
-                var labels = todos.map(function(v) { return v.cm || v.placa; });
-                var data   = todos.map(function(v) { return +((v.tracker_minutos || 0) / 60).toFixed(2); });
-                var colors = todos.map(function(v) {
-                    var estado = v.tracker_estado;
-                    // Em Movimento com mais de 3h sem atualização → Sem Sinal
-                    if (estado === 1 && (v.tracker_minutos || 0) > 180) { estado = -1; }
-                    if (estado === 1) { return '#10b981'; }
-                    if (estado === 0) { return '#f43f5e'; }
-                    return '#a1a1aa';
-                });
-
-                function rotateChartLabels() {
-                    document.querySelectorAll('#chart-todos .apexcharts-datalabels text').forEach(function (el) {
-                        var x = parseFloat(el.getAttribute('x') || 0);
-                        var y = parseFloat(el.getAttribute('y') || 0);
-                        el.setAttribute('transform', 'rotate(-45 ' + x + ' ' + y + ')');
-                    });
+                function makeChart(elId, veiculos, colorFn) {
+                    var el = document.getElementById(elId);
+                    if (! el || ! veiculos.length) { return; }
+                    var labels = veiculos.map(function(v) { return v.cm || v.placa; });
+                    var data   = veiculos.map(function(v) { return +((v.tracker_minutos || 0) / 60).toFixed(2); });
+                    var colors = veiculos.map(colorFn);
+                    new ApexCharts(el, {
+                        chart: { type: 'bar', height: chartH, background: 'transparent', toolbar: { show: false } },
+                        series: [{ name: 'Tempo', data: data }],
+                        xaxis: {
+                            categories: labels,
+                            labels: { rotate: -45, style: { colors: Array(labels.length).fill(lblClr), fontSize: '10px' } },
+                            axisBorder: { color: gridClr }, axisTicks: { color: gridClr },
+                        },
+                        yaxis: {
+                            max: yMax,
+                            labels: { style: { colors: [lblClr] }, formatter: function(v) { return fmtMin(v * 60); } },
+                        },
+                        colors: colors,
+                        plotOptions: { bar: { distributed: true, borderRadius: 3, columnWidth: '60%', dataLabels: { position: 'top' } } },
+                        dataLabels: {
+                            enabled: true, offsetY: -18,
+                            style: { fontSize: window.innerWidth >= 1280 ? '11px' : '9px', fontWeight: '600', colors: [lblClr] },
+                            formatter: function(v) { return fmtMin(v * 60); },
+                        },
+                        legend: { show: false },
+                        grid: { borderColor: gridClr, yaxis: { lines: { show: true } }, xaxis: { lines: { show: false } } },
+                        tooltip: { theme: isDark ? 'dark' : 'light', y: { formatter: function(v) { return fmtMin(v * 60); } } },
+                        theme: { mode: isDark ? 'dark' : 'light' },
+                    }).render();
                 }
 
-                new ApexCharts(document.getElementById('chart-todos'), {
-                    chart: { type: 'bar', height: Math.max(420, Math.floor(window.innerHeight * 0.45)), background: 'transparent', toolbar: { show: false } },
-                    series: [{ name: 'Tempo', data: data }],
-                    xaxis: {
-                        categories: labels,
-                        labels: { rotate: -45, style: { colors: Array(labels.length).fill(lblClr), fontSize: '10px' } },
-                        axisBorder: { color: gridClr }, axisTicks: { color: gridClr },
-                    },
-                    yaxis: { labels: { style: { colors: [lblClr] }, formatter: function(v) { return fmtMin(v * 60); } } },
-                    colors: colors,
-                    plotOptions: { bar: { distributed: true, borderRadius: 3, columnWidth: '60%', dataLabels: { position: 'top' } } },
-                    dataLabels: {
-                        enabled: true, offsetY: -22,
-                        style: { fontSize: window.innerWidth >= 1280 ? '12px' : '10px', fontWeight: '600', colors: [lblClr] },
-                        formatter: function(v) { return fmtMin(v * 60); },
-                    },
-                    legend: { show: false },
-                    grid: { borderColor: gridClr, yaxis: { lines: { show: true } }, xaxis: { lines: { show: false } } },
-                    tooltip: { theme: isDark ? 'dark' : 'light', y: { formatter: function(v) { return fmtMin(v * 60); } } },
-                    theme: { mode: isDark ? 'dark' : 'light' },
-                }).render().then(function () { setTimeout(rotateChartLabels, 50); });
+                var parados   = @json($veiculosParados);
+                var movimento = @json($veiculosMovimento);
+
+                makeChart('chart-parados', parados, function() { return '#f43f5e'; });
+
+                makeChart('chart-movimento', movimento, function(v) {
+                    var estado = v.tracker_estado;
+                    if (estado === 1 && (v.tracker_minutos || 0) > 180) { estado = -1; }
+                    return estado === 1 ? '#10b981' : '#a1a1aa';
+                });
             });
             </script>
 
