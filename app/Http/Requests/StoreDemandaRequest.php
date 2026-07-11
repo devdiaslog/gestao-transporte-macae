@@ -31,6 +31,7 @@ class StoreDemandaRequest extends FormRequest
             'local_origem_id' => ['nullable', 'exists:locais,id'],
             'local_destino_id' => ['nullable', 'exists:locais,id'],
             'prazo_atendimento_demanda' => ['nullable', 'date'],
+            'data_hora_agendamento' => ['nullable', 'date'],
 
             'data_hora_inicio_carregamento' => ['nullable', 'date'],
             'data_hora_fim_carregamento' => [

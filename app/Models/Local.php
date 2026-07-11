@@ -9,12 +9,13 @@ class Local extends Model
 {
     protected $table = 'locais';
 
-    protected $fillable = ['nome', 'ativo'];
+    protected $fillable = ['nome', 'ativo', 'precisa_agendamento'];
 
     protected function casts(): array
     {
         return [
             'ativo' => 'boolean',
+            'precisa_agendamento' => 'boolean',
         ];
     }
 

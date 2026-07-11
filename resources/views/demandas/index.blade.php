@@ -2,15 +2,15 @@
 
 @php
     $statusColors = [
-        'pendente'     => 'zinc',
-        'em_andamento' => 'blue',
-        'concluida'    => 'emerald',
-        'cancelada'    => 'rose',
+        'pendente'      => 'zinc',
+        'em_andamento'  => 'blue',
+        'concluida'     => 'emerald',
+        'cancelada'     => 'rose',
     ];
     $tipoColors = [
-        'load'         => 'blue',
-        'backload'     => 'amber',
-        'transferencia'=> 'violet',
+        'load'          => 'blue',
+        'backload'      => 'amber',
+        'transferencia' => 'violet',
     ];
     $isAdmin = auth()->user()->role->value === 'administrador';
 @endphp
@@ -19,12 +19,24 @@
 
     {{-- Header --}}
     <div class="mb-6 flex flex-wrap items-center gap-3">
-        <div class="flex-1 min-w-0">
+        <div class="min-w-0 flex-1">
             <h2 class="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Demandas</h2>
             <p class="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
                 Registro e acompanhamento de demandas de transporte
             </p>
         </div>
+        @can('manage-cadastros')
+        <a href="{{ route('locais.index') }}"
+           class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium
+                  text-zinc-600 shadow-xs transition-colors hover:bg-zinc-50
+                  dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+            </svg>
+            Gerenciar Locais
+        </a>
+        @endcan
         <button type="button" onclick="openDemandaModal()"
                 class="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white
                        shadow-xs transition-all duration-150 hover:bg-zinc-700 active:scale-[0.98]
@@ -40,7 +52,13 @@
     <form method="GET" action="{{ route('demandas.index') }}"
           class="mb-5 flex flex-wrap items-center gap-3">
         <input type="text" name="q" value="{{ $search }}" placeholder="Número da demanda…"
-               class="h-9 w-48 rounded-lg border border-slate-200 bg-white px-3 text-sm
+               class="h-9 w-44 rounded-lg border border-slate-200 bg-white px-3 text-sm
+                      text-zinc-900 placeholder-zinc-400 shadow-xs outline-none
+                      focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                      dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
+                      dark:placeholder-zinc-600 dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+        <input type="text" name="prefixo" value="{{ $prefixo }}" placeholder="Prefixo do veículo…"
+               class="h-9 w-40 rounded-lg border border-slate-200 bg-white px-3 text-sm
                       text-zinc-900 placeholder-zinc-400 shadow-xs outline-none
                       focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
                       dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
@@ -67,13 +85,39 @@
                 <option value="{{ $t->value }}" @selected($tipo === $t->value)>{{ $t->label() }}</option>
             @endforeach
         </select>
+        <div class="flex items-center gap-1.5">
+            <span class="text-xs text-zinc-400 dark:text-zinc-600">Cadastro:</span>
+            <input type="date" name="data_de" value="{{ $dataDE }}"
+                   class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
+                          text-zinc-900 shadow-xs outline-none
+                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
+                          dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
+            <span class="text-xs text-zinc-400 dark:text-zinc-600">até</span>
+            <input type="date" name="data_ate" value="{{ $dataAte }}"
+                   class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
+                          text-zinc-900 shadow-xs outline-none
+                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
+                          dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
+        </div>
         <button type="submit"
                 class="h-9 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium
                        text-zinc-700 shadow-xs transition-colors hover:bg-zinc-50
                        dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
             Filtrar
         </button>
-        @if($search || $status || $tipo)
+        <a id="btn-export-demandas" href="{{ route('demandas.export') }}"
+           title="Exportar para CSV/Excel"
+           class="h-9 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-sm font-medium
+                  text-zinc-700 shadow-xs transition-colors hover:bg-slate-50
+                  dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
+            <svg class="h-4 w-4 text-emerald-600 dark:text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+            </svg>
+            Exportar
+        </a>
+        @if($search || $status || $tipo || $prefixo || $dataDE || $dataAte)
             <a href="{{ route('demandas.index') }}"
                class="h-9 inline-flex items-center gap-1 rounded-lg px-3 text-sm text-zinc-400 hover:text-zinc-700
                       dark:hover:text-zinc-200">
@@ -95,17 +139,43 @@
                 <p class="text-sm">Nenhuma demanda encontrada.</p>
             </div>
         @else
+            @php
+            $colunas = [
+                ['label' => 'Número',               'tip' => 'Identificador único da demanda, gerado pelo sistema de gestão de carga (SGC). Composto por 9 a 10 dígitos e imutável após o cadastro.'],
+                ['label' => 'Tipo',                  'tip' => 'Natureza da operação. Load = entrega de carga no porto/base; Backload = coleta de carga no porto/base para retorno; Transferência = movimentação de carga entre bases próprias.'],
+                ['label' => 'Veículo',               'tip' => 'Prefixo e placa do veículo motorizado alocado para executar a demanda. O prefixo é o código interno de frota.'],
+                ['label' => 'Origem',                'tip' => 'Local de partida da operação — ponto onde o veículo irá carregar ou iniciar o trajeto.'],
+                ['label' => 'Destino',               'tip' => 'Local de chegada da operação — ponto de entrega ou descarregamento da carga.'],
+                ['label' => 'Prazo',                 'tip' => 'Data e hora limite para conclusão da demanda. Exibido em vermelho quando vencido e a demanda ainda está em aberto.'],
+                ['label' => 'Agendamento',           'tip' => 'Data e hora de acesso agendado ao local de origem ou destino. Necessário quando o local exige pré-agendamento para entrada (ex.: terminais portuários, bases offshore).'],
+                ['label' => 'Ini. Carregamento',     'tip' => 'Momento em que se iniciou o carregamento da carga no veículo no local de origem.'],
+                ['label' => 'Fim Carregamento',      'tip' => 'Momento em que o carregamento foi concluído e o veículo ficou liberado para partir.'],
+                ['label' => 'Saída Origem',          'tip' => 'Data e hora em que o veículo efetivamente deixou o local de origem com a carga.'],
+                ['label' => 'Chegada Destino',       'tip' => 'Data e hora em que o veículo chegou ao local de destino. A diferença entre saída e chegada representa o tempo de trânsito.'],
+                ['label' => 'Ini. Descarregamento',  'tip' => 'Momento em que se iniciou o descarregamento da carga no local de destino.'],
+                ['label' => 'Fim Descarregamento',   'tip' => 'Momento em que o descarregamento foi concluído e a operação de entrega foi encerrada.'],
+                ['label' => 'Status',                'tip' => 'Situação atual da demanda: Pendente (aguardando início), Em Andamento (operação em curso), Concluída (entrega finalizada) ou Cancelada.'],
+                ['label' => 'Criado por',            'tip' => 'Usuário do sistema que registrou esta demanda manualmente. Demandas integradas via API não possuem criador.'],
+                ['label' => 'Cadastro',              'tip' => 'Data e hora em que a demanda foi registrada no sistema, independente do tipo de cadastro (manual ou integração).'],
+            ];
+            @endphp
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead class="border-b border-slate-100 bg-slate-50 dark:border-zinc-800 dark:bg-zinc-950/50">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Número</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Tipo</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Veículo</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Origem → Destino</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Prazo</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Status</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Cadastro</th>
+                            @foreach($colunas as $col)
+                            <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                                <span class="inline-flex items-center gap-1">
+                                    {{ $col['label'] }}
+                                    <span class="col-tip cursor-help" data-tip="{{ $col['tip'] }}">
+                                        <svg class="h-3.5 w-3.5 shrink-0 text-zinc-300 hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-400"
+                                             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/>
+                                        </svg>
+                                    </span>
+                                </span>
+                            </th>
+                            @endforeach
                             <th class="w-10 px-4 py-3"></th>
                         </tr>
                     </thead>
@@ -115,10 +185,10 @@
                                 $sc = $statusColors[$demanda->status_demanda->value] ?? 'zinc';
                                 $tc = $demanda->tipo_demanda ? ($tipoColors[$demanda->tipo_demanda->value] ?? 'zinc') : null;
                                 $prazoVencido = $demanda->prazo_atendimento_demanda && $demanda->prazo_atendimento_demanda->isPast()
-                                    && !in_array($demanda->status_demanda->value, ['concluida', 'cancelada']);
+                                    && ! in_array($demanda->status_demanda->value, ['concluida', 'cancelada']);
                             @endphp
                             <tr class="group transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/30">
-                                <td class="px-4 py-3">
+                                <td class="whitespace-nowrap px-4 py-3">
                                     <span class="font-mono text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                                         #{{ $demanda->numero_demanda }}
                                     </span>
@@ -129,7 +199,7 @@
                                         </span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
+                                <td class="whitespace-nowrap px-4 py-3">
                                     @if($demanda->tipo_demanda)
                                         <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
                                                      bg-{{ $tc }}-100 text-{{ $tc }}-700
@@ -140,53 +210,69 @@
                                         <span class="text-zinc-400 dark:text-zinc-600">—</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
+                                <td class="whitespace-nowrap px-4 py-3">
                                     @if($demanda->equipamento)
-                                        <span class="font-medium text-zinc-800 dark:text-zinc-200">
-                                            {{ $demanda->equipamento->prefixo }}
-                                        </span>
-                                        <span class="text-zinc-400 dark:text-zinc-600">
-                                            {{ $demanda->equipamento->placa }}
-                                        </span>
+                                        <span class="font-medium text-zinc-800 dark:text-zinc-200">{{ $demanda->equipamento->prefixo }}</span>
+                                        <span class="text-zinc-400 dark:text-zinc-600"> {{ $demanda->equipamento->placa }}</span>
                                     @else
                                         <span class="text-zinc-400 dark:text-zinc-600">—</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-zinc-600 dark:text-zinc-400">
+                                <td class="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-400">
                                     {{ $demanda->localOrigem?->nome ?? '—' }}
-                                    @if($demanda->localOrigem && $demanda->localDestino)
-                                        <span class="mx-1 text-zinc-300 dark:text-zinc-700">→</span>
-                                    @endif
-                                    {{ $demanda->localDestino?->nome ?? '' }}
                                 </td>
-                                <td class="px-4 py-3">
+                                <td class="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-400">
+                                    {{ $demanda->localDestino?->nome ?? '—' }}
+                                </td>
+                                <td class="whitespace-nowrap px-4 py-3">
                                     @if($demanda->prazo_atendimento_demanda)
-                                        <span class="{{ $prazoVencido ? 'text-rose-600 dark:text-rose-400 font-semibold' : 'text-zinc-600 dark:text-zinc-400' }}">
+                                        <span class="{{ $prazoVencido ? 'font-semibold text-rose-600 dark:text-rose-400' : 'text-zinc-600 dark:text-zinc-400' }}">
                                             {{ $demanda->prazo_atendimento_demanda->format('d/m/Y H:i') }}
                                         </span>
                                     @else
                                         <span class="text-zinc-400 dark:text-zinc-600">—</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
+                                <td class="whitespace-nowrap px-4 py-3 text-xs text-zinc-500 dark:text-zinc-400">
+                                    {{ $demanda->data_hora_agendamento ? $demanda->data_hora_agendamento->format('d/m/Y H:i') : '—' }}
+                                </td>
+                                @foreach([
+                                    'data_hora_inicio_carregamento',
+                                    'data_hora_fim_carregamento',
+                                    'data_hora_saida_origem',
+                                    'data_hora_chegada_destino',
+                                    'data_hora_inicio_descarregamento',
+                                    'data_hora_fim_descarregamento',
+                                ] as $campo)
+                                <td class="whitespace-nowrap px-4 py-3 text-xs text-zinc-500 dark:text-zinc-400">
+                                    {{ $demanda->$campo ? $demanda->$campo->format('d/m/Y H:i') : '—' }}
+                                </td>
+                                @endforeach
+                                <td class="whitespace-nowrap px-4 py-3">
                                     <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
                                                  bg-{{ $sc }}-100 text-{{ $sc }}-700
                                                  dark:bg-{{ $sc }}-950/40 dark:text-{{ $sc }}-400">
                                         {{ $demanda->status_demanda->label() }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 text-xs text-zinc-400 dark:text-zinc-600">
+                                <td class="whitespace-nowrap px-4 py-3 text-xs text-zinc-500 dark:text-zinc-400">
+                                    {{ $demanda->criador?->name ?? '—' }}
+                                </td>
+                                <td class="whitespace-nowrap px-4 py-3 text-xs text-zinc-400 dark:text-zinc-600">
                                     {{ $demanda->created_at->format('d/m/Y H:i') }}
                                 </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <td class="whitespace-nowrap px-4 py-3">
+                                    <div class="flex items-center gap-2">
                                         <button type="button"
                                                 onclick="editDemanda({{ $demanda->id }}, {{ $demanda->toJson() }})"
-                                                class="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700
-                                                       dark:hover:bg-zinc-800 dark:hover:text-zinc-300">
+                                                class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5
+                                                       text-xs font-medium transition-all duration-150
+                                                       border-zinc-200 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50
+                                                       dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800/70">
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/>
                                             </svg>
+                                            Atualizar
                                         </button>
                                         @if($isAdmin)
                                         <form method="POST" action="{{ route('demandas.destroy', $demanda) }}"
@@ -194,11 +280,14 @@
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit"
-                                                    class="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-600
-                                                           dark:hover:bg-red-950/40 dark:hover:text-red-400">
+                                                    class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5
+                                                           text-xs font-medium transition-all duration-150
+                                                           border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50
+                                                           dark:border-red-900/50 dark:text-red-400 dark:hover:border-red-800 dark:hover:bg-red-950/40">
                                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
                                                 </svg>
+                                                Remover
                                             </button>
                                         </form>
                                         @endif
@@ -229,11 +318,10 @@
 
     <div class="relative flex min-h-full items-center justify-center p-4">
         <div id="demanda-modal-panel"
-             class="flex w-full max-w-3xl scale-95 flex-col opacity-0 overflow-hidden rounded-2xl border shadow-2xl
+             class="flex w-full max-w-[62rem] scale-95 flex-col overflow-hidden rounded-2xl border opacity-0 shadow-2xl
                     transition-all duration-200
-                    border-slate-200 bg-white
-                    dark:border-zinc-800 dark:bg-zinc-950"
-             style="max-height: 80vh;">
+                    border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+             style="max-height: 95vh;">
 
             {{-- Header --}}
             <div class="flex shrink-0 items-center justify-between border-b px-6 py-4
@@ -279,6 +367,12 @@
                 <input type="hidden" name="_method" id="demanda-method" value="POST">
                 <input type="hidden" name="tipo_cadastro" value="manual">
 
+                {{-- Campos hidden reais dos comboboxes --}}
+                <input type="hidden" name="tipo_demanda"    id="cb-tipo_demanda-value">
+                <input type="hidden" name="equipamento_id"  id="cb-equipamento_id-value">
+                <input type="hidden" name="local_origem_id" id="cb-local_origem_id-value">
+                <input type="hidden" name="local_destino_id" id="cb-local_destino_id-value">
+
                 <div class="min-h-0 flex-1 overflow-y-auto px-6 py-5">
 
                     {{-- Passo 1 — Identificação --}}
@@ -301,17 +395,20 @@
                                 <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                                     Tipo de Demanda
                                 </label>
-                                <select name="tipo_demanda" id="f-tipo-demanda"
-                                        class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                               text-zinc-900 outline-none shadow-xs
-                                               focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                               dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                               dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-                                    <option value="">Selecione…</option>
-                                    @foreach(\App\Enums\TipoDemanda::cases() as $t)
-                                        <option value="{{ $t->value }}">{{ $t->label() }}</option>
-                                    @endforeach
-                                </select>
+                                <div class="relative" data-combobox="tipo_demanda">
+                                    <input type="text" id="cb-tipo_demanda-display" autocomplete="off"
+                                           placeholder="Pesquisar tipo…"
+                                           oninput="cbFilter('tipo_demanda')" onfocus="cbFilter('tipo_demanda')"
+                                           class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
+                                                  text-zinc-900 outline-none shadow-xs
+                                                  focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                                                  dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
+                                                  dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+                                    <div id="cb-tipo_demanda-dropdown"
+                                         class="absolute z-30 mt-1 hidden max-h-52 w-full overflow-y-auto rounded-lg border
+                                                border-slate-200 bg-white py-1 shadow-lg
+                                                dark:border-zinc-700 dark:bg-zinc-800"></div>
+                                </div>
                             </div>
                         </div>
 
@@ -319,17 +416,20 @@
                             <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                                 Veículo (Prefixo)
                             </label>
-                            <select name="equipamento_id" id="f-equipamento"
-                                    class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                           text-zinc-900 outline-none shadow-xs
-                                           focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                           dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                           dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-                                <option value="">Selecione…</option>
-                                @foreach($equipamentos as $eq)
-                                    <option value="{{ $eq->id }}">{{ $eq->prefixo }} — {{ $eq->placa }}</option>
-                                @endforeach
-                            </select>
+                            <div class="relative" data-combobox="equipamento_id">
+                                <input type="text" id="cb-equipamento_id-display" autocomplete="off"
+                                       placeholder="Pesquisar prefixo ou placa…"
+                                       oninput="cbFilter('equipamento_id')" onfocus="cbFilter('equipamento_id')"
+                                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
+                                              text-zinc-900 outline-none shadow-xs
+                                              focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                                              dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
+                                              dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+                                <div id="cb-equipamento_id-dropdown"
+                                     class="absolute z-30 mt-1 hidden max-h-52 w-full overflow-y-auto rounded-lg border
+                                            border-slate-200 bg-white py-1 shadow-lg
+                                            dark:border-zinc-700 dark:bg-zinc-800"></div>
+                            </div>
                         </div>
 
                         <div class="grid grid-cols-2 gap-4">
@@ -337,33 +437,39 @@
                                 <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                                     Local de Origem
                                 </label>
-                                <select name="local_origem_id" id="f-origem"
-                                        class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                               text-zinc-900 outline-none shadow-xs
-                                               focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                               dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                               dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-                                    <option value="">Selecione…</option>
-                                    @foreach($locais as $local)
-                                        <option value="{{ $local->id }}">{{ $local->nome }}</option>
-                                    @endforeach
-                                </select>
+                                <div class="relative" data-combobox="local_origem_id">
+                                    <input type="text" id="cb-local_origem_id-display" autocomplete="off"
+                                           placeholder="Pesquisar local…"
+                                           oninput="cbFilter('local_origem_id')" onfocus="cbFilter('local_origem_id')"
+                                           class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
+                                                  text-zinc-900 outline-none shadow-xs
+                                                  focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                                                  dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
+                                                  dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+                                    <div id="cb-local_origem_id-dropdown"
+                                         class="absolute z-30 mt-1 hidden max-h-52 w-full overflow-y-auto rounded-lg border
+                                                border-slate-200 bg-white py-1 shadow-lg
+                                                dark:border-zinc-700 dark:bg-zinc-800"></div>
+                                </div>
                             </div>
                             <div>
                                 <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                                     Local de Destino
                                 </label>
-                                <select name="local_destino_id" id="f-destino"
-                                        class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                               text-zinc-900 outline-none shadow-xs
-                                               focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                               dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                               dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-                                    <option value="">Selecione…</option>
-                                    @foreach($locais as $local)
-                                        <option value="{{ $local->id }}">{{ $local->nome }}</option>
-                                    @endforeach
-                                </select>
+                                <div class="relative" data-combobox="local_destino_id">
+                                    <input type="text" id="cb-local_destino_id-display" autocomplete="off"
+                                           placeholder="Pesquisar local…"
+                                           oninput="cbFilter('local_destino_id')" onfocus="cbFilter('local_destino_id')"
+                                           class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
+                                                  text-zinc-900 outline-none shadow-xs
+                                                  focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                                                  dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
+                                                  dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+                                    <div id="cb-local_destino_id-dropdown"
+                                         class="absolute z-30 mt-1 hidden max-h-52 w-full overflow-y-auto rounded-lg border
+                                                border-slate-200 bg-white py-1 shadow-lg
+                                                dark:border-zinc-700 dark:bg-zinc-800"></div>
+                                </div>
                             </div>
                         </div>
 
@@ -380,20 +486,17 @@
                                               dark:focus:border-zinc-500 dark:focus:ring-zinc-800
                                               dark:[color-scheme:dark]">
                             </div>
-                            <div id="f-status-wrapper">
+                            <div>
                                 <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                    Status
+                                    Data de Agendamento
                                 </label>
-                                <select name="status_demanda" id="f-status"
-                                        class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                               text-zinc-900 outline-none shadow-xs
-                                               focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                               dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                               dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-                                    @foreach(\App\Enums\StatusDemanda::cases() as $s)
-                                        <option value="{{ $s->value }}">{{ $s->label() }}</option>
-                                    @endforeach
-                                </select>
+                                <input type="datetime-local" name="data_hora_agendamento" id="f-agendamento"
+                                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
+                                              text-zinc-900 outline-none shadow-xs
+                                              focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                                              dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
+                                              dark:focus:border-zinc-500 dark:focus:ring-zinc-800
+                                              dark:[color-scheme:dark]">
                             </div>
                         </div>
                     </div>
@@ -403,85 +506,40 @@
                         <p class="text-xs text-zinc-400 dark:text-zinc-600">
                             Todos os campos de data são opcionais — preencha conforme o andamento da operação.
                         </p>
-
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                    Início do Carregamento
-                                </label>
+                                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Início do Carregamento</label>
                                 <input type="datetime-local" name="data_hora_inicio_carregamento" id="f-ini-car"
-                                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                              text-zinc-900 outline-none shadow-xs
-                                              focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                              dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                              dark:focus:border-zinc-500 dark:focus:ring-zinc-800
-                                              dark:[color-scheme:dark]">
+                                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none shadow-xs focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                    Fim do Carregamento
-                                </label>
+                                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Fim do Carregamento</label>
                                 <input type="datetime-local" name="data_hora_fim_carregamento" id="f-fim-car"
-                                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                              text-zinc-900 outline-none shadow-xs
-                                              focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                              dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                              dark:focus:border-zinc-500 dark:focus:ring-zinc-800
-                                              dark:[color-scheme:dark]">
+                                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none shadow-xs focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
                             </div>
                         </div>
-
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                    Saída da Origem
-                                </label>
+                                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Saída da Origem</label>
                                 <input type="datetime-local" name="data_hora_saida_origem" id="f-saida"
-                                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                              text-zinc-900 outline-none shadow-xs
-                                              focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                              dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                              dark:focus:border-zinc-500 dark:focus:ring-zinc-800
-                                              dark:[color-scheme:dark]">
+                                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none shadow-xs focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                    Chegada ao Destino
-                                </label>
+                                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Chegada ao Destino</label>
                                 <input type="datetime-local" name="data_hora_chegada_destino" id="f-chegada"
-                                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                              text-zinc-900 outline-none shadow-xs
-                                              focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                              dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                              dark:focus:border-zinc-500 dark:focus:ring-zinc-800
-                                              dark:[color-scheme:dark]">
+                                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none shadow-xs focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
                             </div>
                         </div>
-
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                    Início do Descarregamento
-                                </label>
+                                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Início do Descarregamento</label>
                                 <input type="datetime-local" name="data_hora_inicio_descarregamento" id="f-ini-des"
-                                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                              text-zinc-900 outline-none shadow-xs
-                                              focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                              dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                              dark:focus:border-zinc-500 dark:focus:ring-zinc-800
-                                              dark:[color-scheme:dark]">
+                                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none shadow-xs focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                    Fim do Descarregamento
-                                </label>
+                                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Fim do Descarregamento</label>
                                 <input type="datetime-local" name="data_hora_fim_descarregamento" id="f-fim-des"
-                                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                              text-zinc-900 outline-none shadow-xs
-                                              focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                              dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                              dark:focus:border-zinc-500 dark:focus:ring-zinc-800
-                                              dark:[color-scheme:dark]">
+                                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none shadow-xs focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
                             </div>
                         </div>
                     </div>
@@ -494,8 +552,8 @@
                             </label>
                             <textarea name="observacao_adicional" id="f-obs" rows="6"
                                       placeholder="Detalhes adicionais sobre a demanda…"
-                                      class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                             text-zinc-900 outline-none shadow-xs resize-none
+                                      class="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
+                                             text-zinc-900 outline-none shadow-xs
                                              focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
                                              dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
                                              dark:focus:border-zinc-500 dark:focus:ring-zinc-800"></textarea>
@@ -505,7 +563,7 @@
 
                 {{-- Mensagem de erro --}}
                 <div id="demanda-error"
-                     class="hidden mx-6 mb-0 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700
+                     class="mx-6 mb-0 hidden rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700
                             dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-400"></div>
 
                 {{-- Footer --}}
@@ -542,7 +600,7 @@
                                 class="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2 text-sm font-semibold text-white
                                        shadow-xs transition-all duration-150 hover:bg-zinc-700 active:scale-[0.98]
                                        dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200
-                                       disabled:opacity-60 disabled:cursor-not-allowed">
+                                       disabled:cursor-not-allowed disabled:opacity-60">
                             Salvar
                         </button>
                     </div>
@@ -552,52 +610,136 @@
     </div>
 </div>
 
+{{-- Tooltip flutuante (posicionado via JS para não ser cortado pelo overflow-x-auto) --}}
+<div id="col-tip-box"
+     class="pointer-events-none fixed z-[200] hidden max-w-xs rounded-lg bg-zinc-900 px-3 py-2 text-xs
+            leading-relaxed text-white shadow-xl dark:bg-zinc-700"
+     style="transition: opacity 0.1s;">
+</div>
+
 @push('scripts')
 <script>
 (function () {
-    var modal   = document.getElementById('demanda-modal');
-    var overlay = document.getElementById('demanda-modal-overlay');
-    var panel   = document.getElementById('demanda-modal-panel');
-    var title   = document.getElementById('demanda-modal-title');
-    var form    = document.getElementById('demanda-form');
-    var errBox  = document.getElementById('demanda-error');
+    // ── Dados dos comboboxes (gerados pelo PHP) ───────────────────────────────
+    var CB_DATA = {
+        tipo_demanda: [
+            @foreach(\App\Enums\TipoDemanda::cases() as $t)
+            { v: '{{ $t->value }}', l: '{{ $t->label() }}' },
+            @endforeach
+        ],
+        equipamento_id: [
+            @foreach($equipamentos as $eq)
+            { v: {{ $eq->id }}, l: '{{ $eq->prefixo }} — {{ $eq->placa }}' },
+            @endforeach
+        ],
+        local_origem_id: [
+            @foreach($locais as $local)
+            { v: {{ $local->id }}, l: '{{ addslashes($local->nome) }}' },
+            @endforeach
+        ],
+        local_destino_id: [
+            @foreach($locais as $local)
+            { v: {{ $local->id }}, l: '{{ addslashes($local->nome) }}' },
+            @endforeach
+        ],
+        status_demanda: [
+            @foreach(\App\Enums\StatusDemanda::cases() as $s)
+            { v: '{{ $s->value }}', l: '{{ $s->label() }}' },
+            @endforeach
+        ],
+    };
+
+    var DD_CLS = 'cursor-pointer px-3 py-2 text-sm text-zinc-800 hover:bg-slate-50 dark:text-zinc-200 dark:hover:bg-zinc-700/60';
+
+    // ── Combobox engine ───────────────────────────────────────────────────────
+    window.cbFilter = function (key) {
+        var inp = document.getElementById('cb-' + key + '-display');
+        var dd  = document.getElementById('cb-' + key + '-dropdown');
+        var q   = (inp.value || '').toLowerCase().trim();
+        var opts = CB_DATA[key] || [];
+
+        var matches = q
+            ? opts.filter(function (o) { return o.l.toLowerCase().includes(q); })
+            : opts;
+
+        if (! matches.length) { dd.classList.add('hidden'); return; }
+
+        dd.innerHTML = matches.slice(0, 40).map(function (o) {
+            var safe = String(o.l).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            var safeV = String(o.v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            return '<div class="' + DD_CLS + '" onmousedown="event.preventDefault();cbSelect(\'' + key + '\',\'' + safeV + '\',\'' + safe + '\')">'
+                + o.l
+                + '</div>';
+        }).join('');
+
+        dd.classList.remove('hidden');
+    };
+
+    window.cbSelect = function (key, value, label) {
+        document.getElementById('cb-' + key + '-value').value   = value;
+        document.getElementById('cb-' + key + '-display').value = label;
+        document.getElementById('cb-' + key + '-dropdown').classList.add('hidden');
+    };
+
+    function cbSetValue(key, value) {
+        var opts = CB_DATA[key] || [];
+        var opt  = opts.find(function (o) { return String(o.v) === String(value); });
+        document.getElementById('cb-' + key + '-value').value   = value != null ? value : '';
+        document.getElementById('cb-' + key + '-display').value = opt ? opt.l : '';
+    }
+
+    function cbReset(key) {
+        document.getElementById('cb-' + key + '-value').value   = '';
+        document.getElementById('cb-' + key + '-display').value = '';
+        document.getElementById('cb-' + key + '-dropdown').classList.add('hidden');
+    }
+
+    var ALL_CB_KEYS = ['tipo_demanda', 'equipamento_id', 'local_origem_id', 'local_destino_id'];
+
+    // Fecha dropdowns ao clicar fora
+    document.addEventListener('click', function (e) {
+        document.querySelectorAll('[data-combobox]').forEach(function (el) {
+            var dd = el.querySelector('[id$="-dropdown"]');
+            if (dd && ! el.contains(e.target)) { dd.classList.add('hidden'); }
+        });
+    });
+
+    // ── Modal open/close ──────────────────────────────────────────────────────
+    var modal     = document.getElementById('demanda-modal');
+    var overlay   = document.getElementById('demanda-modal-overlay');
+    var panel     = document.getElementById('demanda-modal-panel');
+    var titleEl   = document.getElementById('demanda-modal-title');
+    var form      = document.getElementById('demanda-form');
+    var errBox    = document.getElementById('demanda-error');
     var btnSalvar = document.getElementById('btn-salvar');
-    var currentStep = 1;
-    var totalSteps  = 3;
-    var editingId   = null;
+    var editingId = null;
 
     var STORE_URL  = '{{ route('demandas.store') }}';
     var CSRF_TOKEN = '{{ csrf_token() }}';
 
-    // ── Modal open/close ──────────────────────────────────────────────────────
     window.openDemandaModal = function () {
         editingId = null;
-        title.textContent = 'Nova Demanda';
+        titleEl.textContent = 'Nova Demanda';
         form.reset();
         document.getElementById('demanda-method').value = 'POST';
         document.getElementById('f-numero-demanda').disabled = false;
-        document.getElementById('f-status-wrapper').classList.add('hidden');
         errBox.classList.add('hidden');
+        ALL_CB_KEYS.forEach(cbReset);
         goToStep(1);
         openModal();
     };
 
     window.editDemanda = function (id, data) {
         editingId = id;
-        title.textContent = 'Editar Demanda #' + data.numero_demanda;
+        titleEl.textContent = 'Editar Demanda #' + data.numero_demanda;
         form.reset();
         document.getElementById('demanda-method').value = 'PUT';
         document.getElementById('f-numero-demanda').disabled = true;
-        document.getElementById('f-status-wrapper').classList.remove('hidden');
         errBox.classList.add('hidden');
 
         document.getElementById('f-numero-demanda').value = data.numero_demanda || '';
-        document.getElementById('f-tipo-demanda').value   = data.tipo_demanda   || '';
-        document.getElementById('f-equipamento').value    = data.equipamento_id || '';
-        document.getElementById('f-origem').value         = data.local_origem_id || '';
-        document.getElementById('f-destino').value        = data.local_destino_id || '';
         document.getElementById('f-prazo').value          = fmtDatetime(data.prazo_atendimento_demanda);
-        document.getElementById('f-status').value         = data.status_demanda || '';
+        document.getElementById('f-agendamento').value    = fmtDatetime(data.data_hora_agendamento);
         document.getElementById('f-ini-car').value        = fmtDatetime(data.data_hora_inicio_carregamento);
         document.getElementById('f-fim-car').value        = fmtDatetime(data.data_hora_fim_carregamento);
         document.getElementById('f-saida').value          = fmtDatetime(data.data_hora_saida_origem);
@@ -605,6 +747,11 @@
         document.getElementById('f-ini-des').value        = fmtDatetime(data.data_hora_inicio_descarregamento);
         document.getElementById('f-fim-des').value        = fmtDatetime(data.data_hora_fim_descarregamento);
         document.getElementById('f-obs').value            = data.observacao_adicional || '';
+
+        cbSetValue('tipo_demanda',    data.tipo_demanda);
+        cbSetValue('equipamento_id',  data.equipamento_id);
+        cbSetValue('local_origem_id', data.local_origem_id);
+        cbSetValue('local_destino_id',data.local_destino_id);
 
         goToStep(1);
         openModal();
@@ -631,17 +778,17 @@
     }
 
     // ── Steps ─────────────────────────────────────────────────────────────────
+    var currentStep = 1;
+    var totalSteps  = 3;
+
     window.goToStep = function (n) {
         currentStep = n;
-
         document.querySelectorAll('[data-step]').forEach(function (el) {
             el.classList.toggle('hidden', el.dataset.step != n);
         });
-
         document.querySelectorAll('[data-step-btn]').forEach(function (btn) {
             btn.classList.toggle('active', btn.dataset.stepBtn == n);
         });
-
         document.getElementById('btn-prev').classList.toggle('hidden', n === 1);
         document.getElementById('btn-next').classList.toggle('hidden', n === totalSteps);
     };
@@ -655,16 +802,15 @@
         errBox.classList.add('hidden');
         btnSalvar.disabled = true;
 
-        var url    = editingId ? '{{ url('/demandas') }}/' + editingId : STORE_URL;
-        var data   = new FormData(form);
+        var url  = editingId ? '{{ url('/demandas') }}/' + editingId : STORE_URL;
+        var data = new FormData(form);
 
-        // Remove empty datetime fields so backend treats them as null
-        var dtFields = ['prazo_atendimento_demanda','data_hora_inicio_carregamento','data_hora_fim_carregamento',
-                        'data_hora_saida_origem','data_hora_chegada_destino',
-                        'data_hora_inicio_descarregamento','data_hora_fim_descarregamento'];
-        dtFields.forEach(function (k) {
-            if (! data.get(k)) { data.delete(k); }
-        });
+        var dtFields = [
+            'prazo_atendimento_demanda', 'data_hora_agendamento', 'data_hora_inicio_carregamento', 'data_hora_fim_carregamento',
+            'data_hora_saida_origem', 'data_hora_chegada_destino',
+            'data_hora_inicio_descarregamento', 'data_hora_fim_descarregamento',
+        ];
+        dtFields.forEach(function (k) { if (! data.get(k)) { data.delete(k); } });
 
         fetch(url, {
             method: 'POST',
@@ -691,7 +837,7 @@
         });
     });
 
-    // ── Fechar ao clicar fora ─────────────────────────────────────────────────
+    // Fechar ao clicar fora do painel
     modal.addEventListener('click', function (e) {
         if (e.target === modal || e.target === overlay) { window.closeDemandaModal(); }
     });
@@ -702,9 +848,64 @@
     // ── Util ──────────────────────────────────────────────────────────────────
     function fmtDatetime(iso) {
         if (! iso) { return ''; }
-        // "2026-07-10T14:30:00.000000Z" → "2026-07-10T14:30"
-        return iso.replace('Z', '').replace(/ /, 'T').substring(0, 16);
+        return iso.replace('Z', '').replace(' ', 'T').substring(0, 16);
     }
+
+    // ── Exportar — mantém filtros no href ────────────────────────────────────
+    (function () {
+        var exportBtn  = document.getElementById('btn-export-demandas');
+        var filterForm = exportBtn && exportBtn.closest('form') ? exportBtn.closest('form') : document.querySelector('form[action*="demandas"]');
+        var baseUrl    = '{{ route('demandas.export') }}';
+
+        if (! exportBtn || ! filterForm) { return; }
+
+        function syncExportUrl() {
+            var params = new URLSearchParams(new FormData(filterForm));
+            // remove entradas vazias
+            var clean = new URLSearchParams();
+            params.forEach(function (v, k) { if (v.trim() !== '') { clean.set(k, v); } });
+            exportBtn.href = baseUrl + (clean.toString() ? '?' + clean.toString() : '');
+        }
+
+        filterForm.querySelectorAll('input, select').forEach(function (el) {
+            el.addEventListener('change', syncExportUrl);
+            el.addEventListener('input',  syncExportUrl);
+        });
+
+        syncExportUrl();
+    })();
+
+    // ── Tooltips das colunas ──────────────────────────────────────────────────
+    (function () {
+        var box = document.getElementById('col-tip-box');
+        if (! box) { return; }
+
+        document.querySelectorAll('.col-tip').forEach(function (el) {
+            el.addEventListener('mouseenter', function (e) {
+                box.textContent = el.dataset.tip;
+                box.classList.remove('hidden');
+                positionTip(e);
+            });
+            el.addEventListener('mousemove', positionTip);
+            el.addEventListener('mouseleave', function () {
+                box.classList.add('hidden');
+            });
+        });
+
+        function positionTip(e) {
+            var gap = 12;
+            var bw  = box.offsetWidth  || 280;
+            var bh  = box.offsetHeight || 60;
+            var x   = e.clientX + gap;
+            var y   = e.clientY - bh - gap;
+
+            if (x + bw > window.innerWidth  - 8) { x = e.clientX - bw - gap; }
+            if (y < 8)                            { y = e.clientY + gap; }
+
+            box.style.left = x + 'px';
+            box.style.top  = y + 'px';
+        }
+    })();
 })();
 </script>
 @endpush

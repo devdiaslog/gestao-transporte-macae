@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\StatusDemanda;
 use App\Enums\TipoDemanda;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -27,7 +26,7 @@ class UpdateDemandaRequest extends FormRequest
             'local_origem_id' => ['nullable', 'exists:locais,id'],
             'local_destino_id' => ['nullable', 'exists:locais,id'],
             'prazo_atendimento_demanda' => ['nullable', 'date'],
-            'status_demanda' => ['nullable', Rule::enum(StatusDemanda::class)],
+            'data_hora_agendamento' => ['nullable', 'date'],
 
             'data_hora_inicio_carregamento' => ['nullable', 'date'],
             'data_hora_fim_carregamento' => [

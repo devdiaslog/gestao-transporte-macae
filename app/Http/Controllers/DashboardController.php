@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CercaEvento;
 use App\Models\DashboardSnapshot;
+use App\Models\Equipamento;
+use App\Models\StatusEvento;
+use App\Models\TipoEquipamento;
 use App\Services\BigcoreService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +16,112 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    public function tabela(): View
+    {
+        $agora = now();
+        $tipoMotorizado = TipoEquipamento::where('nome', 'Motorizado')->first();
+
+        $equipamentos = Equipamento::query()
+            ->where('status', true)
+            ->when($tipoMotorizado, fn ($q) => $q->where('tipo_id', $tipoMotorizado->id))
+            ->whereNotNull('prefixo')
+            ->with('posicao')
+            ->orderBy('prefixo')
+            ->get();
+
+        $ids = $equipamentos->pluck('id')->all();
+
+        $statusAbertos = StatusEvento::query()
+            ->whereNull('saida_em')
+            ->whereIn('equipamento_id', $ids)
+            ->get()
+            ->keyBy('equipamento_id');
+
+        $cercasAbertas = CercaEvento::query()
+            ->with('cerca')
+            ->whereNull('saida_em')
+            ->whereIn('equipamento_id', $ids)
+            ->get()
+            ->keyBy('equipamento_id');
+
+        $minutosAtendimento = StatusEvento::query()
+            ->whereIn('equipamento_id', $ids)
+            ->whereNotNull('saida_em')
+            ->whereNotNull('documento')
+            ->selectRaw('equipamento_id, documento, SUM(duracao_minutos) as total_minutos')
+            ->groupBy('equipamento_id', 'documento')
+            ->get()
+            ->keyBy(fn ($r) => $r->equipamento_id.'_'.$r->documento);
+
+        $veiculos = $equipamentos
+            ->map(function (Equipamento $e) use ($agora, $statusAbertos, $cercasAbertas, $minutosAtendimento) {
+                $posicao = $e->posicao;
+                $statusEvento = $statusAbertos->get($e->id);
+                $cercaEvento = $cercasAbertas->get($e->id);
+
+                $trackerEstado = match ($posicao?->tracker_state) {
+                    'Em Movimento' => 1,
+                    'Parado' => 0,
+                    default => -1,
+                };
+                $trackerMinutos = $posicao?->state_since
+                    ? (int) abs(Carbon::parse($posicao->state_since)->diffInMinutes($agora))
+                    : 0;
+
+                if ($trackerEstado !== -1 && $posicao?->position_at) {
+                    if (Carbon::parse($posicao->position_at)->diffInHours($agora) >= 3) {
+                        $trackerEstado = -1;
+                        $trackerMinutos = (int) abs(Carbon::parse($posicao->position_at)->diffInMinutes($agora));
+                    }
+                }
+
+                $status = $statusEvento?->status_operacional ?? $e->status_operacional ?? '';
+                $statusMinutos = $statusEvento?->entrada_em
+                    ? (int) abs($statusEvento->entrada_em->diffInMinutes($agora))
+                    : 0;
+
+                $documento = $statusEvento?->documento ?? $e->documento_demanda;
+                $minutosPassados = ($documento && $statusEvento)
+                    ? (int) ($minutosAtendimento->get($e->id.'_'.$documento)?->total_minutos ?? 0)
+                    : 0;
+                $atendimentoMinutos = $minutosPassados + $statusMinutos;
+
+                $cercaNome = $cercaEvento?->cerca?->nome;
+                $cercaMinutos = $cercaEvento?->entrada_em
+                    ? (int) abs($cercaEvento->entrada_em->diffInMinutes($agora))
+                    : 0;
+
+                return [
+                    'prefixo' => $e->prefixo,
+                    'placa' => $e->placa ?? '—',
+                    'status' => $status,
+                    'documento' => $documento ?? '',
+                    'cerca_nome' => $cercaNome,
+                    'cerca_minutos' => $cercaMinutos,
+                    'tracker_estado' => $trackerEstado,
+                    'tracker_minutos' => $trackerMinutos,
+                    'atendimento_minutos' => $atendimentoMinutos,
+                    'status_minutos' => $statusMinutos,
+                ];
+            })
+            ->sort(function ($a, $b) {
+                $order = fn ($v) => $v['tracker_estado'] === 0 ? 0 : ($v['tracker_estado'] === 1 ? 1 : 2);
+                $oa = $order($a);
+                $ob = $order($b);
+                if ($oa !== $ob) {
+                    return $oa <=> $ob;
+                }
+                if ($oa === 0) {
+                    return $b['tracker_minutos'] <=> $a['tracker_minutos'];
+                }
+
+                return strcmp($a['prefixo'], $b['prefixo']);
+            })
+            ->values();
+
+        return view('dashboard.tabela', compact('veiculos', 'agora'));
+    }
+
     public function graficos(): View
     {
         $snapshot = DashboardSnapshot::latest('capturado_em')->first();
