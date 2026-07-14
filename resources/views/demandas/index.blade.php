@@ -47,6 +47,7 @@
                        dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
                        dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
             <option value="">Todos os status</option>
+            <option value="active" @selected($status === 'active')>Pendente + Em Andamento</option>
             @foreach(\App\Enums\StatusDemanda::cases() as $s)
                 <option value="{{ $s->value }}" @selected($status === $s->value)>{{ $s->label() }}</option>
             @endforeach
@@ -94,7 +95,7 @@
             </svg>
             Exportar
         </a>
-        @if($search || $status !== 'pendente' || $tipo || $prefixo || $dataDE || $dataAte)
+        @if($search || $status !== 'active' || $tipo || $prefixo || $dataDE || $dataAte)
             <a href="{{ route('demandas.index') }}"
                class="h-9 inline-flex items-center gap-1 rounded-lg px-3 text-sm text-zinc-400 hover:text-zinc-700
                       dark:hover:text-zinc-200">

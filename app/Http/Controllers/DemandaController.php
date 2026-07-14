@@ -19,7 +19,7 @@ class DemandaController extends Controller
     public function index(Request $request): View
     {
         $search = $request->input('q');
-        $status = $request->input('status', 'pendente');
+        $status = $request->input('status', 'active');
         $tipo = $request->input('tipo');
         $prefixo = $request->input('prefixo');
         $dataDE = $request->input('data_de');
@@ -29,7 +29,8 @@ class DemandaController extends Controller
             ->with(['equipamento', 'criador'])
             ->when($search, fn ($q) => $q->where('numero_demanda', 'like', "%{$search}%")
                 ->orWhere('documento_demanda', 'like', "%{$search}%"))
-            ->when($status, fn ($q) => $q->where('status_demanda', $status))
+            ->when($status === 'active', fn ($q) => $q->whereIn('status_demanda', ['pendente', 'em_andamento']))
+            ->when($status && $status !== 'active', fn ($q) => $q->where('status_demanda', $status))
             ->when($tipo, fn ($q) => $q->where('tipo_demanda', $tipo))
             ->when($prefixo, fn ($q) => $q->whereHas('equipamento', fn ($eq) => $eq->where('prefixo', 'like', "%{$prefixo}%")))
             ->when($dataDE, fn ($q) => $q->whereDate('created_at', '>=', $dataDE))
