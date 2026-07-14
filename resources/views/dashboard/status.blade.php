@@ -250,6 +250,13 @@
                     return mn + 'm';
                 }
 
+                function fmtMinHHMM(m) {
+                    m = Math.abs(Math.round(m));
+                    var h  = Math.floor(m / 60);
+                    var mn = m % 60;
+                    return (h < 10 ? '0' : '') + h + ':' + (mn < 10 ? '0' : '') + mn;
+                }
+
                 function makeChart(elId, veiculos, colorFn) {
                     var el = document.getElementById(elId);
                     if (! el || ! veiculos.length) { return; }
@@ -273,7 +280,7 @@
                         dataLabels: {
                             enabled: true, offsetY: -18,
                             style: { fontSize: lblSize, fontWeight: '600', colors: [lblClr] },
-                            formatter: function(v) { return fmtMin(v * 60); },
+                            formatter: function(v) { return fmtMinHHMM(v * 60); },
                         },
                         legend: { show: false },
                         grid: { borderColor: gridClr, yaxis: { lines: { show: true } }, xaxis: { lines: { show: false } } },
