@@ -151,10 +151,13 @@ class DashboardController extends Controller
                     : 0;
 
                 $documento = $statusEvento?->documento ?? $e->documento_demanda;
-                $minutosPassados = ($documento && $statusEvento)
-                    ? (int) ($minutosAtendimento->get($e->id.'_'.$documento)?->total_minutos ?? 0)
-                    : 0;
-                $atendimentoMinutos = $minutosPassados + $statusMinutos;
+                $atendimentoMinutos = 0;
+                if ($documento) {
+                    $minutosPassados = $statusEvento
+                        ? (int) ($minutosAtendimento->get($e->id.'_'.$documento)?->total_minutos ?? 0)
+                        : 0;
+                    $atendimentoMinutos = $minutosPassados + $statusMinutos;
+                }
 
                 $cercaNome = $cercaEvento?->cerca?->nome;
                 $cercaMinutos = $cercaEvento?->entrada_em

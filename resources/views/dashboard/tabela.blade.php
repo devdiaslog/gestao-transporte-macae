@@ -59,7 +59,7 @@
     <div class="shrink-0 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-2 dark:border-zinc-800 dark:bg-zinc-950">
         <div class="flex items-center gap-3">
             <span class="text-sm font-bold text-zinc-800 dark:text-zinc-200">{{ $veiculos->count() }} veículos</span>
-            <span class="text-xs text-zinc-400 dark:text-zinc-600">ordenado por tempo parado</span>
+            <span id="sort-label" class="text-xs text-zinc-400 dark:text-zinc-600">clique no cabeçalho para ordenar</span>
         </div>
         <span class="text-xs text-zinc-400 dark:text-zinc-600">Atualizado: {{ $agora->format('H:i:s') }}</span>
     </div>
@@ -69,14 +69,14 @@
         <table class="w-full border-collapse">
             <thead class="sticky top-0 z-10 bg-slate-100 dark:bg-zinc-900">
                 <tr>
-                    <th class="whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Prefixo</th>
-                    <th class="whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Placa</th>
-                    <th class="whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Status</th>
-                    <th class="whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Documento</th>
-                    <th class="whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Cerca</th>
-                    <th class="whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Rastreador</th>
-                    <th class="whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Atendimento</th>
-                    <th class="whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Tempo Status</th>
+                    <th data-col="prefixo"  class="sortable-th whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Prefixo</th>
+                    <th data-col="placa"    class="sortable-th whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Placa</th>
+                    <th data-col="status"   class="sortable-th whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Status</th>
+                    <th data-col="doc"      class="sortable-th whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Documento</th>
+                    <th data-col="cerca"    class="sortable-th whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Cerca</th>
+                    <th data-col="tracker"  class="sortable-th whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Rastreador</th>
+                    <th data-col="atend"    class="sortable-th whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Atendimento</th>
+                    <th data-col="statmin"  class="sortable-th whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Tempo Status</th>
                 </tr>
             </thead>
             <tbody>
@@ -91,7 +91,15 @@
                     $isParado = $v['tracker_estado'] === 0;
                 @endphp
                 <tr class="border-b border-slate-100 hover:bg-slate-50 dark:border-zinc-800/60 dark:hover:bg-zinc-900/40"
-                    style="border-left: 4px solid {{ $hex }}">
+                    style="border-left: 4px solid {{ $hex }}"
+                    data-s-prefixo="{{ $v['prefixo'] }}"
+                    data-s-placa="{{ $v['placa'] }}"
+                    data-s-status="{{ $v['status'] }}"
+                    data-s-doc="{{ $v['documento'] }}"
+                    data-s-cerca="{{ $v['cerca_minutos'] }}"
+                    data-s-tracker="{{ $v['tracker_minutos'] }}"
+                    data-s-atend="{{ $v['atendimento_minutos'] }}"
+                    data-s-statmin="{{ $v['status_minutos'] }}">
 
                     {{-- Prefixo --}}
                     <td class="px-5 py-4 font-bold text-base text-zinc-900 dark:text-zinc-100 whitespace-nowrap">
@@ -177,6 +185,77 @@
         </table>
     </div>
 </div>
+
+<script>
+(function () {
+    var ths   = document.querySelectorAll('th.sortable-th');
+    var tbody = document.querySelector('table tbody');
+    var label = document.getElementById('sort-label');
+    var state = { col: null, dir: 1 };
+
+    var colLabels = {
+        prefixo: 'Prefixo', placa: 'Placa', status: 'Status', doc: 'Documento',
+        cerca: 'Cerca', tracker: 'Rastreador', atend: 'Atendimento', statmin: 'Tempo Status'
+    };
+
+    ths.forEach(function (th) {
+        th.style.cursor = 'pointer';
+        th.style.userSelect = 'none';
+
+        var ind = document.createElement('span');
+        ind.className = 'sort-ind ml-1 opacity-40';
+        ind.textContent = '⇅';
+        th.appendChild(ind);
+
+        th.addEventListener('click', function () {
+            var col = th.getAttribute('data-col');
+            if (state.col === col) {
+                state.dir *= -1;
+            } else {
+                state.col = col;
+                state.dir = -1; // primeira vez: decrescente (maior primeiro)
+            }
+            sortRows(col, state.dir);
+            updateHeaders();
+        });
+    });
+
+    function sortRows(col, dir) {
+        var rows = Array.from(tbody.querySelectorAll('tr[data-s-' + col + ']'));
+        rows.sort(function (a, b) {
+            var av = a.getAttribute('data-s-' + col) || '';
+            var bv = b.getAttribute('data-s-' + col) || '';
+            var an = parseFloat(av);
+            var bn = parseFloat(bv);
+            if (!isNaN(an) && !isNaN(bn)) { return (an - bn) * dir; }
+            return av.localeCompare(bv, 'pt-BR', { sensitivity: 'base' }) * dir;
+        });
+        var frag = document.createDocumentFragment();
+        rows.forEach(function (r) { frag.appendChild(r); });
+        tbody.appendChild(frag);
+    }
+
+    function updateHeaders() {
+        ths.forEach(function (th) {
+            var col = th.getAttribute('data-col');
+            var ind = th.querySelector('.sort-ind');
+            if (col === state.col) {
+                ind.textContent = state.dir === 1 ? ' ▲' : ' ▼';
+                ind.classList.remove('opacity-40');
+                ind.classList.add('opacity-100');
+            } else {
+                ind.textContent = ' ⇅';
+                ind.classList.remove('opacity-100');
+                ind.classList.add('opacity-40');
+            }
+        });
+        if (label) {
+            label.textContent = 'ordenado por ' + colLabels[state.col]
+                + (state.dir === 1 ? ' (crescente)' : ' (decrescente)');
+        }
+    }
+})();
+</script>
 
 <script>
 window.TV_MODE = false;

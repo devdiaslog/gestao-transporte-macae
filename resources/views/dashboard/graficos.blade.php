@@ -33,7 +33,7 @@
             </div>
         @else
             @php
-                $statusGraficos = ['Ag-Carregamento', 'Carregado', 'Ag-Programação', 'Ag-Descarregamento', 'Recusa', 'Ag-Motorista'];
+                $statusGraficos = ['Ag-Carregamento', 'Carregado', 'Ag-Programação', 'Ag-Descarregamento', 'Recusa', 'Ag-Motorista', 'Ag-Documentação', 'Manutenção', 'Reserva'];
 
                 $colorPalette = [
                     'Ag-Carregamento'    => ['hex' => '#f59e0b', 'bg' => 'bg-amber-500'],
@@ -42,6 +42,9 @@
                     'Ag-Descarregamento' => ['hex' => '#f97316', 'bg' => 'bg-orange-500'],
                     'Recusa'             => ['hex' => '#f43f5e', 'bg' => 'bg-rose-500'],
                     'Ag-Motorista'       => ['hex' => '#84cc16', 'bg' => 'bg-lime-500'],
+                    'Ag-Documentação'    => ['hex' => '#eab308', 'bg' => 'bg-yellow-500'],
+                    'Manutenção'         => ['hex' => '#fb7185', 'bg' => 'bg-rose-400'],
+                    'Reserva'            => ['hex' => '#a1a1aa', 'bg' => 'bg-zinc-400'],
                 ];
                 $defaultColor = ['hex' => '#a1a1aa', 'bg' => 'bg-zinc-400'];
 
@@ -67,7 +70,7 @@
             @if($dados->isEmpty())
                 <p class="py-16 text-center text-sm text-zinc-400 dark:text-zinc-600">Nenhum dos status selecionados possui veículos na captura atual.</p>
             @else
-                <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
+                <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                     @foreach($dados as $item)
                         @php
                             $cor = $colorPalette[$item['status']] ?? $defaultColor;
@@ -77,6 +80,10 @@
                                 $td = intdiv($t, 1440); $th = intdiv($t % 1440, 60); $tm = $t % 60;
                                 $top1tempo = $td > 0 ? "{$td}d {$th}h {$tm}m" : ($th > 0 ? "{$th}h {$tm}m" : "{$tm}m");
                             } else { $top1tempo = null; }
+                            $minWidthChart = max(count($item['veiculos']) * 52, 400);
+                            $mediaMin = (int) ($item['media_minutos'] ?? 0);
+                            $mediaH = intdiv($mediaMin, 60); $mediaM = $mediaMin % 60;
+                            $mediaHHMM = sprintf('%02d:%02d', $mediaH, $mediaM);
                         @endphp
                         <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                             <div class="h-1 w-full {{ $cor['bg'] }}"></div>
@@ -86,17 +93,25 @@
                                         <p class="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{{ $item['status'] }}</p>
                                         <p class="mt-0.5 text-sm text-zinc-400 dark:text-zinc-600">{{ $item['quantidade'] }} veículos</p>
                                     </div>
-                                    @if($top1 && $top1tempo)
-                                        <div class="flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 dark:border-amber-900/40 dark:bg-amber-950/20">
-                                            <svg class="h-3 w-3 shrink-0 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"/>
-                                            </svg>
-                                            <span class="text-[11px] font-semibold text-amber-800 dark:text-amber-300">{{ $top1['cm'] }} – {{ $top1['placa'] }}</span>
-                                            <span class="tabular-nums text-[11px] font-bold text-amber-700 dark:text-amber-400">{{ $top1tempo }}</span>
+                                    <div class="flex shrink-0 items-center gap-2">
+                                        <div class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 dark:border-zinc-700 dark:bg-zinc-800">
+                                            <p class="text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Média</p>
+                                            <p class="tabular-nums text-sm font-bold leading-tight text-zinc-700 dark:text-zinc-200">{{ $mediaHHMM }}</p>
                                         </div>
-                                    @endif
+                                        @if($top1 && $top1tempo)
+                                            <div class="flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 dark:border-amber-900/40 dark:bg-amber-950/20">
+                                                <svg class="h-3 w-3 shrink-0 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"/>
+                                                </svg>
+                                                <span class="text-[11px] font-semibold text-amber-800 dark:text-amber-300">{{ $top1['cm'] }} – {{ $top1['placa'] }}</span>
+                                                <span class="tabular-nums text-[11px] font-bold text-amber-700 dark:text-amber-400">{{ $top1tempo }}</span>
+                                            </div>
+                                        @endif
+                                    </div>
                                 </div>
-                                <div id="chart-g-{{ $loop->index }}" class="mt-4 min-h-[300px]"></div>
+                                <div class="mt-4 overflow-x-auto">
+                                    <div id="chart-g-{{ $loop->index }}" style="min-width: {{ $minWidthChart }}px"></div>
+                                </div>
                             </div>
                         </div>
                     @endforeach
@@ -129,8 +144,8 @@
                 var defHex   = '#a1a1aa';
                 var tv       = window.TV_MODE;
                 var chartH   = tv
-                    ? Math.max(200, Math.floor((window.innerHeight - 280) / 2))
-                    : Math.max(260, Math.floor((window.innerHeight - 220) * 0.42));
+                    ? Math.max(140, Math.floor((window.innerHeight - 280) * 0.35))
+                    : Math.max(182, Math.floor((window.innerHeight - 220) * 0.294));
                 var lblSize  = tv ? '14px' : (window.innerWidth >= 1280 ? '12px' : '10px');
                 var axisSize = tv ? '13px' : '10px';
 
@@ -142,6 +157,13 @@
                     if (d > 0) { return d + 'd ' + h + 'h ' + mn + 'm'; }
                     if (h > 0) { return h + 'h ' + mn + 'm'; }
                     return mn + 'm';
+                }
+
+                function fmtMinHHMM(m) {
+                    m = Math.abs(Math.round(m));
+                    var h  = Math.floor(m / 60);
+                    var mn = m % 60;
+                    return (h < 10 ? '0' : '') + h + ':' + (mn < 10 ? '0' : '') + mn;
                 }
 
                 @foreach($dados as $item)
@@ -166,7 +188,7 @@
                         dataLabels: {
                             enabled: true, offsetY: -18,
                             style: { fontSize: lblSize, fontWeight: '600', colors: [lblClr] },
-                            formatter: function(v) { return fmtMin(v * 60); },
+                            formatter: function(v) { return fmtMinHHMM(v * 60); },
                         },
                         legend: { show: false },
                         grid: { borderColor: gridClr, yaxis: { lines: { show: true } }, xaxis: { lines: { show: false } } },
