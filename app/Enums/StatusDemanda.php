@@ -6,7 +6,7 @@ enum StatusDemanda: string
 {
     case Pendente = 'pendente';
     case EmAndamento = 'em_andamento';
-    case Concluida = 'concluida';
+    case Finalizado = 'finalizado';
     case Cancelada = 'cancelada';
 
     public function label(): string
@@ -14,7 +14,7 @@ enum StatusDemanda: string
         return match ($this) {
             self::Pendente => 'Pendente',
             self::EmAndamento => 'Em Andamento',
-            self::Concluida => 'Concluída',
+            self::Finalizado => 'Finalizado',
             self::Cancelada => 'Cancelada',
         };
     }
@@ -24,7 +24,7 @@ enum StatusDemanda: string
         return match ($this) {
             self::Pendente => 'zinc',
             self::EmAndamento => 'blue',
-            self::Concluida => 'emerald',
+            self::Finalizado => 'emerald',
             self::Cancelada => 'rose',
         };
     }

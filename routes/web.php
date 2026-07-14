@@ -11,7 +11,6 @@ use App\Http\Controllers\DemandaController;
 use App\Http\Controllers\DivisaoController;
 use App\Http\Controllers\EquipamentoController;
 use App\Http\Controllers\JustificativaController;
-use App\Http\Controllers\LocalController;
 use App\Http\Controllers\MetricasController;
 use App\Http\Controllers\ModeloEquipamentoController;
 use App\Http\Controllers\MotoristaController;
@@ -110,6 +109,10 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
     Route::get('demandas-export', [DemandaController::class, 'export'])->name('demandas.export');
     Route::post('demandas', [DemandaController::class, 'store'])->name('demandas.store');
     Route::put('demandas/{demanda}', [DemandaController::class, 'update'])->name('demandas.update');
+    Route::patch('demandas/{demanda}/iniciar', [DemandaController::class, 'iniciar'])->name('demandas.iniciar');
+    Route::patch('demandas/{demanda}/cancelar', [DemandaController::class, 'cancelar'])->name('demandas.cancelar');
+    Route::patch('demandas/{demanda}/finalizar', [DemandaController::class, 'finalizar'])->name('demandas.finalizar');
+    Route::patch('demandas/{demanda}/auditar', [DemandaController::class, 'auditar'])->name('demandas.auditar')->middleware('can:delete-demanda');
     Route::delete('demandas/{demanda}', [DemandaController::class, 'destroy'])->name('demandas.destroy')->middleware('can:delete-demanda');
 
     // Alertas da frota
@@ -144,14 +147,6 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
     Route::middleware('can:manage-users')->group(function () {
         Route::resource('users', UserController::class)->except(['show']);
         Route::get('users-export', [UserController::class, 'export'])->name('users.export');
-    });
-
-    // Locais de demandas — Administrador e Supervisor
-    Route::middleware('can:manage-cadastros')->group(function () {
-        Route::get('locais', [LocalController::class, 'index'])->name('locais.index');
-        Route::post('locais', [LocalController::class, 'store'])->name('locais.store');
-        Route::put('locais/{local}', [LocalController::class, 'update'])->name('locais.update');
-        Route::delete('locais/{local}', [LocalController::class, 'destroy'])->name('locais.destroy');
     });
 
     // Cadastros — Administrador e Supervisor

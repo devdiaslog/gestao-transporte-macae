@@ -21,18 +21,15 @@ class Demanda extends Model
         'tipo_cadastro',
         'tipo_demanda',
         'equipamento_id',
-        'local_origem_id',
-        'local_destino_id',
-        'prazo_atendimento_demanda',
-        'data_hora_agendamento',
-        'data_hora_inicio_carregamento',
-        'data_hora_fim_carregamento',
-        'data_hora_saida_origem',
-        'data_hora_chegada_destino',
-        'data_hora_inicio_descarregamento',
-        'data_hora_fim_descarregamento',
+        'documento_demanda',
+        'origem',
+        'destino',
+        'prazo_referencia',
+        'data_hora_inicio_demanda',
+        'data_hora_fim_demanda',
         'status_demanda',
-        'observacao_adicional',
+        'status_auditoria',
+        'observacao',
         'criado_por',
     ];
 
@@ -42,30 +39,16 @@ class Demanda extends Model
             'tipo_cadastro' => TipoCadastro::class,
             'tipo_demanda' => TipoDemanda::class,
             'status_demanda' => StatusDemanda::class,
-            'prazo_atendimento_demanda' => 'datetime',
-            'data_hora_agendamento' => 'datetime',
-            'data_hora_inicio_carregamento' => 'datetime',
-            'data_hora_fim_carregamento' => 'datetime',
-            'data_hora_saida_origem' => 'datetime',
-            'data_hora_chegada_destino' => 'datetime',
-            'data_hora_inicio_descarregamento' => 'datetime',
-            'data_hora_fim_descarregamento' => 'datetime',
+            'prazo_referencia' => 'datetime',
+            'data_hora_inicio_demanda' => 'datetime',
+            'data_hora_fim_demanda' => 'datetime',
+            'status_auditoria' => 'boolean',
         ];
     }
 
     public function equipamento(): BelongsTo
     {
         return $this->belongsTo(Equipamento::class);
-    }
-
-    public function localOrigem(): BelongsTo
-    {
-        return $this->belongsTo(Local::class, 'local_origem_id');
-    }
-
-    public function localDestino(): BelongsTo
-    {
-        return $this->belongsTo(Local::class, 'local_destino_id');
     }
 
     public function criador(): BelongsTo

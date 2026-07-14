@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\StatusDemanda;
 use App\Enums\TipoCadastro;
 use App\Http\Requests\StoreDemandaRequest;
 use App\Http\Requests\UpdateDemandaRequest;
 use App\Models\Demanda;
 use App\Models\Equipamento;
-use App\Models\Local;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,8 +26,9 @@ class DemandaController extends Controller
         $dataAte = $request->input('data_ate');
 
         $demandas = Demanda::query()
-            ->with(['equipamento', 'localOrigem', 'localDestino', 'criador'])
-            ->when($search, fn ($q) => $q->where('numero_demanda', 'like', "%{$search}%"))
+            ->with(['equipamento', 'criador'])
+            ->when($search, fn ($q) => $q->where('numero_demanda', 'like', "%{$search}%")
+                ->orWhere('documento_demanda', 'like', "%{$search}%"))
             ->when($status, fn ($q) => $q->where('status_demanda', $status))
             ->when($tipo, fn ($q) => $q->where('tipo_demanda', $tipo))
             ->when($prefixo, fn ($q) => $q->whereHas('equipamento', fn ($eq) => $eq->where('prefixo', 'like', "%{$prefixo}%")))
@@ -37,21 +38,21 @@ class DemandaController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        $locais = Local::ativo()->orderBy('nome')->get();
         $equipamentos = Equipamento::query()
             ->whereHas('tipo', fn ($q) => $q->where('nome', 'Motorizado'))
             ->whereNotNull('prefixo')
             ->orderBy('prefixo')
             ->get(['id', 'prefixo', 'placa']);
 
-        return view('demandas.index', compact('demandas', 'locais', 'equipamentos', 'search', 'status', 'tipo', 'prefixo', 'dataDE', 'dataAte'));
+        return view('demandas.index', compact('demandas', 'equipamentos', 'search', 'status', 'tipo', 'prefixo', 'dataDE', 'dataAte'));
     }
 
     public function export(Request $request): Response
     {
         $demandas = Demanda::query()
-            ->with(['equipamento', 'localOrigem', 'localDestino', 'criador'])
-            ->when($request->input('q'), fn ($q, $v) => $q->where('numero_demanda', 'like', "%{$v}%"))
+            ->with(['equipamento', 'criador'])
+            ->when($request->input('q'), fn ($q, $v) => $q->where('numero_demanda', 'like', "%{$v}%")
+                ->orWhere('documento_demanda', 'like', "%{$v}%"))
             ->when($request->input('status'), fn ($q, $v) => $q->where('status_demanda', $v))
             ->when($request->input('tipo'), fn ($q, $v) => $q->where('tipo_demanda', $v))
             ->when($request->input('prefixo'), fn ($q, $v) => $q->whereHas('equipamento', fn ($eq) => $eq->where('prefixo', 'like', "%{$v}%")))
@@ -63,13 +64,11 @@ class DemandaController extends Controller
         $fmt = fn ($dt) => $dt?->format('d/m/Y H:i') ?? '';
 
         $headers = [
-            'Número', 'Tipo', 'Tipo Cadastro', 'Veículo (Prefixo)', 'Veículo (Placa)',
-            'Origem', 'Destino',
-            'Prazo', 'Agendamento',
-            'Ini. Carregamento', 'Fim Carregamento',
-            'Saída Origem', 'Chegada Destino',
-            'Ini. Descarregamento', 'Fim Descarregamento',
-            'Status', 'Criado por', 'Cadastrado em',
+            'Número', 'Tipo', 'Tipo Cadastro',
+            'Veículo (Prefixo)', 'Veículo (Placa)',
+            'Documento', 'Origem', 'Destino', 'Prazo Referência',
+            'Início', 'Fim',
+            'Status', 'Auditado', 'Criado por', 'Cadastrado em',
         ];
 
         $rows = $demandas->map(fn (Demanda $d) => [
@@ -78,17 +77,14 @@ class DemandaController extends Controller
             $d->tipo_cadastro->label(),
             $d->equipamento?->prefixo ?? '',
             $d->equipamento?->placa ?? '',
-            $d->localOrigem?->nome ?? '',
-            $d->localDestino?->nome ?? '',
-            $fmt($d->prazo_atendimento_demanda),
-            $fmt($d->data_hora_agendamento),
-            $fmt($d->data_hora_inicio_carregamento),
-            $fmt($d->data_hora_fim_carregamento),
-            $fmt($d->data_hora_saida_origem),
-            $fmt($d->data_hora_chegada_destino),
-            $fmt($d->data_hora_inicio_descarregamento),
-            $fmt($d->data_hora_fim_descarregamento),
+            $d->documento_demanda ?? '',
+            $d->origem ?? '',
+            $d->destino ?? '',
+            $fmt($d->prazo_referencia),
+            $fmt($d->data_hora_inicio_demanda),
+            $fmt($d->data_hora_fim_demanda),
             $d->status_demanda->label(),
+            $d->status_auditoria ? 'Sim' : 'Não',
             $d->criador?->name ?? '',
             $fmt($d->created_at),
         ]);
@@ -113,6 +109,7 @@ class DemandaController extends Controller
             $request->validated(),
             [
                 'tipo_cadastro' => TipoCadastro::Manual,
+                'status_demanda' => StatusDemanda::Pendente,
                 'criado_por' => auth()->id(),
             ]
         ));
@@ -125,6 +122,46 @@ class DemandaController extends Controller
         $demanda->update($request->validated());
 
         return response()->json(['ok' => true]);
+    }
+
+    public function iniciar(Demanda $demanda): RedirectResponse
+    {
+        abort_if($demanda->data_hora_inicio_demanda !== null, 403, 'Demanda já foi iniciada.');
+
+        $demanda->update([
+            'data_hora_inicio_demanda' => now(),
+            'status_demanda' => StatusDemanda::EmAndamento,
+        ]);
+
+        return redirect()->back()->with('success', 'Demanda #'.$demanda->numero_demanda.' iniciada.');
+    }
+
+    public function cancelar(Demanda $demanda): RedirectResponse
+    {
+        abort_if($demanda->status_demanda === StatusDemanda::Finalizado, 403, 'Demanda já finalizada.');
+
+        $demanda->update(['status_demanda' => StatusDemanda::Cancelada]);
+
+        return redirect()->back()->with('success', 'Demanda #'.$demanda->numero_demanda.' cancelada.');
+    }
+
+    public function finalizar(Demanda $demanda): RedirectResponse
+    {
+        abort_if($demanda->data_hora_inicio_demanda === null, 403, 'Demanda precisa ser iniciada antes de finalizar.');
+
+        $demanda->update([
+            'data_hora_fim_demanda' => now(),
+            'status_demanda' => StatusDemanda::Finalizado,
+        ]);
+
+        return redirect()->back()->with('success', 'Demanda #'.$demanda->numero_demanda.' finalizada.');
+    }
+
+    public function auditar(Demanda $demanda): RedirectResponse
+    {
+        $demanda->update(['status_auditoria' => ! $demanda->status_auditoria]);
+
+        return redirect()->back()->with('success', 'Auditoria da demanda #'.$demanda->numero_demanda.' atualizada.');
     }
 
     public function destroy(Demanda $demanda): RedirectResponse
