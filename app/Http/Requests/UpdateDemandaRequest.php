@@ -26,6 +26,8 @@ class UpdateDemandaRequest extends FormRequest
             'origem' => ['nullable', 'string', 'max:500'],
             'destino' => ['nullable', 'string', 'max:500'],
             'prazo_referencia' => ['nullable', 'date'],
+            'data_hora_inicio_demanda' => ['nullable', 'date'],
+            'data_hora_fim_demanda' => ['nullable', 'date'],
             'observacao' => ['nullable', 'string', 'max:2000'],
         ];
     }

@@ -129,7 +129,6 @@
                     <thead class="border-b border-slate-100 bg-slate-50 dark:border-zinc-800 dark:bg-zinc-950/50">
                         <tr>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Número</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Documento</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Tipo</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Veículo</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Origem</th>
@@ -170,10 +169,6 @@
                                             API
                                         </span>
                                     @endif
-                                </td>
-                                {{-- Documento --}}
-                                <td class="whitespace-nowrap px-4 py-3 font-mono text-xs text-zinc-600 dark:text-zinc-400">
-                                    {{ $demanda->documento_demanda ?? '—' }}
                                 </td>
                                 {{-- Tipo --}}
                                 <td class="whitespace-nowrap px-4 py-3">
@@ -284,21 +279,6 @@
                                         </button>
                                         @endif
 
-                                        {{-- Finalizar --}}
-                                        @if($podeFinalizar)
-                                        <form method="POST" action="{{ route('demandas.finalizar', $demanda) }}">
-                                            @csrf @method('PATCH')
-                                            <button type="submit" title="Finalizar demanda"
-                                                    class="inline-flex h-7 items-center gap-1 rounded-lg border px-2 text-[11px] font-medium
-                                                           border-emerald-200 text-emerald-700 transition-colors hover:bg-emerald-50
-                                                           dark:border-emerald-800/50 dark:text-emerald-400 dark:hover:bg-emerald-950/40">
-                                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
-                                                </svg>
-                                                Finalizar
-                                            </button>
-                                        </form>
-                                        @endif
 
                                         {{-- Cancelar --}}
                                         @if($podeCancelar)
@@ -404,33 +384,19 @@
 
                 <div class="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-4">
 
-                    {{-- Linha 1: Número + Documento --}}
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                Número da Demanda <span class="text-rose-500">*</span>
-                            </label>
-                            <input type="number" name="numero_demanda" id="f-numero-demanda"
-                                   placeholder="Ex: 123456789"
-                                   class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                          text-zinc-900 outline-none shadow-xs
-                                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                          dark:focus:border-zinc-500 dark:focus:ring-zinc-800
-                                          disabled:opacity-50">
-                        </div>
-                        <div>
-                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                Documento de Transporte
-                            </label>
-                            <input type="text" name="documento_demanda" id="f-documento"
-                                   placeholder="Número do documento…"
-                                   class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                          text-zinc-900 outline-none shadow-xs
-                                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                          dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-                        </div>
+                    {{-- Linha 1: Número --}}
+                    <div>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                            Número da Demanda <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="number" name="numero_demanda" id="f-numero-demanda"
+                               placeholder="Ex: 123456789"
+                               class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
+                                      text-zinc-900 outline-none shadow-xs
+                                      focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                                      dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
+                                      dark:focus:border-zinc-500 dark:focus:ring-zinc-800
+                                      disabled:opacity-50">
                     </div>
 
                     {{-- Linha 2: Tipo + Veículo --}}
@@ -519,6 +485,32 @@
                         </div>
                     </div>
 
+                    {{-- Linha: Início + Fim (só exibido no modo edição) --}}
+                    <div id="f-datas-group" class="hidden" style="display:none">
+                        <div>
+                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                                Data / Hora de Início
+                            </label>
+                            <input type="datetime-local" name="data_hora_inicio_demanda" id="f-inicio"
+                                   class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
+                                          text-zinc-900 outline-none shadow-xs
+                                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
+                                          dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                                Data / Hora de Fim
+                            </label>
+                            <input type="datetime-local" name="data_hora_fim_demanda" id="f-fim"
+                                   class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
+                                          text-zinc-900 outline-none shadow-xs
+                                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
+                                          dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
+                        </div>
+                    </div>
+
                     {{-- Observação --}}
                     <div>
                         <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
@@ -540,7 +532,7 @@
                             dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-400"></div>
 
                 {{-- Footer --}}
-                <div class="flex shrink-0 items-center justify-end gap-3 border-t px-6 py-4
+                <div class="flex shrink-0 items-center justify-between border-t px-6 py-4
                             border-slate-100 dark:border-zinc-800">
                     <button type="button" onclick="closeDemandaModal()"
                             class="rounded-lg px-4 py-2 text-sm font-medium text-zinc-600 transition-colors
@@ -548,13 +540,24 @@
                                    dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200">
                         Cancelar
                     </button>
-                    <button type="submit" id="btn-salvar"
-                            class="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2 text-sm font-semibold text-white
-                                   shadow-xs transition-all duration-150 hover:bg-zinc-700 active:scale-[0.98]
-                                   dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200
-                                   disabled:cursor-not-allowed disabled:opacity-60">
-                        Salvar
-                    </button>
+                    <div class="flex items-center gap-3">
+                        <button type="button" id="btn-finalizar"
+                                class="hidden inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 px-4 py-2
+                                       text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-50
+                                       dark:border-emerald-800/50 dark:text-emerald-400 dark:hover:bg-emerald-950/40">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+                            </svg>
+                            Finalizar
+                        </button>
+                        <button type="submit" id="btn-salvar"
+                                class="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2 text-sm font-semibold text-white
+                                       shadow-xs transition-all duration-150 hover:bg-zinc-700 active:scale-[0.98]
+                                       dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200
+                                       disabled:cursor-not-allowed disabled:opacity-60">
+                            Salvar
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -680,25 +683,33 @@
         });
     });
 
-    var modal     = document.getElementById('demanda-modal');
-    var overlay   = document.getElementById('demanda-modal-overlay');
-    var panel     = document.getElementById('demanda-modal-panel');
-    var titleEl   = document.getElementById('demanda-modal-title');
-    var form      = document.getElementById('demanda-form');
-    var errBox    = document.getElementById('demanda-error');
-    var btnSalvar = document.getElementById('btn-salvar');
-    var editingId = null;
+    var modal        = document.getElementById('demanda-modal');
+    var overlay      = document.getElementById('demanda-modal-overlay');
+    var panel        = document.getElementById('demanda-modal-panel');
+    var titleEl      = document.getElementById('demanda-modal-title');
+    var form         = document.getElementById('demanda-form');
+    var errBox       = document.getElementById('demanda-error');
+    var btnSalvar    = document.getElementById('btn-salvar');
+    var btnFinalizar = document.getElementById('btn-finalizar');
+    var datasGroup   = document.getElementById('f-datas-group');
+    var editingId    = null;
+    var finalizarUrl = null;
 
     var STORE_URL  = '{{ route('demandas.store') }}';
+    var BASE_URL   = '{{ url('/demandas') }}';
     var CSRF_TOKEN = '{{ csrf_token() }}';
 
     window.openDemandaModal = function () {
         editingId = null;
+        finalizarUrl = null;
         titleEl.textContent = 'Nova Demanda';
         form.reset();
         document.getElementById('demanda-method').value = 'POST';
         document.getElementById('f-numero-demanda').disabled = false;
         errBox.classList.add('hidden');
+        datasGroup.style.display = 'none';
+        datasGroup.classList.add('hidden');
+        btnFinalizar.classList.add('hidden');
         cbReset('tipo_demanda');
         cbReset('equipamento_id');
         openModal();
@@ -713,17 +724,48 @@
         errBox.classList.add('hidden');
 
         document.getElementById('f-numero-demanda').value = data.numero_demanda || '';
-        document.getElementById('f-documento').value      = data.documento_demanda || '';
         document.getElementById('f-origem').value         = data.origem || '';
         document.getElementById('f-destino').value        = data.destino || '';
         document.getElementById('f-prazo').value          = fmtDatetime(data.prazo_referencia);
+        document.getElementById('f-inicio').value         = fmtDatetime(data.data_hora_inicio_demanda);
+        document.getElementById('f-fim').value            = fmtDatetime(data.data_hora_fim_demanda);
         document.getElementById('f-obs').value            = data.observacao || '';
 
         cbSetValue('tipo_demanda',   data.tipo_demanda);
         cbSetValue('equipamento_id', data.equipamento_id);
 
+        // Mostra campos de data somente no modo edição
+        datasGroup.style.display = 'grid';
+        datasGroup.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
+        datasGroup.style.gap = '1rem';
+        datasGroup.classList.remove('hidden');
+
+        // Botão Finalizar: visível se pode finalizar (iniciado e não finalizado/cancelado)
+        var status = data.status_demanda || '';
+        var podeF  = data.data_hora_inicio_demanda && status !== 'finalizado' && status !== 'cancelada';
+        if (podeF) {
+            finalizarUrl = BASE_URL + '/' + id + '/finalizar';
+            btnFinalizar.classList.remove('hidden');
+        } else {
+            finalizarUrl = null;
+            btnFinalizar.classList.add('hidden');
+        }
+
         openModal();
     };
+
+    btnFinalizar.addEventListener('click', function () {
+        if (! finalizarUrl) { return; }
+        var fimVal = document.getElementById('f-fim').value;
+        var f = document.createElement('form');
+        f.method = 'POST';
+        f.action = finalizarUrl;
+        f.innerHTML = '<input name="_token" value="' + CSRF_TOKEN + '">'
+            + '<input name="_method" value="PATCH">'
+            + (fimVal ? '<input name="data_hora_fim_demanda" value="' + fimVal + '">' : '');
+        document.body.appendChild(f);
+        f.submit();
+    });
 
     window.closeDemandaModal = function () {
         overlay.classList.remove('opacity-100');
