@@ -50,7 +50,7 @@
 
                 $dados = collect($snapshot->dados)
                     ->filter(fn ($d) => in_array($d['status'], $statusGraficos) && count($d['veiculos'] ?? []) >= 1)
-                    ->sortBy(fn ($d) => array_search($d['status'], $statusGraficos))
+                    ->sortByDesc(fn ($d) => $d['quantidade'])
                     ->values();
 
                 $hexPalette = array_map(fn ($v) => $v['hex'], $colorPalette);
