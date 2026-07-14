@@ -124,12 +124,16 @@ class DemandaController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    public function iniciar(Demanda $demanda): RedirectResponse
+    public function iniciar(Request $request, Demanda $demanda): RedirectResponse
     {
         abort_if($demanda->data_hora_inicio_demanda !== null, 403, 'Demanda já foi iniciada.');
 
+        $request->validate(['data_hora_inicio_demanda' => ['nullable', 'date']]);
+
         $demanda->update([
-            'data_hora_inicio_demanda' => now(),
+            'data_hora_inicio_demanda' => $request->filled('data_hora_inicio_demanda')
+                ? $request->date('data_hora_inicio_demanda')
+                : now(),
             'status_demanda' => StatusDemanda::EmAndamento,
         ]);
 
