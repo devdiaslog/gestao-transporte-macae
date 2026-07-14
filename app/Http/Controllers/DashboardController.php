@@ -151,8 +151,12 @@ class DashboardController extends Controller
                     : 0;
 
                 $documento = $statusEvento?->documento ?? $e->documento_demanda;
+                $documentoValido = $documento
+                    && ctype_digit((string) $documento)
+                    && strlen((string) $documento) >= 9
+                    && strlen((string) $documento) <= 10;
                 $atendimentoMinutos = 0;
-                if ($documento) {
+                if ($documentoValido) {
                     $minutosPassados = $statusEvento
                         ? (int) ($minutosAtendimento->get($e->id.'_'.$documento)?->total_minutos ?? 0)
                         : 0;
