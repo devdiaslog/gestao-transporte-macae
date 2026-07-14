@@ -94,7 +94,7 @@
             </svg>
             Exportar
         </a>
-        @if($search || $status || $tipo || $prefixo || $dataDE || $dataAte)
+        @if($search || $status !== 'pendente' || $tipo || $prefixo || $dataDE || $dataAte)
             <a href="{{ route('demandas.index') }}"
                class="h-9 inline-flex items-center gap-1 rounded-lg px-3 text-sm text-zinc-400 hover:text-zinc-700
                       dark:hover:text-zinc-200">

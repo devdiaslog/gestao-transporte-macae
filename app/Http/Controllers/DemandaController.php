@@ -19,7 +19,7 @@ class DemandaController extends Controller
     public function index(Request $request): View
     {
         $search = $request->input('q');
-        $status = $request->input('status');
+        $status = $request->input('status', 'pendente');
         $tipo = $request->input('tipo');
         $prefixo = $request->input('prefixo');
         $dataDE = $request->input('data_de');
