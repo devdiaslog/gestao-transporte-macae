@@ -52,6 +52,10 @@
                class="flex items-center gap-2 px-3 py-3 text-sm font-medium transition-colors {{ request()->routeIs('dashboard.tabela') ? $navActive : $navInactive }}">
                 Tabela Veículos
             </a>
+            <a href="{{ route('dashboard.indicadores') }}"
+               class="flex items-center gap-2 px-3 py-3 text-sm font-medium transition-colors {{ request()->routeIs('dashboard.indicadores') ? $navActive : $navInactive }}">
+                Indicadores
+            </a>
         </div>
     </nav>
 
