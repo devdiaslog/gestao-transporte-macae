@@ -102,6 +102,7 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
         Route::get('dashboard', [DashboardController::class, 'status'])->name('dashboard.status');
         Route::get('dashboard/graficos', [DashboardController::class, 'graficos'])->name('dashboard.graficos');
         Route::get('dashboard/tabela', [DashboardController::class, 'tabela'])->name('dashboard.tabela');
+        Route::get('dashboard/indicadores', [DashboardController::class, 'indicadores'])->name('dashboard.indicadores');
     });
 
     // Demandas de transporte
