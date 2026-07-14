@@ -25,14 +25,6 @@
         </button>
     </div>
 
-    {{-- Mensagem de sucesso --}}
-    @if(session('success'))
-        <div class="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700
-                    dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-400">
-            {{ session('success') }}
-        </div>
-    @endif
-
     {{-- Filtros --}}
     <form method="GET" action="{{ route('demandas.index') }}"
           class="mb-5 flex flex-wrap items-center gap-3">
@@ -756,16 +748,43 @@
 
     btnFinalizar.addEventListener('click', function () {
         if (! finalizarUrl) { return; }
-        var fimVal = document.getElementById('f-fim').value;
+
+        var inicioVal = document.getElementById('f-inicio').value;
+        var fimVal    = document.getElementById('f-fim').value;
+
+        // Validação: data fim obrigatória
+        if (! fimVal) {
+            showModalError('Preencha a Data / Hora de Fim antes de finalizar.');
+            return;
+        }
+
+        // Validação: data início obrigatória para finalizar
+        if (! inicioVal) {
+            showModalError('Preencha a Data / Hora de Início antes de finalizar.');
+            return;
+        }
+
+        // Validação: fim deve ser igual ou posterior ao início
+        if (new Date(fimVal) < new Date(inicioVal)) {
+            showModalError('A Data / Hora de Fim não pode ser anterior ao Início.');
+            return;
+        }
+
         var f = document.createElement('form');
         f.method = 'POST';
         f.action = finalizarUrl;
         f.innerHTML = '<input name="_token" value="' + CSRF_TOKEN + '">'
             + '<input name="_method" value="PATCH">'
-            + (fimVal ? '<input name="data_hora_fim_demanda" value="' + fimVal + '">' : '');
+            + '<input name="data_hora_fim_demanda" value="' + fimVal + '">';
         document.body.appendChild(f);
         f.submit();
     });
+
+    function showModalError(msg) {
+        errBox.textContent = msg;
+        errBox.classList.remove('hidden');
+        errBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 
     window.closeDemandaModal = function () {
         overlay.classList.remove('opacity-100');
@@ -795,7 +814,18 @@
         var url  = editingId ? '{{ url('/demandas') }}/' + editingId : STORE_URL;
         var data = new FormData(form);
 
+        // Valida coerência de datas quando ambas preenchidas
+        var inicioV = data.get('data_hora_inicio_demanda');
+        var fimV    = data.get('data_hora_fim_demanda');
+        if (inicioV && fimV && new Date(fimV) < new Date(inicioV)) {
+            showModalError('A Data / Hora de Fim não pode ser anterior ao Início.');
+            btnSalvar.disabled = false;
+            return;
+        }
+
         if (! data.get('prazo_referencia')) { data.delete('prazo_referencia'); }
+        if (! data.get('data_hora_inicio_demanda')) { data.delete('data_hora_inicio_demanda'); }
+        if (! data.get('data_hora_fim_demanda')) { data.delete('data_hora_fim_demanda'); }
 
         fetch(url, {
             method: 'POST',
