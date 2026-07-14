@@ -62,7 +62,7 @@
                     <p class="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">Tempo individual por veículo no status atual</p>
                 </div>
                 <div class="text-right">
-                    <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">Última captura</p>
+                    <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">Última atualização</p>
                     <p class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{{ $snapshot->capturado_em->format('d/m/Y H:i:s') }}</p>
                 </div>
             </div>

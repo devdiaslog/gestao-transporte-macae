@@ -72,11 +72,16 @@
 
             {{-- Cabeçalho da página --}}
             <div class="mb-8 flex items-center justify-between">
-                <h1 class="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-                    Poli Macaé — {{ $dados->sum('quantidade') }} Veículos
-                </h1>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+                        Poli Macaé — {{ $dados->sum('quantidade') }} Veículos
+                    </h1>
+                    <p class="mt-0.5 text-xs text-zinc-400 dark:text-zinc-600">
+                        Não inclui: Em Trânsito · Em Operação Interna
+                    </p>
+                </div>
                 <div class="text-right">
-                    <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">Última captura</p>
+                    <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">Última atualização</p>
                     <p class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{{ $snapshot->capturado_em->format('d/m/Y H:i:s') }}</p>
                 </div>
             </div>
@@ -153,7 +158,9 @@
 
             {{-- Gráficos divididos: Parado | Em Movimento + Sem Sinal --}}
             @php
-                $veiculosBase = $dados->filter(fn ($d) => ! in_array($d['status'], ['Manutenção', 'Frota Reserva']))
+                $statusExcluidos = ['Manutenção', 'Frota Reserva', 'Reserva'];
+
+                $veiculosBase = $dados->filter(fn ($d) => ! in_array($d['status'], $statusExcluidos))
                     ->flatMap(fn ($d) => $d['veiculos'] ?? [])
                     ->sortByDesc('tracker_minutos')
                     ->values();
@@ -163,6 +170,11 @@
 
                 $widthParados   = max($veiculosParados->count() * 52, 500);
                 $widthMovimento = max($veiculosMovimento->count() * 52, 500);
+
+                $mediaParadosMin  = $veiculosParados->isNotEmpty()
+                    ? (int) round($veiculosParados->avg('tracker_minutos'))
+                    : 0;
+                $mediaParadosHHMM = sprintf('%02d:%02d', intdiv($mediaParadosMin, 60), $mediaParadosMin % 60);
             @endphp
 
             @if($veiculosParados->isNotEmpty() || $veiculosMovimento->isNotEmpty())
@@ -172,10 +184,21 @@
                 @if($veiculosParados->isNotEmpty())
                 <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                     <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
-                        <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Rastreador — Parado</p>
-                        <span class="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-                            <span class="h-2.5 w-2.5 rounded-sm bg-rose-500"></span>Parado
-                        </span>
+                        <div class="flex items-center gap-3">
+                            <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Rastreador — Parado</p>
+                            <span class="text-[11px] text-zinc-400 dark:text-zinc-500">
+                                Exceto: {{ implode(', ', $statusExcluidos) }}
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 dark:border-zinc-700 dark:bg-zinc-800">
+                                <p class="text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Média</p>
+                                <p class="tabular-nums text-sm font-bold leading-tight text-zinc-700 dark:text-zinc-200">{{ $mediaParadosHHMM }}</p>
+                            </div>
+                            <span class="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                                <span class="h-2.5 w-2.5 rounded-sm bg-rose-500"></span>Parado
+                            </span>
+                        </div>
                     </div>
                     <div class="overflow-x-auto px-2 pb-2 pt-1">
                         <div id="chart-parados" style="min-width: {{ $widthParados }}px"></div>
