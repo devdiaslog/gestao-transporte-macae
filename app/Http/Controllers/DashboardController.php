@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\StatusDemanda;
 use App\Enums\TipoCadastro;
+use App\Enums\TipoDemanda;
 use App\Models\CercaEvento;
 use App\Models\DashboardSnapshot;
 use App\Models\Demanda;
@@ -69,6 +70,8 @@ class DashboardController extends Controller
             })
             ->keyBy(fn ($v) => (int) ($v['document']['documentCode'] ?? $v['loadScheduleCurrent']['documentCode']));
 
+        $pontosPacu = ['PACU', 'PBG'];
+
         $criados = 0;
 
         foreach ($novos as $numeroDoc) {
@@ -76,11 +79,26 @@ class DashboardController extends Controller
             $placa = strtoupper($veiculo['licensePlate'] ?? '');
             $equipamentoId = $placa ? ($placaParaId->get($placa) ?? null) : null;
 
+            $etaDocs = $veiculo['etaDocument']['etaDocuments'] ?? [];
+            $origem = isset($etaDocs[0]) ? strtoupper(trim($etaDocs[0]['destinationName'] ?? '')) : null;
+            $destino = isset($etaDocs[1]) ? strtoupper(trim($etaDocs[1]['destinationName'] ?? '')) : null;
+
+            if ($destino && in_array($destino, $pontosPacu)) {
+                $tipo = TipoDemanda::Load;
+            } elseif ($origem && in_array($origem, $pontosPacu)) {
+                $tipo = TipoDemanda::Backload;
+            } else {
+                $tipo = TipoDemanda::Transferencia;
+            }
+
             Demanda::create([
                 'numero_demanda' => $numeroDoc,
                 'tipo_cadastro' => TipoCadastro::Integracao,
+                'tipo_demanda' => $tipo,
                 'status_demanda' => StatusDemanda::Pendente,
                 'equipamento_id' => $equipamentoId,
+                'origem' => $origem,
+                'destino' => $destino,
             ]);
 
             $criados++;
