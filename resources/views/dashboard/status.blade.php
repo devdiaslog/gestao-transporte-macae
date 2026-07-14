@@ -166,9 +166,9 @@
             @endphp
 
             @if($veiculosParados->isNotEmpty() || $veiculosMovimento->isNotEmpty())
-            <div class="mt-6 grid grid-cols-2 gap-4">
+            <div class="mt-6 flex flex-col gap-4">
 
-                {{-- Gráfico 1: Parado --}}
+                {{-- Gráfico 1: Parado — linha inteira --}}
                 @if($veiculosParados->isNotEmpty())
                 <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                     <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
@@ -183,7 +183,7 @@
                 </div>
                 @endif
 
-                {{-- Gráfico 2: Em Movimento + Sem Sinal --}}
+                {{-- Gráfico 2: Em Movimento + Sem Sinal — linha inteira --}}
                 @if($veiculosMovimento->isNotEmpty())
                 <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                     <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
@@ -234,8 +234,8 @@
                 var gridClr = isDark ? '#27272a' : '#f1f5f9';
                 var tv      = window.TV_MODE;
                 var chartH  = tv
-                    ? Math.max(180, Math.floor((window.innerHeight - 340) / 2))
-                    : Math.max(200, Math.floor((window.innerHeight - 420) / 2));
+                    ? Math.max(160, Math.floor((window.innerHeight - 320) / 2))
+                    : Math.max(180, Math.floor((window.innerHeight - 380) / 2));
                 var yMax    = 36; // máximo 36 horas no eixo Y
                 var lblSize = tv ? '14px' : (window.innerWidth >= 1280 ? '11px' : '9px');
                 var axisSize = tv ? '13px' : '10px';
