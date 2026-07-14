@@ -200,6 +200,7 @@ class DashboardController extends Controller
                     'status_minutos' => $statusMinutos,
                 ];
             })
+            ->filter(fn ($v) => ! empty($v['status']) && ! in_array($v['status'], ['Em Operação Interna', 'Frota Reserva', 'Manutenção']))
             ->sort(function ($a, $b) {
                 $order = fn ($v) => $v['tracker_estado'] === 0 ? 0 : ($v['tracker_estado'] === 1 ? 1 : 2);
                 $oa = $order($a);

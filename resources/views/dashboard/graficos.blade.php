@@ -19,7 +19,7 @@
             <a href="{{ route('dashboard.tabela') }}"
                class="flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-medium transition-colors
                       {{ request()->routeIs('dashboard.tabela') ? 'border-zinc-900 text-zinc-900 dark:border-white dark:text-white' : 'border-transparent text-zinc-500 hover:border-zinc-300 hover:text-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200' }}">
-                Tabela Veículos
+                Cards
             </a>
             <a href="{{ route('dashboard.indicadores') }}"
                class="flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-medium transition-colors

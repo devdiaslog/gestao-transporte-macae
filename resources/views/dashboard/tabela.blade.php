@@ -1,4 +1,4 @@
-<x-layouts.app title="Tabela Veículos — Poli Macaé" :no-header="true">
+<x-layouts.app title="Cards — Poli Macaé" :no-header="true">
 
 @php
     $fmtMin = function (int $min): string {
@@ -50,7 +50,7 @@
             </a>
             <a href="{{ route('dashboard.tabela') }}"
                class="flex items-center gap-2 px-3 py-3 text-sm font-medium transition-colors {{ request()->routeIs('dashboard.tabela') ? $navActive : $navInactive }}">
-                Tabela Veículos
+                Cards
             </a>
             <a href="{{ route('dashboard.indicadores') }}"
                class="flex items-center gap-2 px-3 py-3 text-sm font-medium transition-colors {{ request()->routeIs('dashboard.indicadores') ? $navActive : $navInactive }}">
@@ -63,203 +63,93 @@
     <div class="shrink-0 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-2 dark:border-zinc-800 dark:bg-zinc-950">
         <div class="flex items-center gap-3">
             <span class="text-sm font-bold text-zinc-800 dark:text-zinc-200">{{ $veiculos->count() }} veículos</span>
-            <span id="sort-label" class="text-xs text-zinc-400 dark:text-zinc-600">clique no cabeçalho para ordenar</span>
+            <span class="text-xs text-zinc-400 dark:text-zinc-600">Não inclui status: Em Operação Interna · Frota Reserva · Manutenção</span>
         </div>
         <span class="text-xs text-zinc-400 dark:text-zinc-600">Atualizado: {{ $agora->format('H:i:s') }}</span>
     </div>
 
-    {{-- Tabela com rolagem vertical interna --}}
-    <div class="min-h-0 flex-1 overflow-y-auto bg-white dark:bg-zinc-950">
-        <table class="w-full border-collapse">
-            <thead class="sticky top-0 z-10 bg-slate-100 dark:bg-zinc-900">
-                <tr>
-                    <th data-col="prefixo"  class="sortable-th whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Prefixo</th>
-                    <th data-col="placa"    class="sortable-th whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Placa</th>
-                    <th data-col="status"   class="sortable-th whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Status</th>
-                    <th data-col="doc"      class="sortable-th whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Documento</th>
-                    <th data-col="cerca"    class="sortable-th whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Cerca</th>
-                    <th data-col="tracker"  class="sortable-th whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Rastreador</th>
-                    <th data-col="atend"    class="sortable-th whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Atendimento</th>
-                    <th data-col="statmin"  class="sortable-th whitespace-nowrap border-b border-slate-200 px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Tempo Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($veiculos as $v)
-                @php
-                    $hex = $statusHex[$v['status']] ?? '#a1a1aa';
-                    [$trackerLabel, $trackerCls] = match($v['tracker_estado']) {
-                        0  => ['Parado',        'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'],
-                        1  => ['Em Movimento',  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'],
-                        default => ['Sem Sinal', 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'],
-                    };
-                    $isParado = $v['tracker_estado'] === 0;
-                @endphp
-                <tr class="border-b border-slate-100 hover:bg-slate-50 dark:border-zinc-800/60 dark:hover:bg-zinc-900/40"
-                    style="border-left: 4px solid {{ $hex }}"
-                    data-s-prefixo="{{ $v['prefixo'] }}"
-                    data-s-placa="{{ $v['placa'] }}"
-                    data-s-status="{{ $v['status'] }}"
-                    data-s-doc="{{ $v['documento'] }}"
-                    data-s-cerca="{{ $v['cerca_minutos'] }}"
-                    data-s-tracker="{{ $v['tracker_minutos'] }}"
-                    data-s-atend="{{ $v['atendimento_minutos'] }}"
-                    data-s-statmin="{{ $v['status_minutos'] }}">
+    {{-- Cards com rolagem vertical --}}
+    <div class="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-4 dark:bg-black">
+        @php
+            $maxTracker = $veiculos->max('tracker_minutos') ?: 1;
+            $maxStatus  = $veiculos->max('status_minutos')  ?: 1;
+            $maxAtend   = $veiculos->max('atendimento_minutos') ?: 1;
 
-                    {{-- Prefixo --}}
-                    <td class="px-5 py-4 font-bold text-base text-zinc-900 dark:text-zinc-100 whitespace-nowrap">
-                        {{ $v['prefixo'] }}
-                    </td>
-
-                    {{-- Placa --}}
-                    <td class="px-5 py-4 font-mono text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-                        {{ $v['placa'] }}
-                    </td>
+            $colorFn = function (int $val, int $max): string {
+                if ($val <= 0) { return 'text-zinc-300 dark:text-zinc-600'; }
+                $pct = $val / $max;
+                if ($pct > 0.66) { return 'text-rose-600 dark:text-rose-400'; }
+                if ($pct > 0.33) { return 'text-amber-500 dark:text-amber-400'; }
+                return 'text-emerald-600 dark:text-emerald-400';
+            };
+        @endphp
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
+            @foreach($veiculos as $v)
+            @php
+                $trackerLabel = match($v['tracker_estado']) {
+                    0       => 'Parado',
+                    1       => 'Em Mov.',
+                    default => 'Sem Sinal',
+                };
+                $clsTracker = $colorFn($v['tracker_minutos'], $maxTracker);
+                $clsStatus  = $colorFn($v['status_minutos'],  $maxStatus);
+                $clsAtend   = $colorFn($v['atendimento_minutos'], $maxAtend);
+            @endphp
+            <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="h-1 w-full bg-slate-200 dark:bg-zinc-700"></div>
+                <div class="p-2.5">
+                    {{-- Cabeçalho --}}
+                    <div class="flex items-center justify-between gap-1">
+                        <span class="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">{{ $v['prefixo'] }}</span>
+                        <span class="font-mono text-[10px] text-zinc-400 dark:text-zinc-500">{{ $v['placa'] }}</span>
+                    </div>
 
                     {{-- Status --}}
-                    <td class="px-5 py-4 whitespace-nowrap">
-                        @if($v['status'])
-                            <span class="inline-block max-w-[180px] truncate rounded px-2 py-0.5 text-xs font-semibold text-white"
-                                  style="background-color: {{ $hex }}; title='{{ $v['status'] }}'">
-                                {{ $v['status'] }}
-                            </span>
-                        @else
-                            <span class="text-zinc-300 dark:text-zinc-600">—</span>
-                        @endif
-                    </td>
-
-                    {{-- Documento --}}
-                    <td class="px-5 py-4 font-mono text-sm text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
-                        {{ $v['documento'] ?: '—' }}
-                    </td>
-
-                    {{-- Cerca --}}
-                    <td class="px-5 py-4 whitespace-nowrap">
-                        @if($v['cerca_nome'])
-                            <div class="text-sm font-medium text-zinc-700 dark:text-zinc-300">{{ $v['cerca_nome'] }}</div>
-                            <div class="text-xs font-semibold tabular-nums text-zinc-400 dark:text-zinc-500">{{ $fmtMin($v['cerca_minutos']) }}</div>
-                        @else
-                            <span class="text-zinc-300 dark:text-zinc-600">—</span>
-                        @endif
-                    </td>
-
-                    {{-- Rastreador --}}
-                    <td class="px-5 py-4 whitespace-nowrap">
-                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold {{ $trackerCls }}">
-                            {{ $trackerLabel }}
+                    <div class="mt-1.5">
+                        <span class="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 truncate block">
+                            {{ $v['status'] }}
                         </span>
-                        @if($v['tracker_minutos'] > 0)
-                            <div class="mt-1 text-sm font-extrabold tabular-nums {{ $isParado ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-600 dark:text-zinc-400' }}">
-                                {{ $fmtMin($v['tracker_minutos']) }}
-                            </div>
-                        @endif
-                    </td>
+                    </div>
 
-                    {{-- Atendimento --}}
-                    <td class="px-5 py-4 whitespace-nowrap">
-                        @if($v['atendimento_minutos'] > 0)
-                            <span class="text-base font-bold tabular-nums text-zinc-800 dark:text-zinc-200">
-                                {{ $fmtMin($v['atendimento_minutos']) }}
-                            </span>
-                        @else
-                            <span class="text-zinc-300 dark:text-zinc-600">—</span>
-                        @endif
-                    </td>
+                    {{-- Métricas --}}
+                    <div class="mt-2 space-y-1 border-t border-slate-100 pt-2 dark:border-zinc-800">
+                        <div class="flex items-center justify-between gap-1">
+                            <span class="text-[10px] text-zinc-400 dark:text-zinc-500">{{ $trackerLabel }}</span>
+                            @if($v['tracker_minutos'] > 0)
+                                <span class="text-[10px] font-bold tabular-nums {{ $clsTracker }}">{{ $fmtMin($v['tracker_minutos']) }}</span>
+                            @else
+                                <span class="text-[10px] text-zinc-300 dark:text-zinc-600">—</span>
+                            @endif
+                        </div>
+                        <div class="flex items-center justify-between gap-1">
+                            <span class="text-[10px] text-zinc-400 dark:text-zinc-500">Status</span>
+                            @if($v['status_minutos'] > 0)
+                                <span class="text-[10px] font-semibold tabular-nums {{ $clsStatus }}">{{ $fmtMin($v['status_minutos']) }}</span>
+                            @else
+                                <span class="text-[10px] text-zinc-300 dark:text-zinc-600">—</span>
+                            @endif
+                        </div>
+                        <div class="flex items-center justify-between gap-1">
+                            <span class="text-[10px] text-zinc-400 dark:text-zinc-500">Atend.</span>
+                            @if($v['atendimento_minutos'] > 0)
+                                <span class="text-[10px] font-semibold tabular-nums {{ $clsAtend }}">{{ $fmtMin($v['atendimento_minutos']) }}</span>
+                            @else
+                                <span class="text-[10px] text-zinc-300 dark:text-zinc-600">—</span>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endforeach
 
-                    {{-- Tempo Status --}}
-                    <td class="px-5 py-4 whitespace-nowrap">
-                        @if($v['status_minutos'] > 0)
-                            <span class="text-base font-bold tabular-nums text-zinc-800 dark:text-zinc-200">
-                                {{ $fmtMin($v['status_minutos']) }}
-                            </span>
-                        @else
-                            <span class="text-zinc-300 dark:text-zinc-600">—</span>
-                        @endif
-                    </td>
-                </tr>
-                @endforeach
-
-                @if($veiculos->isEmpty())
-                <tr>
-                    <td colspan="8" class="px-5 py-16 text-center text-sm text-zinc-400 dark:text-zinc-600">
-                        Nenhum veículo motorizado ativo encontrado.
-                    </td>
-                </tr>
-                @endif
-            </tbody>
-        </table>
+            @if($veiculos->isEmpty())
+            <div class="col-span-full py-16 text-center text-sm text-zinc-400 dark:text-zinc-600">
+                Nenhum veículo encontrado.
+            </div>
+            @endif
+        </div>
     </div>
 </div>
-
-<script>
-(function () {
-    var ths   = document.querySelectorAll('th.sortable-th');
-    var tbody = document.querySelector('table tbody');
-    var label = document.getElementById('sort-label');
-    var state = { col: null, dir: 1 };
-
-    var colLabels = {
-        prefixo: 'Prefixo', placa: 'Placa', status: 'Status', doc: 'Documento',
-        cerca: 'Cerca', tracker: 'Rastreador', atend: 'Atendimento', statmin: 'Tempo Status'
-    };
-
-    ths.forEach(function (th) {
-        th.style.cursor = 'pointer';
-        th.style.userSelect = 'none';
-
-        var ind = document.createElement('span');
-        ind.className = 'sort-ind ml-1 opacity-40';
-        ind.textContent = '⇅';
-        th.appendChild(ind);
-
-        th.addEventListener('click', function () {
-            var col = th.getAttribute('data-col');
-            if (state.col === col) {
-                state.dir *= -1;
-            } else {
-                state.col = col;
-                state.dir = -1; // primeira vez: decrescente (maior primeiro)
-            }
-            sortRows(col, state.dir);
-            updateHeaders();
-        });
-    });
-
-    function sortRows(col, dir) {
-        var rows = Array.from(tbody.querySelectorAll('tr[data-s-' + col + ']'));
-        rows.sort(function (a, b) {
-            var av = a.getAttribute('data-s-' + col) || '';
-            var bv = b.getAttribute('data-s-' + col) || '';
-            var an = parseFloat(av);
-            var bn = parseFloat(bv);
-            if (!isNaN(an) && !isNaN(bn)) { return (an - bn) * dir; }
-            return av.localeCompare(bv, 'pt-BR', { sensitivity: 'base' }) * dir;
-        });
-        var frag = document.createDocumentFragment();
-        rows.forEach(function (r) { frag.appendChild(r); });
-        tbody.appendChild(frag);
-    }
-
-    function updateHeaders() {
-        ths.forEach(function (th) {
-            var col = th.getAttribute('data-col');
-            var ind = th.querySelector('.sort-ind');
-            if (col === state.col) {
-                ind.textContent = state.dir === 1 ? ' ▲' : ' ▼';
-                ind.classList.remove('opacity-40');
-                ind.classList.add('opacity-100');
-            } else {
-                ind.textContent = ' ⇅';
-                ind.classList.remove('opacity-100');
-                ind.classList.add('opacity-40');
-            }
-        });
-        if (label) {
-            label.textContent = 'ordenado por ' + colLabels[state.col]
-                + (state.dir === 1 ? ' (crescente)' : ' (decrescente)');
-        }
-    }
-})();
-</script>
 
 <script>
 window.TV_MODE = false;
