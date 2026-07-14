@@ -109,7 +109,6 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
     Route::get('demandas-export', [DemandaController::class, 'export'])->name('demandas.export');
     Route::post('demandas', [DemandaController::class, 'store'])->name('demandas.store');
     Route::put('demandas/{demanda}', [DemandaController::class, 'update'])->name('demandas.update');
-    Route::patch('demandas/{demanda}/iniciar', [DemandaController::class, 'iniciar'])->name('demandas.iniciar');
     Route::patch('demandas/{demanda}/cancelar', [DemandaController::class, 'cancelar'])->name('demandas.cancelar');
     Route::patch('demandas/{demanda}/finalizar', [DemandaController::class, 'finalizar'])->name('demandas.finalizar');
     Route::patch('demandas/{demanda}/auditar', [DemandaController::class, 'auditar'])->name('demandas.auditar')->middleware('can:delete-demanda');

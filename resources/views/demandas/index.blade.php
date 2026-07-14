@@ -142,8 +142,6 @@
                                 $prazoVencido = $demanda->prazo_referencia
                                     && $demanda->prazo_referencia->isPast()
                                     && ! in_array($demanda->status_demanda->value, ['finalizado', 'cancelada']);
-                                $podeIniciar   = $demanda->data_hora_inicio_demanda === null
-                                    && ! in_array($demanda->status_demanda->value, ['cancelada', 'finalizado']);
                                 $podeFinalizar = $demanda->data_hora_inicio_demanda !== null
                                     && $demanda->status_demanda->value !== 'finalizado'
                                     && $demanda->status_demanda->value !== 'cancelada';
@@ -256,20 +254,6 @@
                                             </svg>
                                         </button>
 
-                                        {{-- Iniciar --}}
-                                        @if($podeIniciar)
-                                        <button type="button"
-                                                onclick="openIniciarModal({{ $demanda->id }}, '{{ $demanda->numero_demanda }}')"
-                                                title="Iniciar demanda"
-                                                class="inline-flex h-7 items-center gap-1 rounded-lg border px-2 text-[11px] font-medium
-                                                       border-blue-200 text-blue-700 transition-colors hover:bg-blue-50
-                                                       dark:border-blue-800/50 dark:text-blue-400 dark:hover:bg-blue-950/40">
-                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653Z"/>
-                                            </svg>
-                                            Iniciar
-                                        </button>
-                                        @endif
 
 
                                         {{-- Cancelar --}}
@@ -556,64 +540,6 @@
     </div>
 </div>
 
-{{-- ─── Modal Iniciar Demanda ──────────────────────────────────────────────── --}}
-<div id="iniciar-modal"
-     class="fixed inset-0 z-[95] hidden"
-     role="dialog" aria-modal="true">
-
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-200"
-         id="iniciar-overlay"></div>
-
-    <div class="relative flex min-h-full items-center justify-center p-4">
-        <div id="iniciar-panel"
-             class="w-full max-w-sm scale-95 rounded-2xl border opacity-0 shadow-2xl transition-all duration-200
-                    border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-
-            <div class="flex items-center justify-between border-b px-5 py-4 border-slate-100 dark:border-zinc-800">
-                <h3 id="iniciar-title" class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    Iniciar Demanda
-                </h3>
-                <button type="button" onclick="closeIniciarModal()"
-                        class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
-
-            <form id="iniciar-form" method="POST">
-                @csrf
-                @method('PATCH')
-                <div class="px-5 py-4">
-                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                        Data e hora de início
-                    </label>
-                    <input type="datetime-local" name="data_hora_inicio_demanda" id="f-inicio-dt"
-                           class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                  text-zinc-900 outline-none shadow-xs
-                                  focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                  dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                  dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
-                    <p class="mt-1.5 text-[11px] text-zinc-400 dark:text-zinc-600">
-                        Pré-preenchido com a hora atual. Altere para registrar um início retroativo.
-                    </p>
-                </div>
-                <div class="flex justify-end gap-3 border-t px-5 py-3 border-slate-100 dark:border-zinc-800">
-                    <button type="button" onclick="closeIniciarModal()"
-                            class="rounded-lg px-4 py-2 text-sm font-medium text-zinc-600 transition-colors
-                                   hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800">
-                        Cancelar
-                    </button>
-                    <button type="submit"
-                            class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white
-                                   shadow-xs transition-all hover:bg-blue-700 active:scale-[0.98]">
-                        Confirmar Início
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 @push('scripts')
 <script>
@@ -859,51 +785,6 @@
         if (e.key === 'Escape' && ! modal.classList.contains('hidden')) { window.closeDemandaModal(); }
     });
 
-    // ── Modal Iniciar ─────────────────────────────────────────────────────────
-    (function () {
-        var BASE_URL = '{{ url('/demandas') }}';
-        var iModal   = document.getElementById('iniciar-modal');
-        var iOverlay = document.getElementById('iniciar-overlay');
-        var iPanel   = document.getElementById('iniciar-panel');
-        var iTitle   = document.getElementById('iniciar-title');
-        var iForm    = document.getElementById('iniciar-form');
-        var iDt      = document.getElementById('f-inicio-dt');
-
-        window.openIniciarModal = function (id, numero) {
-            iTitle.textContent = 'Iniciar Demanda #' + numero;
-            iForm.action = BASE_URL + '/' + id + '/iniciar';
-            iDt.value = nowLocalDatetime();
-            iModal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-            requestAnimationFrame(function () {
-                iOverlay.classList.add('opacity-100');
-                iPanel.classList.remove('opacity-0', 'scale-95');
-                iPanel.classList.add('opacity-100', 'scale-100');
-            });
-        };
-
-        window.closeIniciarModal = function () {
-            iOverlay.classList.remove('opacity-100');
-            iPanel.classList.add('opacity-0', 'scale-95');
-            iPanel.classList.remove('opacity-100', 'scale-100');
-            setTimeout(function () {
-                iModal.classList.add('hidden');
-                document.body.style.overflow = '';
-            }, 200);
-        };
-
-        iModal.addEventListener('click', function (e) {
-            if (e.target === iModal || e.target === iOverlay) { window.closeIniciarModal(); }
-        });
-    })();
-
-    function nowLocalDatetime() {
-        var d = new Date();
-        d.setSeconds(0, 0);
-        var pad = function (n) { return String(n).padStart(2, '0'); };
-        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
-            + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-    }
 
     function fmtDatetime(iso) {
         if (! iso) { return ''; }
