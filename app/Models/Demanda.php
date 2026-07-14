@@ -46,6 +46,19 @@ class Demanda extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function (Demanda $demanda): void {
+            if (
+                $demanda->status_demanda === StatusDemanda::Pendente
+                && $demanda->data_hora_inicio_demanda !== null
+                && $demanda->equipamento_id !== null
+            ) {
+                $demanda->status_demanda = StatusDemanda::EmAndamento;
+            }
+        });
+    }
+
     public function equipamento(): BelongsTo
     {
         return $this->belongsTo(Equipamento::class);
