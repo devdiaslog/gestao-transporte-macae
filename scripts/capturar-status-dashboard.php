@@ -4,6 +4,10 @@
  * Script de captura de snapshot do dashboard — chamado via cron.
  * Faz uma requisição HTTP para a rota interna de captura.
  *
+ * A rota internamente retenta a busca na API do E-log até 3 vezes
+ * (com esperas de 1, 2 e 3 minutos entre tentativas), por isso o
+ * timeout deste script é configurado para 10 minutos.
+ *
  * Uso no cron do cPanel:
  *   php /home/usuario/scripts/capturar-status-dashboard.php
  */
@@ -13,15 +17,15 @@ $url = 'https://transporte.vixplancon.com/dashboard/capturar-status?key='.urlenc
 $ch = curl_init($url);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT        => 60,
+    CURLOPT_TIMEOUT => 600,   // 10 min — comporta até 3 retentativas (1+2+3 min)
     CURLOPT_FOLLOWLOCATION => true,
     CURLOPT_SSL_VERIFYPEER => true,
-    CURLOPT_USERAGENT      => 'CronSync/1.0',
+    CURLOPT_USERAGENT => 'CronSync/1.0',
 ]);
 
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$error    = curl_error($ch);
+$error = curl_error($ch);
 curl_close($ch);
 
 $timestamp = date('Y-m-d H:i:s');
@@ -36,5 +40,8 @@ if ($httpCode !== 200) {
     exit(1);
 }
 
-echo "[{$timestamp}] OK — {$response}".PHP_EOL;
+$dados = json_decode($response, true);
+$registradas = $dados['demandas_registradas'] ?? 0;
+
+echo "[{$timestamp}] OK — capturado: {$dados['capturado']} | status: {$dados['total_status']} | demandas novas: {$registradas}".PHP_EOL;
 exit(0);

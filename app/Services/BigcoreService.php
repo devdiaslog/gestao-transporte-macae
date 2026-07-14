@@ -9,25 +9,42 @@ class BigcoreService
 {
     /**
      * Retorna todos os veículos da API Bigcore.
+     * Em caso de falha, retenta após 1, 2 e 3 minutos antes de desistir.
      *
+     * @param  int[]  $delays  Segundos de espera entre tentativas
      * @return array<int, array<string, mixed>>
      */
-    public function buscarTodos(): array
+    public function buscarTodos(array $delays = [60, 120, 180]): array
     {
-        $response = Http::withHeaders([
-            'Authorization' => config('services.bigcore.token'),
-            'TenantId' => config('services.bigcore.tenant'),
-            'SubscriptionId' => config('services.bigcore.subscription'),
-        ])->get(config('services.bigcore.endpoint'), [
-            'Telemetry' => 'true',
-            'Rows' => 500,
-        ]);
+        $tentativas = array_merge([0], $delays);
 
-        if (! $response->successful()) {
-            return [];
+        foreach ($tentativas as $i => $espera) {
+            if ($espera > 0) {
+                sleep($espera);
+            }
+
+            try {
+                $response = Http::timeout(30)->withHeaders([
+                    'Authorization' => config('services.bigcore.token'),
+                    'TenantId' => config('services.bigcore.tenant'),
+                    'SubscriptionId' => config('services.bigcore.subscription'),
+                ])->get(config('services.bigcore.endpoint'), [
+                    'Telemetry' => 'true',
+                    'Rows' => 500,
+                ]);
+
+                if ($response->successful()) {
+                    $dados = $response->json('data', []);
+                    if (! empty($dados)) {
+                        return $dados;
+                    }
+                }
+            } catch (\Throwable) {
+                // falha de rede — tenta novamente
+            }
         }
 
-        return $response->json('data', []);
+        return [];
     }
 
     public function buscarPorPlaca(string $placa): ?array

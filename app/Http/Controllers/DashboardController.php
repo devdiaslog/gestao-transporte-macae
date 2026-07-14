@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\StatusDemanda;
+use App\Enums\TipoCadastro;
 use App\Models\CercaEvento;
 use App\Models\DashboardSnapshot;
+use App\Models\Demanda;
 use App\Models\Equipamento;
 use App\Models\StatusEvento;
 use App\Models\TipoEquipamento;
@@ -16,6 +19,73 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    /**
+     * Registra demandas novas detectadas na resposta da API do E-log.
+     * Ignora documentos já cadastrados e valores que não sejam numéricos de 9-10 dígitos.
+     *
+     * @param  array<int, array<string, mixed>>  $veiculos
+     */
+    private function registrarDemandasNovas(array $veiculos): int
+    {
+        // Coleta todos os documentCodes válidos vindos da API
+        $documentos = collect($veiculos)
+            ->map(fn ($v) => $v['document']['documentCode'] ?? $v['loadScheduleCurrent']['documentCode'] ?? null)
+            ->filter(fn ($d) => $d !== null && ctype_digit((string) $d) && strlen((string) $d) >= 9 && strlen((string) $d) <= 10)
+            ->map(fn ($d) => (int) $d)
+            ->unique()
+            ->values();
+
+        if ($documentos->isEmpty()) {
+            return 0;
+        }
+
+        // Quais já estão cadastrados
+        $existentes = Demanda::withTrashed()
+            ->whereIn('numero_demanda', $documentos)
+            ->pluck('numero_demanda')
+            ->all();
+
+        $novos = $documentos->diff($existentes);
+
+        if ($novos->isEmpty()) {
+            return 0;
+        }
+
+        // Mapa placa → equipamento_id para associar o veículo
+        $placaParaId = Equipamento::query()
+            ->whereNotNull('placa')
+            ->pluck('id', 'placa')
+            ->mapWithKeys(fn ($id, $placa) => [strtoupper($placa) => $id]);
+
+        // Indexa veículos por documentCode para lookup rápido
+        $veiculoPorDoc = collect($veiculos)
+            ->filter(function ($v) {
+                $d = $v['document']['documentCode'] ?? $v['loadScheduleCurrent']['documentCode'] ?? null;
+
+                return $d !== null && ctype_digit((string) $d) && strlen((string) $d) >= 9 && strlen((string) $d) <= 10;
+            })
+            ->keyBy(fn ($v) => (int) ($v['document']['documentCode'] ?? $v['loadScheduleCurrent']['documentCode']));
+
+        $criados = 0;
+
+        foreach ($novos as $numeroDoc) {
+            $veiculo = $veiculoPorDoc->get($numeroDoc);
+            $placa = strtoupper($veiculo['licensePlate'] ?? '');
+            $equipamentoId = $placa ? ($placaParaId->get($placa) ?? null) : null;
+
+            Demanda::create([
+                'numero_demanda' => $numeroDoc,
+                'tipo_cadastro' => TipoCadastro::Integracao,
+                'status_demanda' => StatusDemanda::Pendente,
+                'equipamento_id' => $equipamentoId,
+            ]);
+
+            $criados++;
+        }
+
+        return $criados;
+    }
+
     public function tabela(): View
     {
         $agora = now();
@@ -265,10 +335,13 @@ class DashboardController extends Controller
             'dados' => $agrupado,
         ]);
 
+        $novasDemandas = $this->registrarDemandasNovas($veiculos);
+
         return response()->json([
             'ok' => true,
             'capturado' => $agora->toDateTimeString(),
             'total_status' => count($agrupado),
+            'demandas_registradas' => $novasDemandas,
         ]);
     }
 }
