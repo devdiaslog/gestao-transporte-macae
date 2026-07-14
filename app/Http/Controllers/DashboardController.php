@@ -199,6 +199,72 @@ class DashboardController extends Controller
         return view('dashboard.tabela', compact('veiculos', 'agora'));
     }
 
+    public function indicadores(): View
+    {
+        $snapshot = DashboardSnapshot::latest('capturado_em')->first();
+
+        if (! $snapshot) {
+            return view('dashboard.indicadores', ['snapshot' => null]);
+        }
+
+        $statusExcluidos = ['Manutenção', 'Frota Reserva', 'Reserva'];
+        $dados = collect($snapshot->dados);
+
+        // ── Manutenção ───────────────────────────────────────────────────────────
+        $totalFrota = $dados->sum('quantidade');
+        $grpManutencao = $dados->firstWhere('status', 'Manutenção');
+        $emManutencao = (int) ($grpManutencao['quantidade'] ?? 0);
+        $pctManutencao = $totalFrota > 0 ? round($emManutencao / $totalFrota * 100, 1) : 0;
+        $veiculosManutencao = collect($grpManutencao['veiculos'] ?? [])->sortByDesc('minutos')->values()->all();
+
+        // ── Sem sinal ────────────────────────────────────────────────────────────
+        $semSinalVeiculos = $dados
+            ->flatMap(fn ($d) => collect($d['veiculos'] ?? [])->map(fn ($v) => array_merge($v, ['status_op' => $d['status']])))
+            ->filter(fn ($v) => ($v['tracker_estado'] ?? -1) === -1)
+            ->sortByDesc('tracker_minutos')
+            ->values()
+            ->all();
+
+        // ── Base de veículos parados (excluindo status previsíveis) ──────────────
+        $parados = $dados
+            ->filter(fn ($d) => ! in_array($d['status'], $statusExcluidos))
+            ->flatMap(fn ($d) => $d['veiculos'] ?? [])
+            ->filter(fn ($v) => ($v['tracker_estado'] ?? -1) === 0)
+            ->sortByDesc('tracker_minutos')
+            ->values();
+
+        $mediaParadosMin = $parados->isNotEmpty() ? (int) round($parados->avg('tracker_minutos')) : 0;
+        $mediaParadosHHMM = sprintf('%02d:%02d', intdiv($mediaParadosMin, 60), $mediaParadosMin % 60);
+
+        // ── Faixas de tempo parado (exclusivas — sem sobreposição entre cards) ──
+        $faixas = array_map(function ($f) use ($parados, $totalFrota) {
+            $lista = $parados->filter(function ($v) use ($f) {
+                $min = $v['tracker_minutos'] ?? 0;
+
+                return $min >= $f['limiar'] && ($f['limite'] === null || $min < $f['limite']);
+            })->values();
+
+            $qtd = $lista->count();
+
+            return array_merge($f, [
+                'quantidade' => $qtd,
+                'pct' => $totalFrota > 0 ? round($qtd / $totalFrota * 100, 1) : null,
+                'veiculos' => $lista->take(8)->all(),
+            ]);
+        }, [
+            ['horas' => 24, 'limiar' => 1440, 'limite' => null],
+            ['horas' => 12, 'limiar' => 720,  'limite' => 1440],
+            ['horas' => 6,  'limiar' => 360,  'limite' => 720],
+            ['horas' => 3,  'limiar' => 180,  'limite' => 360],
+        ]);
+
+        return view('dashboard.indicadores', compact(
+            'snapshot', 'totalFrota', 'emManutencao', 'pctManutencao', 'veiculosManutencao',
+            'semSinalVeiculos', 'parados', 'mediaParadosMin', 'mediaParadosHHMM',
+            'faixas', 'statusExcluidos'
+        ));
+    }
+
     public function graficos(): View
     {
         $snapshot = DashboardSnapshot::latest('capturado_em')->first();
