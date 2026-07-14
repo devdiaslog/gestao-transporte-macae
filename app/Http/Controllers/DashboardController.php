@@ -70,8 +70,6 @@ class DashboardController extends Controller
             })
             ->keyBy(fn ($v) => (int) ($v['document']['documentCode'] ?? $v['loadScheduleCurrent']['documentCode']));
 
-        $pontosPacu = ['PACU', 'PBG'];
-
         $criados = 0;
 
         foreach ($novos as $numeroDoc) {
@@ -83,9 +81,9 @@ class DashboardController extends Controller
             $origem = isset($etaDocs[0]) ? strtoupper(trim($etaDocs[0]['destinationName'] ?? '')) : null;
             $destino = isset($etaDocs[1]) ? strtoupper(trim($etaDocs[1]['destinationName'] ?? '')) : null;
 
-            if ($destino && in_array($destino, $pontosPacu)) {
+            if ($destino === 'BMAC') {
                 $tipo = TipoDemanda::Load;
-            } elseif ($origem && in_array($origem, $pontosPacu)) {
+            } elseif ($origem === 'BMAC') {
                 $tipo = TipoDemanda::Backload;
             } else {
                 $tipo = TipoDemanda::Transferencia;
