@@ -27,6 +27,9 @@ class DashboardController extends Controller
      */
     private function registrarDemandasNovas(array $veiculos): int
     {
+        // Apenas veículos da divisão Poli Macaé (divisionId 114)
+        $veiculos = array_filter($veiculos, fn ($v) => ($v['divisionId'] ?? null) === 114);
+
         // Coleta todos os documentCodes válidos vindos da API
         $documentos = collect($veiculos)
             ->map(fn ($v) => $v['document']['documentCode'] ?? $v['loadScheduleCurrent']['documentCode'] ?? null)
