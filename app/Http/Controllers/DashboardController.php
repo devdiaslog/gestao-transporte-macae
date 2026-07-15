@@ -406,19 +406,21 @@ class DashboardController extends Controller
 
                 $totalMinutos = $itens->sum('minutos');
                 $mediaMinutos = (int) round($itens->avg('minutos') ?? 0);
-                $top1 = $itens->first();
+
+                $top5 = $itens->take(5)->map(fn ($v) => [
+                    'cm' => $v['cm'],
+                    'placa' => $v['placa'],
+                    'minutos' => $v['minutos'],
+                    'pct' => $totalMinutos > 0 ? round(($v['minutos'] / $totalMinutos) * 100, 1) : 0,
+                ])->values()->all();
 
                 return [
                     'status' => $status,
                     'quantidade' => $itens->count(),
                     'media_minutos' => $mediaMinutos,
                     'media_horas' => round($mediaMinutos / 60, 1),
-                    'top1' => $top1 ? [
-                        'cm' => $top1['cm'],
-                        'placa' => $top1['placa'],
-                        'minutos' => $top1['minutos'],
-                        'pct' => $totalMinutos > 0 ? round(($top1['minutos'] / $totalMinutos) * 100, 1) : 0,
-                    ] : null,
+                    'top1' => $top5[0] ?? null,
+                    'top5' => $top5,
                     'veiculos' => $itens->take(15)->toArray(),
                 ];
             })

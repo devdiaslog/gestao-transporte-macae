@@ -95,15 +95,14 @@
             <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 @foreach($dados as $item)
                     @php
-                        $cor       = $colorPalette[$item['status']] ?? $defaultColor;
-                        $prevItem  = $anteriorMap->get($item['status']);
-                        $prevMin   = $prevItem['media_minutos'] ?? null;
-                        $diffPct   = ($prevMin && $prevMin > 0)
+                        $cor        = $colorPalette[$item['status']] ?? $defaultColor;
+                        $prevItem   = $anteriorMap->get($item['status']);
+                        $prevMin    = $prevItem['media_minutos'] ?? null;
+                        $diffPct    = ($prevMin && $prevMin > 0)
                             ? (int) round((($item['media_minutos'] - $prevMin) / $prevMin) * 100)
                             : null;
                         $tempoMedia = $fmtMin($item['media_minutos']);
-                        $top1       = $item['top1'] ?? null;
-                        $top1tempo  = $top1 ? $fmtMin($top1['minutos']) : null;
+                        $top5       = $item['top5'] ?? ($item['top1'] ? [$item['top1']] : []);
                     @endphp
 
                     <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -111,50 +110,54 @@
                         {{-- Faixa colorida no topo --}}
                         <div class="h-1 w-full {{ $cor['bg'] }}"></div>
 
-                        <div class="p-4">
+                        <div class="p-3">
                             {{-- Status --}}
                             <p class="truncate text-center text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400"
                                title="{{ $item['status'] }}">{{ $item['status'] }}</p>
 
-                            {{-- Linha principal: qtd | tempo | d(-1) --}}
-                            <div class="mt-3 flex items-end gap-2">
+                            {{-- Linha resumo: qtd | média | d(-1) --}}
+                            <div class="mt-2 flex items-center gap-2">
                                 <div class="shrink-0">
-                                    <p class="text-2xl font-bold tabular-nums leading-none text-zinc-900 dark:text-zinc-100">{{ $item['quantidade'] }}</p>
-                                    <p class="mt-1 text-[10px] text-zinc-400">veículos</p>
+                                    <p class="text-lg font-bold tabular-nums leading-none text-zinc-900 dark:text-zinc-100">{{ $item['quantidade'] }}</p>
+                                    <p class="text-[10px] text-zinc-400">veíc.</p>
                                 </div>
 
-                                <p class="flex-1 text-center text-4xl font-extrabold tabular-nums leading-none text-zinc-900 dark:text-zinc-100 sm:text-5xl">
+                                <p class="flex-1 text-center text-2xl font-extrabold tabular-nums leading-none text-zinc-900 dark:text-zinc-100">
                                     {{ $tempoMedia }}
                                 </p>
 
                                 <div class="shrink-0 text-right">
                                     @if($diffPct !== null)
-                                        <p class="text-sm font-bold tabular-nums leading-none
+                                        <p class="text-xs font-bold tabular-nums leading-none
                                                    {{ $diffPct > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400' }}">
                                             {{ $diffPct > 0 ? '▲' : '▼' }}&nbsp;{{ abs($diffPct) }}%
                                         </p>
                                     @else
-                                        <p class="text-sm leading-none text-zinc-300 dark:text-zinc-700">—</p>
+                                        <p class="text-xs leading-none text-zinc-300 dark:text-zinc-700">—</p>
                                     @endif
-                                    <p class="mt-1 text-[10px] text-zinc-400">d(-1)</p>
+                                    <p class="text-[10px] text-zinc-400">d(-1)</p>
                                 </div>
                             </div>
 
-                            {{-- Top 1 — maior tempo, requer atenção --}}
-                            @if($top1 && $top1tempo)
-                                <div class="mt-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 dark:border-amber-900/40 dark:bg-amber-950/20">
-                                    <svg class="h-3 w-3 shrink-0 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"/>
-                                    </svg>
-                                    <span class="flex-1 truncate text-[11px] font-semibold text-amber-800 dark:text-amber-300">
-                                        {{ $top1['cm'] }} – {{ $top1['placa'] }}
-                                    </span>
-                                    <span class="shrink-0 tabular-nums text-[11px] font-bold text-amber-700 dark:text-amber-400">
-                                        {{ $top1tempo }}
-                                    </span>
+                            {{-- Top 5 --}}
+                            @if(count($top5) > 0)
+                                <div class="mt-2 space-y-1 border-t border-slate-100 pt-2 dark:border-zinc-800">
+                                    @foreach($top5 as $i => $tv)
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="w-3.5 text-center text-[9px] font-bold tabular-nums text-zinc-300 dark:text-zinc-600">{{ $i + 1 }}</span>
+                                            <span class="flex-1 truncate text-[11px] font-medium text-zinc-700 dark:text-zinc-300">
+                                                {{ $tv['cm'] }} <span class="text-zinc-400 dark:text-zinc-500">{{ $tv['placa'] }}</span>
+                                            </span>
+                                            <span class="shrink-0 tabular-nums text-[11px] font-bold text-zinc-600 dark:text-zinc-400">
+                                                {{ $fmtMin($tv['minutos']) }}
+                                            </span>
+                                        </div>
+                                    @endforeach
                                 </div>
                             @else
-                                <div class="mt-3 h-7 rounded-lg bg-slate-50 dark:bg-zinc-800"></div>
+                                <div class="mt-2 border-t border-slate-100 pt-2 dark:border-zinc-800">
+                                    <p class="text-center text-[10px] text-zinc-300 dark:text-zinc-600">—</p>
+                                </div>
                             @endif
                         </div>
                     </div>
