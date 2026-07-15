@@ -331,9 +331,10 @@
                             markers: { size: [0, 3.5] },
                             plotOptions: { bar: { borderRadius: 3, columnWidth: '60%', dataLabels: { position: 'top' } } },
                             dataLabels: {
-                                enabled: true, enabledOnSeries: [0], offsetY: -18,
-                                style: { fontSize: lblSize, fontWeight: '600', colors: [lblClr] },
-                                formatter: function(v) { return fmtMinHHMM(v * 60); },
+                                enabled: true, enabledOnSeries: [0, 1], offsetY: -18,
+                                style: { fontSize: lblSize, fontWeight: '600', colors: [lblClr, lineColor] },
+                                formatter: function(v, opts) { return opts && opts.seriesIndex === 1 ? Math.round(v) + '%' : fmtMinHHMM(v * 60); },
+                                background: { enabled: false },
                             },
                             legend: { show: false },
                             grid: { borderColor: gridClr, yaxis: { lines: { show: true } }, xaxis: { lines: { show: false } } },
