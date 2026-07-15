@@ -114,7 +114,11 @@
                                         @endif
                                     </div>
                                 </div>
-                                <div class="mt-4 overflow-x-auto">
+                                <div class="mt-3 flex items-center gap-4 text-xs text-zinc-500 dark:text-zinc-400">
+                                    <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm {{ $cor['bg'] }}"></span>Tempo</span>
+                                    <span class="flex items-center gap-1.5"><span class="h-0.5 w-3.5 rounded-sm bg-indigo-500"></span>% Acumulado</span>
+                                </div>
+                                <div class="mt-2 overflow-x-auto">
                                     <div id="chart-g-{{ $loop->index }}" style="min-width: {{ $minWidthChart }}px"></div>
                                 </div>
                             </div>
@@ -176,28 +180,47 @@
                     var veiculos = @json($item['veiculos']);
                     var status   = @json($item['status']);
                     var barColor = hexMap[status] || defHex;
+                    var lineColor = isDark ? '#818cf8' : '#4f46e5';
                     var labels   = veiculos.map(function(v) { return v.cm || v.placa; });
                     var data     = veiculos.map(function(v) { return +(Math.abs(v.minutos) / 60).toFixed(2); });
 
+                    var total  = data.reduce(function(a, b) { return a + b; }, 0);
+                    var cum    = 0;
+                    var cumPct = data.map(function(v) { cum += v; return total > 0 ? +((cum / total) * 100).toFixed(1) : 0; });
+
                     new ApexCharts(document.getElementById('chart-g-{{ $loop->index }}'), {
-                        chart: { type: 'bar', height: chartH, background: 'transparent', toolbar: { show: false } },
-                        series: [{ name: 'Tempo', data: data }],
+                        chart: { type: 'line', height: chartH, background: 'transparent', toolbar: { show: false } },
+                        series: [
+                            { name: 'Tempo', type: 'column', data: data },
+                            { name: '% Acumulado', type: 'line', data: cumPct },
+                        ],
                         xaxis: {
                             categories: labels,
                             labels: { rotate: -45, style: { colors: Array(labels.length).fill(lblClr), fontSize: axisSize } },
                             axisBorder: { color: gridClr }, axisTicks: { color: gridClr },
                         },
-                        yaxis: { labels: { style: { colors: [lblClr], fontSize: axisSize }, formatter: function(v) { return fmtMin(v * 60); } } },
-                        colors: [barColor],
+                        yaxis: [
+                            { seriesName: 'Tempo', labels: { style: { colors: [lblClr], fontSize: axisSize }, formatter: function(v) { return fmtMin(v * 60); } } },
+                            {
+                                seriesName: '% Acumulado', opposite: true, min: 0, max: 100, tickAmount: 5,
+                                labels: { style: { colors: [lblClr], fontSize: axisSize }, formatter: function(v) { return Math.round(v) + '%'; } },
+                            },
+                        ],
+                        colors: [barColor, lineColor],
+                        stroke: { width: [0, 2.5], curve: 'straight' },
+                        markers: { size: [0, 3.5] },
                         plotOptions: { bar: { borderRadius: 3, columnWidth: '58%', dataLabels: { position: 'top' } } },
                         dataLabels: {
-                            enabled: true, offsetY: -18,
+                            enabled: true, enabledOnSeries: [0], offsetY: -18,
                             style: { fontSize: lblSize, fontWeight: '600', colors: [lblClr] },
                             formatter: function(v) { return fmtMinHHMM(v * 60); },
                         },
                         legend: { show: false },
                         grid: { borderColor: gridClr, yaxis: { lines: { show: true } }, xaxis: { lines: { show: false } } },
-                        tooltip: { theme: isDark ? 'dark' : 'light', y: { formatter: function(v) { return fmtMin(v * 60); } } },
+                        tooltip: {
+                            theme: isDark ? 'dark' : 'light', shared: true, intersect: false,
+                            y: { formatter: function(v, opts) { return opts && opts.seriesIndex === 1 ? Math.round(v) + '%' : fmtMin(v * 60); } },
+                        },
                         theme: { mode: isDark ? 'dark' : 'light' },
                     }).render();
                 })();
