@@ -81,9 +81,11 @@ class DashboardController extends Controller
             $origem = isset($etaDocs[0]) ? strtoupper(trim($etaDocs[0]['destinationName'] ?? '')) : null;
             $destino = isset($etaDocs[1]) ? strtoupper(trim($etaDocs[1]['destinationName'] ?? '')) : null;
 
-            if ($destino === 'BMAC') {
+            $pontosChave = ['BMAC', 'PACU', 'PBG'];
+
+            if ($destino && in_array($destino, $pontosChave)) {
                 $tipo = TipoDemanda::Load;
-            } elseif ($origem === 'BMAC') {
+            } elseif ($origem && in_array($origem, $pontosChave)) {
                 $tipo = TipoDemanda::Backload;
             } else {
                 $tipo = TipoDemanda::Transferencia;

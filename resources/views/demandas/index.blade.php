@@ -96,7 +96,7 @@
             Exportar
         </a>
         @if($search || $status !== 'active' || $tipo || $prefixo || $dataDE || $dataAte)
-            <a href="{{ route('demandas.index') }}"
+            <a href="{{ route('demandas.index', ['reset' => '1']) }}"
                class="h-9 inline-flex items-center gap-1 rounded-lg px-3 text-sm text-zinc-400 hover:text-zinc-700
                       dark:hover:text-zinc-200">
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -209,12 +209,12 @@
                                     </span>
                                     @if($demanda->data_hora_inicio_demanda)
                                         <div class="mt-0.5 text-[10px] text-zinc-400 dark:text-zinc-600">
-                                            Início: {{ $demanda->data_hora_inicio_demanda->format('d/m H:i') }}
+                                            Início: {{ $demanda->data_hora_inicio_demanda->format('d/m/Y H:i') }}
                                         </div>
                                     @endif
                                     @if($demanda->data_hora_fim_demanda)
                                         <div class="mt-0.5 text-[10px] text-zinc-400 dark:text-zinc-600">
-                                            Fim: {{ $demanda->data_hora_fim_demanda->format('d/m H:i') }}
+                                            Fim: {{ $demanda->data_hora_fim_demanda->format('d/m/Y H:i') }}
                                         </div>
                                     @endif
                                 </td>

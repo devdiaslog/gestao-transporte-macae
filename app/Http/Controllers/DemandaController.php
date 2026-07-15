@@ -16,8 +16,27 @@ use Illuminate\View\View;
 
 class DemandaController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
+        $filtroKeys = ['q', 'status', 'tipo', 'prefixo', 'data_de', 'data_ate'];
+
+        if ($request->boolean('reset')) {
+            session()->forget('demandas.filtros');
+
+            return redirect()->route('demandas.index');
+        }
+
+        $temFiltro = $request->hasAny($filtroKeys) || $request->has('page');
+
+        if (! $temFiltro) {
+            $salvos = session('demandas.filtros', []);
+            if (! empty($salvos)) {
+                return redirect()->route('demandas.index', $salvos);
+            }
+        } elseif ($request->hasAny($filtroKeys)) {
+            session(['demandas.filtros' => $request->only($filtroKeys)]);
+        }
+
         $search = $request->input('q');
         $status = $request->input('status', 'active');
         $tipo = $request->input('tipo');
