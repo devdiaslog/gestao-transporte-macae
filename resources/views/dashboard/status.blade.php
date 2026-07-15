@@ -206,6 +206,9 @@
                             <span class="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
                                 <span class="h-2.5 w-2.5 rounded-sm bg-rose-500"></span>Parado
                             </span>
+                            <span class="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                                <span class="h-0.5 w-3.5 rounded-sm bg-indigo-500"></span>% Acumulado
+                            </span>
                         </div>
                     </div>
                     <div class="overflow-x-auto px-2 pb-2 pt-1">
@@ -288,7 +291,7 @@
                     return (h < 10 ? '0' : '') + h + ':' + (mn < 10 ? '0' : '') + mn;
                 }
 
-                function makeChart(elId, veiculos, colorFn) {
+                function makeChart(elId, veiculos, colorFn, pareto) {
                     var el = document.getElementById(elId);
                     if (! el || ! veiculos.length) { return; }
                     var labels = veiculos.map(function(v) { return v.cm || v.placa; });
@@ -297,6 +300,52 @@
                     var maxVal = data.reduce(function(a, b) { return Math.max(a, b); }, 0);
                     var yAxisOpts = { labels: { style: { colors: [lblClr], fontSize: axisSize }, formatter: function(v) { return fmtMin(v * 60); } } };
                     if (maxVal > yMax) { yAxisOpts.max = yMax; }
+
+                    if (pareto) {
+                        var total  = data.reduce(function(a, b) { return a + b; }, 0);
+                        var cum    = 0;
+                        var cumPct = data.map(function(v) { cum += v; return total > 0 ? +((cum / total) * 100).toFixed(1) : 0; });
+                        var barColor  = colors[0] || '#f43f5e';
+                        var lineColor = isDark ? '#818cf8' : '#4f46e5';
+                        yAxisOpts.seriesName = 'Tempo';
+                        new ApexCharts(el, {
+                            chart: { type: 'line', height: chartH, background: 'transparent', toolbar: { show: false } },
+                            series: [
+                                { name: 'Tempo', type: 'column', data: data },
+                                { name: '% Acumulado', type: 'line', data: cumPct },
+                            ],
+                            xaxis: {
+                                categories: labels,
+                                labels: { rotate: -45, style: { colors: Array(labels.length).fill(lblClr), fontSize: axisSize } },
+                                axisBorder: { color: gridClr }, axisTicks: { color: gridClr },
+                            },
+                            yaxis: [
+                                yAxisOpts,
+                                {
+                                    seriesName: '% Acumulado', opposite: true, min: 0, max: 100, tickAmount: 5,
+                                    labels: { style: { colors: [lblClr], fontSize: axisSize }, formatter: function(v) { return Math.round(v) + '%'; } },
+                                },
+                            ],
+                            colors: [barColor, lineColor],
+                            stroke: { width: [0, 2.5], curve: 'straight' },
+                            markers: { size: [0, 3.5] },
+                            plotOptions: { bar: { borderRadius: 3, columnWidth: '60%', dataLabels: { position: 'top' } } },
+                            dataLabels: {
+                                enabled: true, enabledOnSeries: [0], offsetY: -18,
+                                style: { fontSize: lblSize, fontWeight: '600', colors: [lblClr] },
+                                formatter: function(v) { return fmtMinHHMM(v * 60); },
+                            },
+                            legend: { show: false },
+                            grid: { borderColor: gridClr, yaxis: { lines: { show: true } }, xaxis: { lines: { show: false } } },
+                            tooltip: {
+                                theme: isDark ? 'dark' : 'light', shared: true, intersect: false,
+                                y: { formatter: function(v, opts) { return opts && opts.seriesIndex === 1 ? Math.round(v) + '%' : fmtMin(v * 60); } },
+                            },
+                            theme: { mode: isDark ? 'dark' : 'light' },
+                        }).render();
+                        return;
+                    }
+
                     new ApexCharts(el, {
                         chart: { type: 'bar', height: chartH, background: 'transparent', toolbar: { show: false } },
                         series: [{ name: 'Tempo', data: data }],
@@ -323,7 +372,7 @@
                 var parados   = @json($veiculosParados);
                 var movimento = @json($veiculosMovimento);
 
-                makeChart('chart-parados', parados, function() { return '#f43f5e'; });
+                makeChart('chart-parados', parados, function() { return '#f43f5e'; }, true);
 
                 makeChart('chart-movimento', movimento, function(v) {
                     var estado = v.tracker_estado;
