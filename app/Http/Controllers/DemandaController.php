@@ -8,6 +8,7 @@ use App\Http\Requests\StoreDemandaRequest;
 use App\Http\Requests\UpdateDemandaRequest;
 use App\Models\Demanda;
 use App\Models\Equipamento;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ class DemandaController extends Controller
 {
     public function index(Request $request): View|RedirectResponse
     {
-        $filtroKeys = ['q', 'status', 'tipo', 'prefixo', 'data_de', 'data_ate'];
+        $filtroKeys = ['q', 'status', 'tipo', 'prefixo', 'data_de', 'data_ate', 'prazo', 'prazo_de', 'prazo_ate'];
 
         if ($request->boolean('reset')) {
             session()->forget('demandas.filtros');
@@ -43,6 +44,9 @@ class DemandaController extends Controller
         $prefixo = $request->input('prefixo');
         $dataDE = $request->input('data_de');
         $dataAte = $request->input('data_ate');
+        $prazo = $request->input('prazo');
+        $prazoDE = $request->input('prazo_de');
+        $prazoAte = $request->input('prazo_ate');
 
         $demandas = Demanda::query()
             ->with(['equipamento', 'criador'])
@@ -54,7 +58,8 @@ class DemandaController extends Controller
             ->when($prefixo, fn ($q) => $q->whereHas('equipamento', fn ($eq) => $eq->where('prefixo', 'like', "%{$prefixo}%")))
             ->when($dataDE, fn ($q) => $q->whereDate('created_at', '>=', $dataDE))
             ->when($dataAte, fn ($q) => $q->whereDate('created_at', '<=', $dataAte))
-            ->latest()
+            ->when($prazo, fn ($q) => $this->filtrarPorPrazo($q, $prazo, $prazoDE, $prazoAte))
+            ->when($prazo, fn ($q) => $q->orderBy('prazo_referencia'), fn ($q) => $q->latest())
             ->paginate(25)
             ->withQueryString();
 
@@ -64,7 +69,30 @@ class DemandaController extends Controller
             ->orderBy('prefixo')
             ->get(['id', 'prefixo', 'placa']);
 
-        return view('demandas.index', compact('demandas', 'equipamentos', 'search', 'status', 'tipo', 'prefixo', 'dataDE', 'dataAte'));
+        return view('demandas.index', compact('demandas', 'equipamentos', 'search', 'status', 'tipo', 'prefixo', 'dataDE', 'dataAte', 'prazo', 'prazoDE', 'prazoAte'));
+    }
+
+    /**
+     * Aplica o filtro de prazo (vencimento) a demandas ainda em aberto.
+     */
+    private function filtrarPorPrazo(Builder $query, string $prazo, ?string $de = null, ?string $ate = null): Builder
+    {
+        $agora = now();
+
+        $query->whereNotNull('prazo_referencia')
+            ->whereNotIn('status_demanda', ['finalizado', 'cancelada']);
+
+        return match ($prazo) {
+            'vencidas' => $query->where('prazo_referencia', '<', $agora),
+            'hoje' => $query->whereDate('prazo_referencia', $agora->toDateString()),
+            '24h' => $query->whereBetween('prazo_referencia', [$agora, $agora->copy()->addDay()]),
+            '3d' => $query->whereBetween('prazo_referencia', [$agora, $agora->copy()->addDays(3)]),
+            '7d' => $query->whereBetween('prazo_referencia', [$agora, $agora->copy()->addDays(7)]),
+            'personalizado' => $query
+                ->when($de, fn ($q) => $q->whereDate('prazo_referencia', '>=', $de))
+                ->when($ate, fn ($q) => $q->whereDate('prazo_referencia', '<=', $ate)),
+            default => $query,
+        };
     }
 
     public function export(Request $request): Response
@@ -78,7 +106,8 @@ class DemandaController extends Controller
             ->when($request->input('prefixo'), fn ($q, $v) => $q->whereHas('equipamento', fn ($eq) => $eq->where('prefixo', 'like', "%{$v}%")))
             ->when($request->input('data_de'), fn ($q, $v) => $q->whereDate('created_at', '>=', $v))
             ->when($request->input('data_ate'), fn ($q, $v) => $q->whereDate('created_at', '<=', $v))
-            ->latest()
+            ->when($request->input('prazo'), fn ($q, $v) => $this->filtrarPorPrazo($q, $v, $request->input('prazo_de'), $request->input('prazo_ate')))
+            ->when($request->input('prazo'), fn ($q) => $q->orderBy('prazo_referencia'), fn ($q) => $q->latest())
             ->get();
 
         $fmt = fn ($dt) => $dt?->format('d/m/Y H:i') ?? '';

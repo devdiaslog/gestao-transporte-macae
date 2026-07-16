@@ -63,6 +63,36 @@
                 <option value="{{ $t->value }}" @selected($tipo === $t->value)>{{ $t->label() }}</option>
             @endforeach
         </select>
+        <select name="prazo"
+                class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
+                       text-zinc-900 shadow-xs outline-none
+                       focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                       dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
+                       dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+            <option value="">Prazo — todos</option>
+            <option value="vencidas" @selected($prazo === 'vencidas')>⚠ Vencidas</option>
+            <option value="hoje" @selected($prazo === 'hoje')>Vence hoje</option>
+            <option value="24h" @selected($prazo === '24h')>Próximas 24h</option>
+            <option value="3d" @selected($prazo === '3d')>Próximos 3 dias</option>
+            <option value="7d" @selected($prazo === '7d')>Próximos 7 dias</option>
+            <option value="personalizado" @selected($prazo === 'personalizado')>Personalizado…</option>
+        </select>
+        <div id="prazo-range" class="flex items-center gap-1.5 {{ $prazo === 'personalizado' ? '' : 'hidden' }}">
+            <span class="text-xs text-zinc-400 dark:text-zinc-600">Prazo:</span>
+            <input type="date" name="prazo_de" value="{{ $prazoDE }}"
+                   class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
+                          text-zinc-900 shadow-xs outline-none
+                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
+                          dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
+            <span class="text-xs text-zinc-400 dark:text-zinc-600">até</span>
+            <input type="date" name="prazo_ate" value="{{ $prazoAte }}"
+                   class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
+                          text-zinc-900 shadow-xs outline-none
+                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
+                          dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
+        </div>
         <div class="flex items-center gap-1.5">
             <span class="text-xs text-zinc-400 dark:text-zinc-600">Cadastro:</span>
             <input type="date" name="data_de" value="{{ $dataDE }}"
@@ -95,7 +125,8 @@
             </svg>
             Exportar
         </a>
-        @if($search || $status !== 'active' || $tipo || $prefixo || $dataDE || $dataAte)
+        @if($search || $status !== 'active' || $tipo || $prefixo || $dataDE || $dataAte || $prazo)
+            {{-- prazo_de/prazo_ate acompanham $prazo === 'personalizado' --}}
             <a href="{{ route('demandas.index', ['reset' => '1']) }}"
                class="h-9 inline-flex items-center gap-1 rounded-lg px-3 text-sm text-zinc-400 hover:text-zinc-700
                       dark:hover:text-zinc-200">
@@ -794,6 +825,16 @@
         return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
             + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
     }
+
+    // Prazo personalizado — revela intervalo de datas
+    (function () {
+        var prazoSel   = document.querySelector('select[name="prazo"]');
+        var prazoRange = document.getElementById('prazo-range');
+        if (! prazoSel || ! prazoRange) { return; }
+        prazoSel.addEventListener('change', function () {
+            prazoRange.classList.toggle('hidden', prazoSel.value !== 'personalizado');
+        });
+    })();
 
     // Exportar — mantém filtros no href
     (function () {
