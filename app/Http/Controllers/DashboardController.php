@@ -412,32 +412,59 @@ class DashboardController extends Controller
             ];
         })->all();
 
-        // ── Top rotas (origem → destino) ─────────────────────────────────────────
-        $topRotas = $demandas
+        // ── Metadados de status para empilhamento nos gráficos ───────────────────
+        $statusMeta = [
+            ['key' => 'pendente',     'label' => 'Pendente',     'cor' => '#a1a1aa'],
+            ['key' => 'em_andamento', 'label' => 'Em Andamento', 'cor' => '#3b82f6'],
+            ['key' => 'finalizado',   'label' => 'Finalizado',   'cor' => '#10b981'],
+            ['key' => 'cancelada',    'label' => 'Cancelada',    'cor' => '#f43f5e'],
+        ];
+
+        $porStatusDe = fn ($grupo): array => [
+            'pendente' => $grupo->where('status_demanda', StatusDemanda::Pendente)->count(),
+            'em_andamento' => $grupo->where('status_demanda', StatusDemanda::EmAndamento)->count(),
+            'finalizado' => $grupo->where('status_demanda', StatusDemanda::Finalizado)->count(),
+            'cancelada' => $grupo->where('status_demanda', StatusDemanda::Cancelada)->count(),
+        ];
+
+        // ── Top rotas (origem → destino), segmentadas por status ─────────────────
+        $rotasGroup = $demandas
             ->filter(fn (Demanda $d) => ! empty($d->origem) && ! empty($d->destino))
-            ->groupBy(fn (Demanda $d) => $d->origem.' → '.$d->destino)
+            ->groupBy(fn (Demanda $d) => $d->origem.' → '.$d->destino);
+
+        $topRotas = $rotasGroup
             ->map->count()
             ->sortDesc()
             ->take(10)
-            ->map(fn ($qtd, $rota) => ['rota' => $rota, 'total' => $qtd])
+            ->map(fn ($total, $rota) => [
+                'rota' => $rota,
+                'total' => $total,
+                'por_status' => $porStatusDe($rotasGroup->get($rota)),
+            ])
             ->values()
             ->all();
 
-        // ── Top veículos por nº de demandas ──────────────────────────────────────
-        $topVeiculos = $demandas
+        // ── Top veículos por nº de demandas, segmentados por status ──────────────
+        $veiculosGroup = $demandas
             ->filter(fn (Demanda $d) => $d->equipamento !== null)
-            ->groupBy(fn (Demanda $d) => $d->equipamento->prefixo)
+            ->groupBy(fn (Demanda $d) => $d->equipamento->prefixo);
+
+        $topVeiculos = $veiculosGroup
             ->map->count()
             ->sortDesc()
             ->take(10)
-            ->map(fn ($qtd, $prefixo) => ['prefixo' => $prefixo, 'total' => $qtd])
+            ->map(fn ($total, $prefixo) => [
+                'prefixo' => $prefixo,
+                'total' => $total,
+                'por_status' => $porStatusDe($veiculosGroup->get($prefixo)),
+            ])
             ->values()
             ->all();
 
         return view('dashboard.demandas', compact(
             'total', 'emAberto', 'pendentes', 'emAndamento', 'finalizadas', 'canceladas',
             'vencidas', 'venceEm24h', 'naoClassificadas', 'taxaConclusao', 'tempoMedioAtendMin',
-            'porStatus', 'porTipo', 'porPrazo', 'pctNoPrazo', 'evolucao', 'topRotas', 'topVeiculos', 'agora'
+            'porStatus', 'porTipo', 'porPrazo', 'pctNoPrazo', 'evolucao', 'topRotas', 'topVeiculos', 'statusMeta', 'agora'
         ));
     }
 

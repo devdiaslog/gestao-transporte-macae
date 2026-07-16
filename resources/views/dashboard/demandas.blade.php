@@ -174,6 +174,14 @@
             var evolucao    = @json($evolucao);
             var topRotas    = @json($topRotas);
             var topVeiculos = @json($topVeiculos);
+            var statusMeta  = @json($statusMeta);
+
+            function stackSeries(rows) {
+                return statusMeta.map(function (s) {
+                    return { name: s.label, data: rows.map(function (r) { return r.por_status[s.key]; }) };
+                });
+            }
+            var statusColors = statusMeta.map(function (s) { return s.cor; });
 
             // Donut — Status
             new ApexCharts(document.getElementById('chart-status'), {
@@ -236,34 +244,34 @@
                 theme: { mode: mode },
             }).render();
 
-            // Barra horizontal — Top rotas
+            // Barra horizontal empilhada por status — Top rotas
             if (topRotas.length) {
                 new ApexCharts(document.getElementById('chart-rotas'), {
-                    chart: { type: 'bar', height: Math.max(240, topRotas.length * 34), background: 'transparent', toolbar: { show: false } },
-                    series: [{ name: 'Demandas', data: topRotas.map(function (r) { return r.total; }) }],
+                    chart: { type: 'bar', stacked: true, height: Math.max(260, topRotas.length * 36), background: 'transparent', toolbar: { show: false } },
+                    series: stackSeries(topRotas),
                     xaxis: { categories: topRotas.map(function (r) { return r.rota; }), labels: { style: { colors: [lblClr] } }, axisBorder: { color: gridClr }, axisTicks: { color: gridClr } },
                     yaxis: { labels: { style: { colors: [lblClr], fontSize: '11px' } } },
-                    colors: ['#6366f1'],
-                    plotOptions: { bar: { horizontal: true, borderRadius: 3, barHeight: '65%', dataLabels: { position: 'center' } } },
-                    dataLabels: { enabled: true, style: { fontSize: '11px', fontWeight: '600', colors: ['#fff'] } },
-                    legend: { show: false },
+                    colors: statusColors,
+                    plotOptions: { bar: { horizontal: true, borderRadius: 3, barHeight: '65%', dataLabels: { total: { enabled: true, style: { fontSize: '11px', fontWeight: '700', color: lblClr } } } } },
+                    dataLabels: { enabled: true, style: { fontSize: '10px', fontWeight: '600', colors: ['#fff'] }, formatter: function (v) { return v > 0 ? v : ''; } },
+                    legend: { show: true, position: 'bottom', labels: { colors: lblClr } },
                     grid: { borderColor: gridClr },
                     tooltip: { theme: mode },
                     theme: { mode: mode },
                 }).render();
             }
 
-            // Barra horizontal — Top veículos
+            // Barra horizontal empilhada por status — Top veículos
             if (topVeiculos.length) {
                 new ApexCharts(document.getElementById('chart-veiculos'), {
-                    chart: { type: 'bar', height: Math.max(240, topVeiculos.length * 34), background: 'transparent', toolbar: { show: false } },
-                    series: [{ name: 'Demandas', data: topVeiculos.map(function (v) { return v.total; }) }],
+                    chart: { type: 'bar', stacked: true, height: Math.max(260, topVeiculos.length * 36), background: 'transparent', toolbar: { show: false } },
+                    series: stackSeries(topVeiculos),
                     xaxis: { categories: topVeiculos.map(function (v) { return v.prefixo; }), labels: { style: { colors: [lblClr] } }, axisBorder: { color: gridClr }, axisTicks: { color: gridClr } },
                     yaxis: { labels: { style: { colors: [lblClr], fontSize: '11px' } } },
-                    colors: ['#0ea5e9'],
-                    plotOptions: { bar: { horizontal: true, borderRadius: 3, barHeight: '65%', dataLabels: { position: 'center' } } },
-                    dataLabels: { enabled: true, style: { fontSize: '11px', fontWeight: '600', colors: ['#fff'] } },
-                    legend: { show: false },
+                    colors: statusColors,
+                    plotOptions: { bar: { horizontal: true, borderRadius: 3, barHeight: '65%', dataLabels: { total: { enabled: true, style: { fontSize: '11px', fontWeight: '700', color: lblClr } } } } },
+                    dataLabels: { enabled: true, style: { fontSize: '10px', fontWeight: '600', colors: ['#fff'] }, formatter: function (v) { return v > 0 ? v : ''; } },
+                    legend: { show: true, position: 'bottom', labels: { colors: lblClr } },
                     grid: { borderColor: gridClr },
                     tooltip: { theme: mode },
                     theme: { mode: mode },
