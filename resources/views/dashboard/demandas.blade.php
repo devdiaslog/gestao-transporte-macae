@@ -66,8 +66,8 @@
             $kpis = [
                 ['label' => 'Total de demandas',   'valor' => $total,                    'sub' => 'no período',                  'cor' => 'text-zinc-900 dark:text-zinc-100', 'bar' => 'bg-zinc-400'],
                 ['label' => 'Em aberto',            'valor' => $emAberto,                 'sub' => "{$pendentes} pend. · {$emAndamento} em and.", 'cor' => 'text-blue-600 dark:text-blue-400', 'bar' => 'bg-blue-500'],
-                ['label' => 'Vencidas',             'valor' => $vencidas,                 'sub' => 'prazo estourado, em aberto',  'cor' => 'text-rose-600 dark:text-rose-400', 'bar' => 'bg-rose-500', 'alerta' => $vencidas > 0],
-                ['label' => 'Vence em 24h',         'valor' => $venceEm24h,               'sub' => 'requer atenção',              'cor' => 'text-amber-600 dark:text-amber-400', 'bar' => 'bg-amber-500', 'alerta' => $venceEm24h > 0],
+                ['label' => 'Vencidas',             'valor' => $vencidas,                 'sub' => 'prazo estourado, em aberto',  'cor' => 'text-rose-600 dark:text-rose-400', 'bar' => 'bg-rose-500'],
+                ['label' => 'Vence em 24h',         'valor' => $venceEm24h,               'sub' => 'requer atenção',              'cor' => 'text-amber-600 dark:text-amber-400', 'bar' => 'bg-amber-500'],
                 ['label' => 'Não classificadas',    'valor' => $naoClassificadas,         'sub' => 'sem tipo, em aberto',         'cor' => 'text-zinc-600 dark:text-zinc-300', 'bar' => 'bg-zinc-300 dark:bg-zinc-600'],
                 ['label' => 'Taxa de conclusão',    'valor' => $taxaConclusao.'%',        'sub' => "{$finalizadas} fin. · {$canceladas} canc.", 'cor' => 'text-emerald-600 dark:text-emerald-400', 'bar' => 'bg-emerald-500'],
                 ['label' => 'Tempo médio atend.',   'valor' => $tempoMedioAtendMin > 0 ? $fmtMin($tempoMedioAtendMin) : '—', 'sub' => 'fim − início (finalizadas)', 'cor' => 'text-zinc-900 dark:text-zinc-100', 'bar' => 'bg-violet-500'],
@@ -103,9 +103,10 @@
             </div>
             <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                 <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
-                    <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Origem do Cadastro</p>
+                    <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Cumprimento de Prazo</p>
+                    <p class="text-[11px] text-zinc-400 dark:text-zinc-500">% no prazo — demandas com prazo definido (exceto canceladas)</p>
                 </div>
-                <div class="p-4"><div id="chart-cadastro"></div></div>
+                <div class="p-4"><div id="chart-prazo"></div></div>
             </div>
         </div>
 
@@ -168,7 +169,8 @@
 
             var porStatus   = @json($porStatus);
             var porTipo     = @json($porTipo);
-            var porCadastro = @json($porCadastro);
+            var porPrazo    = @json($porPrazo);
+            var pctNoPrazo  = @json($pctNoPrazo);
             var evolucao    = @json($evolucao);
             var topRotas    = @json($topRotas);
             var topVeiculos = @json($topVeiculos);
@@ -187,14 +189,15 @@
                 theme: { mode: mode },
             }).render();
 
-            // Donut — Cadastro
-            new ApexCharts(document.getElementById('chart-cadastro'), {
+            // Donut — Cumprimento de prazo (No prazo vs Vencidas)
+            new ApexCharts(document.getElementById('chart-prazo'), {
                 chart: { type: 'donut', height: 260, background: 'transparent' },
-                series: porCadastro.map(function (s) { return s.valor; }),
-                labels: porCadastro.map(function (s) { return s.label; }),
-                colors: porCadastro.map(function (s) { return s.cor; }),
+                series: porPrazo.map(function (s) { return s.valor; }),
+                labels: porPrazo.map(function (s) { return s.label; }),
+                colors: porPrazo.map(function (s) { return s.cor; }),
                 legend: { position: 'bottom', labels: { colors: lblClr } },
                 dataLabels: { enabled: true, formatter: function (val, o) { return o.w.config.series[o.seriesIndex]; } },
+                plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'No prazo', color: lblClr, formatter: function () { return pctNoPrazo + '%'; } } } } } },
                 stroke: { colors: [isDark ? '#18181b' : '#fff'] },
                 tooltip: { theme: mode },
                 theme: { mode: mode },

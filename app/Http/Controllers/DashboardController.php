@@ -372,10 +372,26 @@ class DashboardController extends Controller
             ['label' => 'Não classificada', 'valor' => $demandas->whereNull('tipo_demanda')->count(),                        'cor' => '#d4d4d8'],
         ];
 
-        // ── Origem do cadastro (Manual x Integração) ─────────────────────────────
-        $porCadastro = [
-            ['label' => 'Integração', 'valor' => $demandas->where('tipo_cadastro', TipoCadastro::Integracao)->count(), 'cor' => '#06b6d4'],
-            ['label' => 'Manual',     'valor' => $demandas->where('tipo_cadastro', TipoCadastro::Manual)->count(),     'cor' => '#84cc16'],
+        // ── Cumprimento de prazo (No prazo x Vencidas) ───────────────────────────
+        // Base: demandas com prazo definido, exceto canceladas.
+        $comPrazo = $demandas->filter(fn (Demanda $d) => $d->prazo_referencia !== null
+            && $d->status_demanda !== StatusDemanda::Cancelada);
+
+        $foraPrazoQtd = $comPrazo->filter(function (Demanda $d) use ($agora) {
+            if ($d->status_demanda === StatusDemanda::Finalizado) {
+                return $d->data_hora_fim_demanda !== null
+                    && $d->data_hora_fim_demanda->isAfter($d->prazo_referencia);
+            }
+
+            return $d->prazo_referencia->isBefore($agora);
+        })->count();
+
+        $noPrazoQtd = $comPrazo->count() - $foraPrazoQtd;
+        $pctNoPrazo = $comPrazo->count() > 0 ? round($noPrazoQtd / $comPrazo->count() * 100, 1) : 0;
+
+        $porPrazo = [
+            ['label' => 'No prazo', 'valor' => $noPrazoQtd,   'cor' => '#10b981'],
+            ['label' => 'Vencidas', 'valor' => $foraPrazoQtd, 'cor' => '#f43f5e'],
         ];
 
         // ── Evolução diária — criadas nos últimos 14 dias ────────────────────────
@@ -421,7 +437,7 @@ class DashboardController extends Controller
         return view('dashboard.demandas', compact(
             'total', 'emAberto', 'pendentes', 'emAndamento', 'finalizadas', 'canceladas',
             'vencidas', 'venceEm24h', 'naoClassificadas', 'taxaConclusao', 'tempoMedioAtendMin',
-            'porStatus', 'porTipo', 'porCadastro', 'evolucao', 'topRotas', 'topVeiculos', 'agora'
+            'porStatus', 'porTipo', 'porPrazo', 'pctNoPrazo', 'evolucao', 'topRotas', 'topVeiculos', 'agora'
         ));
     }
 
