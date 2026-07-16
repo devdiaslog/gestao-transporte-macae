@@ -66,13 +66,13 @@
         {{-- KPIs --}}
         @php
             $kpis = [
-                ['label' => 'Total de demandas',   'valor' => $total,                    'sub' => 'no período',                  'cor' => 'text-zinc-900 dark:text-zinc-100', 'bar' => 'bg-zinc-400'],
-                ['label' => 'Em aberto',            'valor' => $emAberto,                 'sub' => "{$pendentes} pend. · {$emAndamento} em and.", 'cor' => 'text-blue-600 dark:text-blue-400', 'bar' => 'bg-blue-500'],
-                ['label' => 'Vencidas',             'valor' => $vencidas,                 'sub' => 'prazo estourado, em aberto',  'cor' => 'text-rose-600 dark:text-rose-400', 'bar' => 'bg-rose-500'],
-                ['label' => 'Vence em 24h',         'valor' => $venceEm24h,               'sub' => 'requer atenção',              'cor' => 'text-amber-600 dark:text-amber-400', 'bar' => 'bg-amber-500'],
-                ['label' => 'Não classificadas',    'valor' => $naoClassificadas,         'sub' => 'sem tipo, em aberto',         'cor' => 'text-zinc-600 dark:text-zinc-300', 'bar' => 'bg-zinc-300 dark:bg-zinc-600'],
-                ['label' => 'Taxa de conclusão',    'valor' => $taxaConclusao.'%',        'sub' => "{$finalizadas} fin. · {$canceladas} canc.", 'cor' => 'text-emerald-600 dark:text-emerald-400', 'bar' => 'bg-emerald-500'],
-                ['label' => 'Tempo médio atend.',   'valor' => $tempoMedioAtendMin > 0 ? $fmtMin($tempoMedioAtendMin) : '—', 'sub' => 'fim − início (finalizadas)', 'cor' => 'text-zinc-900 dark:text-zinc-100', 'bar' => 'bg-violet-500'],
+                ['label' => 'Total de demandas',   'valor' => $total,                    'sub' => 'no período',                  'cor' => 'text-zinc-900 dark:text-zinc-100', 'bar' => 'bg-zinc-400', 'info' => 'Todas as demandas cadastradas (não excluídas), independente de status ou origem do cadastro.'],
+                ['label' => 'Em aberto',            'valor' => $emAberto,                 'sub' => "{$pendentes} pend. · {$emAndamento} em and.", 'cor' => 'text-blue-600 dark:text-blue-400', 'bar' => 'bg-blue-500', 'info' => 'Demandas ainda não encerradas: soma de Pendentes e Em Andamento. Não inclui Finalizadas nem Canceladas.'],
+                ['label' => 'Vencidas',             'valor' => $vencidas,                 'sub' => 'prazo estourado, em aberto',  'cor' => 'text-rose-600 dark:text-rose-400', 'bar' => 'bg-rose-500', 'info' => 'Demandas em aberto (Pendente ou Em Andamento) cujo prazo de referência já passou. Só conta as que têm prazo definido.'],
+                ['label' => 'Vence em 24h',         'valor' => $venceEm24h,               'sub' => 'requer atenção',              'cor' => 'text-amber-600 dark:text-amber-400', 'bar' => 'bg-amber-500', 'info' => 'Demandas em aberto cujo prazo de referência vence nas próximas 24 horas a partir de agora.'],
+                ['label' => 'Não classificadas',    'valor' => $naoClassificadas,         'sub' => 'sem tipo, em aberto',         'cor' => 'text-zinc-600 dark:text-zinc-300', 'bar' => 'bg-zinc-300 dark:bg-zinc-600', 'info' => 'Demandas em aberto sem tipo definido (Load/Backload/Transferência). Ocorre na integração quando a API não informa origem/destino.'],
+                ['label' => 'Taxa de conclusão',    'valor' => $taxaConclusao.'%',        'sub' => "{$finalizadas} fin. · {$canceladas} canc.", 'cor' => 'text-emerald-600 dark:text-emerald-400', 'bar' => 'bg-emerald-500', 'info' => 'Percentual de demandas encerradas que foram concluídas: Finalizadas ÷ (Finalizadas + Canceladas). Não considera as que estão em aberto.'],
+                ['label' => 'Tempo médio atend.',   'valor' => $tempoMedioAtendMin > 0 ? $fmtMin($tempoMedioAtendMin) : '—', 'sub' => 'fim − início (finalizadas)', 'cor' => 'text-zinc-900 dark:text-zinc-100', 'bar' => 'bg-violet-500', 'info' => 'Média da duração (data/hora de fim − início) das demandas Finalizadas que têm início e fim preenchidos.'],
             ];
         @endphp
         <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
@@ -80,7 +80,7 @@
                 <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 {{ ($k['alerta'] ?? false) ? 'ring-1 ring-rose-200 dark:ring-rose-900/40' : '' }}">
                     <div class="h-1 w-full {{ $k['bar'] }}"></div>
                     <div class="p-3">
-                        <p class="truncate text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500" title="{{ $k['label'] }}">{{ $k['label'] }}</p>
+                        <p class="flex items-center text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500"><span class="truncate" title="{{ $k['label'] }}">{{ $k['label'] }}</span>{!! $info($k['info']) !!}</p>
                         <p class="mt-1 text-2xl font-extrabold tabular-nums leading-none {{ $k['cor'] }}">{{ $k['valor'] }}</p>
                         <p class="mt-1 truncate text-[10px] text-zinc-400 dark:text-zinc-600" title="{{ $k['sub'] }}">{{ $k['sub'] }}</p>
                     </div>
