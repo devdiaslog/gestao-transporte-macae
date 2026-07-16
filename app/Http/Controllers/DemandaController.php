@@ -50,8 +50,8 @@ class DemandaController extends Controller
 
         $demandas = Demanda::query()
             ->with(['equipamento', 'criador'])
-            ->when($search, fn ($q) => $q->where('numero_demanda', 'like', "%{$search}%")
-                ->orWhere('documento_demanda', 'like', "%{$search}%"))
+            ->when($search, fn ($q) => $q->where(fn ($sub) => $sub->where('numero_demanda', 'like', "%{$search}%")
+                ->orWhere('documento_demanda', 'like', "%{$search}%")))
             ->when($status === 'active', fn ($q) => $q->whereIn('status_demanda', ['pendente', 'em_andamento']))
             ->when($status && $status !== 'active', fn ($q) => $q->where('status_demanda', $status))
             ->when($tipo, fn ($q) => $q->where('tipo_demanda', $tipo))
@@ -97,11 +97,14 @@ class DemandaController extends Controller
 
     public function export(Request $request): Response
     {
+        $status = $request->input('status');
+
         $demandas = Demanda::query()
             ->with(['equipamento', 'criador'])
-            ->when($request->input('q'), fn ($q, $v) => $q->where('numero_demanda', 'like', "%{$v}%")
-                ->orWhere('documento_demanda', 'like', "%{$v}%"))
-            ->when($request->input('status'), fn ($q, $v) => $q->where('status_demanda', $v))
+            ->when($request->input('q'), fn ($q, $v) => $q->where(fn ($sub) => $sub->where('numero_demanda', 'like', "%{$v}%")
+                ->orWhere('documento_demanda', 'like', "%{$v}%")))
+            ->when($status === 'active', fn ($q) => $q->whereIn('status_demanda', ['pendente', 'em_andamento']))
+            ->when($status && $status !== 'active', fn ($q) => $q->where('status_demanda', $status))
             ->when($request->input('tipo'), fn ($q, $v) => $q->where('tipo_demanda', $v))
             ->when($request->input('prefixo'), fn ($q, $v) => $q->whereHas('equipamento', fn ($eq) => $eq->where('prefixo', 'like', "%{$v}%")))
             ->when($request->input('data_de'), fn ($q, $v) => $q->whereDate('created_at', '>=', $v))
