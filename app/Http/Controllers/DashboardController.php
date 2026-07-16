@@ -404,11 +404,14 @@ class DashboardController extends Controller
 
         $evolucao = collect(range(13, 0))->map(function ($diasAtras) use ($agora, $criadasPorDia, $finalizadasPorDia) {
             $dia = $agora->copy()->subDays($diasAtras)->toDateString();
+            $criadas = $criadasPorDia->get($dia)?->count() ?? 0;
+            $finalizadas = $finalizadasPorDia->get($dia)?->count() ?? 0;
 
             return [
                 'dia' => Carbon::parse($dia)->format('d/m'),
-                'criadas' => $criadasPorDia->get($dia)?->count() ?? 0,
-                'finalizadas' => $finalizadasPorDia->get($dia)?->count() ?? 0,
+                'criadas' => $criadas,
+                'finalizadas' => $finalizadas,
+                'taxa' => $criadas > 0 ? round($finalizadas / $criadas * 100, 1) : null,
             ];
         })->all();
 

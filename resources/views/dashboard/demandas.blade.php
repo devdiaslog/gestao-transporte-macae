@@ -116,12 +116,13 @@
         <div class="mb-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
                 <div>
-                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Evolução — últimos 14 dias {!! $info('Eixo X por dia. Criadas: contadas pela data de cadastro (created_at). Finalizadas: contadas pela data de conclusão (fim da demanda). As duas séries usam datas diferentes.') !!}</p>
+                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Evolução — últimos 14 dias {!! $info('Eixo X por dia. Criadas: pela data de cadastro (created_at). Finalizadas: pela data de conclusão (fim da demanda). A linha é a taxa de conclusão diária (Finalizadas ÷ Criadas), no eixo direito; dias sem criadas não têm ponto.') !!}</p>
                     <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Criadas por data de cadastro · Finalizadas por data de conclusão</p>
                 </div>
                 <div class="flex items-center gap-4 text-xs text-zinc-500 dark:text-zinc-400">
                     <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-blue-500"></span>Criadas</span>
                     <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-emerald-500"></span>Finalizadas</span>
+                    <span class="flex items-center gap-1.5"><span class="h-0.5 w-3.5 rounded-sm bg-amber-500"></span>Taxa de conclusão</span>
                 </div>
             </div>
             <div class="p-4"><div id="chart-evolucao"></div></div>
@@ -231,21 +232,38 @@
                 theme: { mode: mode },
             }).render();
 
-            // Barra agrupada — Evolução
+            // Combo — Evolução (barras Criadas/Finalizadas + linha Taxa de conclusão)
+            var taxaVals = evolucao.map(function (e) { return e.taxa; }).filter(function (v) { return v !== null; });
+            var maxTaxa  = Math.max.apply(null, [100].concat(taxaVals));
             new ApexCharts(document.getElementById('chart-evolucao'), {
-                chart: { type: 'bar', height: 280, background: 'transparent', toolbar: { show: false } },
+                chart: { type: 'line', height: 300, background: 'transparent', toolbar: { show: false } },
                 series: [
-                    { name: 'Criadas', data: evolucao.map(function (e) { return e.criadas; }) },
-                    { name: 'Finalizadas', data: evolucao.map(function (e) { return e.finalizadas; }) },
+                    { name: 'Criadas', type: 'column', data: evolucao.map(function (e) { return e.criadas; }) },
+                    { name: 'Finalizadas', type: 'column', data: evolucao.map(function (e) { return e.finalizadas; }) },
+                    { name: 'Taxa de conclusão', type: 'line', data: evolucao.map(function (e) { return e.taxa; }) },
                 ],
                 xaxis: { categories: evolucao.map(function (e) { return e.dia; }), labels: { style: { colors: Array(evolucao.length).fill(lblClr), fontSize: '11px' } }, axisBorder: { color: gridClr }, axisTicks: { color: gridClr } },
-                yaxis: { labels: { style: { colors: [lblClr] } } },
-                colors: ['#3b82f6', '#10b981'],
-                plotOptions: { bar: { borderRadius: 3, columnWidth: '65%' } },
-                dataLabels: { enabled: false },
+                yaxis: [
+                    { seriesName: 'Criadas', labels: { style: { colors: [lblClr] } } },
+                    { seriesName: 'Finalizadas', show: false },
+                    { seriesName: 'Taxa de conclusão', opposite: true, min: 0, max: maxTaxa, tickAmount: 5, labels: { style: { colors: [lblClr] }, formatter: function (v) { return Math.round(v) + '%'; } } },
+                ],
+                colors: ['#3b82f6', '#10b981', '#f59e0b'],
+                stroke: { width: [0, 0, 2.5], curve: 'straight' },
+                markers: { size: [0, 0, 4] },
+                plotOptions: { bar: { borderRadius: 3, columnWidth: '65%', dataLabels: { position: 'top' } } },
+                dataLabels: {
+                    enabled: true, enabledOnSeries: [0, 1, 2], offsetY: -16,
+                    style: { fontSize: '10px', fontWeight: '600', colors: [lblClr, lblClr, '#f59e0b'] },
+                    background: { enabled: false },
+                    formatter: function (v, opts) {
+                        if (opts.seriesIndex === 2) { return v === null ? '' : Math.round(v) + '%'; }
+                        return v > 0 ? v : '';
+                    },
+                },
                 legend: { show: false },
                 grid: { borderColor: gridClr },
-                tooltip: { theme: mode },
+                tooltip: { theme: mode, shared: true, intersect: false, y: { formatter: function (v, opts) { return opts && opts.seriesIndex === 2 ? (v === null ? '—' : Math.round(v) + '%') : v; } } },
                 theme: { mode: mode },
             }).render();
 
