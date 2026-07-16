@@ -35,6 +35,10 @@
                class="flex items-center gap-2 px-3 py-3 text-sm font-medium transition-colors {{ request()->routeIs('dashboard.indicadores') ? $navActive : $navInactive }}">
                 Indicadores
             </a>
+            <a href="{{ route('dashboard.demandas') }}"
+               class="flex items-center gap-2 px-3 py-3 text-sm font-medium transition-colors {{ request()->routeIs('dashboard.demandas') ? $navActive : $navInactive }}">
+                Demandas
+            </a>
         </div>
     </nav>
 

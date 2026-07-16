@@ -308,6 +308,123 @@ class DashboardController extends Controller
         return view('dashboard.status', compact('snapshot', 'anterior'));
     }
 
+    public function demandas(): View
+    {
+        $agora = now();
+
+        $demandas = Demanda::query()->with('equipamento:id,prefixo')->get();
+
+        $total = $demandas->count();
+
+        // ── Contagem por status ──────────────────────────────────────────────────
+        $pendentes = $demandas->where('status_demanda', StatusDemanda::Pendente)->count();
+        $emAndamento = $demandas->where('status_demanda', StatusDemanda::EmAndamento)->count();
+        $finalizadas = $demandas->where('status_demanda', StatusDemanda::Finalizado)->count();
+        $canceladas = $demandas->where('status_demanda', StatusDemanda::Cancelada)->count();
+        $emAberto = $pendentes + $emAndamento;
+
+        // ── Vencidas: prazo já passou e ainda em aberto ──────────────────────────
+        $vencidas = $demandas
+            ->filter(fn (Demanda $d) => $d->prazo_referencia !== null
+                && $d->prazo_referencia->isBefore($agora)
+                && in_array($d->status_demanda, [StatusDemanda::Pendente, StatusDemanda::EmAndamento]))
+            ->count();
+
+        // ── Vence nas próximas 24h (em aberto) ───────────────────────────────────
+        $venceEm24h = $demandas
+            ->filter(fn (Demanda $d) => $d->prazo_referencia !== null
+                && $d->prazo_referencia->isBetween($agora, $agora->copy()->addDay())
+                && in_array($d->status_demanda, [StatusDemanda::Pendente, StatusDemanda::EmAndamento]))
+            ->count();
+
+        // ── Não classificadas: sem tipo definido e ainda em aberto ───────────────
+        $naoClassificadas = $demandas
+            ->filter(fn (Demanda $d) => $d->tipo_demanda === null
+                && in_array($d->status_demanda, [StatusDemanda::Pendente, StatusDemanda::EmAndamento]))
+            ->count();
+
+        // ── Taxa de conclusão ────────────────────────────────────────────────────
+        $encerradas = $finalizadas + $canceladas;
+        $taxaConclusao = $encerradas > 0 ? round($finalizadas / $encerradas * 100, 1) : 0;
+
+        // ── Tempo médio de atendimento (fim − início) das finalizadas ────────────
+        $finalizadasComTempo = $demandas
+            ->filter(fn (Demanda $d) => $d->status_demanda === StatusDemanda::Finalizado
+                && $d->data_hora_inicio_demanda !== null
+                && $d->data_hora_fim_demanda !== null);
+        $tempoMedioAtendMin = $finalizadasComTempo->isNotEmpty()
+            ? (int) round($finalizadasComTempo->avg(fn (Demanda $d) => abs($d->data_hora_inicio_demanda->diffInMinutes($d->data_hora_fim_demanda))))
+            : 0;
+
+        // ── Distribuição por status (donut) ──────────────────────────────────────
+        $porStatus = [
+            ['label' => 'Pendente',     'valor' => $pendentes,   'cor' => '#a1a1aa'],
+            ['label' => 'Em Andamento', 'valor' => $emAndamento, 'cor' => '#3b82f6'],
+            ['label' => 'Finalizado',   'valor' => $finalizadas, 'cor' => '#10b981'],
+            ['label' => 'Cancelada',    'valor' => $canceladas,  'cor' => '#f43f5e'],
+        ];
+
+        // ── Distribuição por tipo (barra) ────────────────────────────────────────
+        $porTipo = [
+            ['label' => 'Load',            'valor' => $demandas->where('tipo_demanda', TipoDemanda::Load)->count(),          'cor' => '#3b82f6'],
+            ['label' => 'Backload',        'valor' => $demandas->where('tipo_demanda', TipoDemanda::Backload)->count(),      'cor' => '#f59e0b'],
+            ['label' => 'Transferência',   'valor' => $demandas->where('tipo_demanda', TipoDemanda::Transferencia)->count(), 'cor' => '#8b5cf6'],
+            ['label' => 'Não classificada', 'valor' => $demandas->whereNull('tipo_demanda')->count(),                        'cor' => '#d4d4d8'],
+        ];
+
+        // ── Origem do cadastro (Manual x Integração) ─────────────────────────────
+        $porCadastro = [
+            ['label' => 'Integração', 'valor' => $demandas->where('tipo_cadastro', TipoCadastro::Integracao)->count(), 'cor' => '#06b6d4'],
+            ['label' => 'Manual',     'valor' => $demandas->where('tipo_cadastro', TipoCadastro::Manual)->count(),     'cor' => '#84cc16'],
+        ];
+
+        // ── Evolução diária — criadas nos últimos 14 dias ────────────────────────
+        $criadasPorDia = $demandas->groupBy(fn (Demanda $d) => $d->created_at->toDateString());
+        $finalizadasPorDia = $finalizadasComTempo
+            ->merge($demandas->where('status_demanda', StatusDemanda::Finalizado))
+            ->unique('id')
+            ->filter(fn (Demanda $d) => $d->data_hora_fim_demanda !== null)
+            ->groupBy(fn (Demanda $d) => $d->data_hora_fim_demanda->toDateString());
+
+        $evolucao = collect(range(13, 0))->map(function ($diasAtras) use ($agora, $criadasPorDia, $finalizadasPorDia) {
+            $dia = $agora->copy()->subDays($diasAtras)->toDateString();
+
+            return [
+                'dia' => Carbon::parse($dia)->format('d/m'),
+                'criadas' => $criadasPorDia->get($dia)?->count() ?? 0,
+                'finalizadas' => $finalizadasPorDia->get($dia)?->count() ?? 0,
+            ];
+        })->all();
+
+        // ── Top rotas (origem → destino) ─────────────────────────────────────────
+        $topRotas = $demandas
+            ->filter(fn (Demanda $d) => ! empty($d->origem) && ! empty($d->destino))
+            ->groupBy(fn (Demanda $d) => $d->origem.' → '.$d->destino)
+            ->map->count()
+            ->sortDesc()
+            ->take(10)
+            ->map(fn ($qtd, $rota) => ['rota' => $rota, 'total' => $qtd])
+            ->values()
+            ->all();
+
+        // ── Top veículos por nº de demandas ──────────────────────────────────────
+        $topVeiculos = $demandas
+            ->filter(fn (Demanda $d) => $d->equipamento !== null)
+            ->groupBy(fn (Demanda $d) => $d->equipamento->prefixo)
+            ->map->count()
+            ->sortDesc()
+            ->take(10)
+            ->map(fn ($qtd, $prefixo) => ['prefixo' => $prefixo, 'total' => $qtd])
+            ->values()
+            ->all();
+
+        return view('dashboard.demandas', compact(
+            'total', 'emAberto', 'pendentes', 'emAndamento', 'finalizadas', 'canceladas',
+            'vencidas', 'venceEm24h', 'naoClassificadas', 'taxaConclusao', 'tempoMedioAtendMin',
+            'porStatus', 'porTipo', 'porCadastro', 'evolucao', 'topRotas', 'topVeiculos', 'agora'
+        ));
+    }
+
     public function capturarStatus(Request $request, BigcoreService $bigcore): JsonResponse
     {
         if ($request->input('key') !== config('services.bigcore.sync_key') || ! config('services.bigcore.sync_key')) {
