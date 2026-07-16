@@ -11,6 +11,8 @@
         $m = $min % 60;
         return $d > 0 ? "{$d}d {$h}h {$m}m" : ($h > 0 ? "{$h}h {$m}m" : "{$m}m");
     };
+
+    $info = fn (string $texto): string => '<span class="ml-1.5 inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-zinc-300 text-[10px] font-bold leading-none text-zinc-400 dark:border-zinc-600 dark:text-zinc-500" title="'.e($texto).'">i</span>';
 @endphp
 
 <div class="-mx-4 flex min-h-screen flex-col sm:-mx-6 lg:-mx-8">
@@ -90,20 +92,20 @@
         <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                 <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
-                    <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Por Status</p>
+                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Por Status {!! $info('Distribuição das demandas pelos status do ciclo de vida: Pendente → Em Andamento (quando há início e veículo) → Finalizado, ou Cancelada. Total no centro do gráfico.') !!}</p>
                 </div>
                 <div class="p-4"><div id="chart-status"></div></div>
             </div>
             <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                 <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
-                    <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Por Tipo</p>
+                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Por Tipo {!! $info('Load: destino é BMAC, PACU ou PBG. Backload: origem é um desses pontos. Caso contrário, Transferência. Não classificada: demanda de integração sem origem/destino informados pela API.') !!}</p>
                     <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Load / Backload / Transferência (regra BMAC · PACU · PBG)</p>
                 </div>
                 <div class="p-4"><div id="chart-tipo"></div></div>
             </div>
             <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                 <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
-                    <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Cumprimento de Prazo</p>
+                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Cumprimento de Prazo {!! $info('Base: demandas com prazo de referência definido, exceto canceladas. Vencida = em aberto com prazo já passado, ou finalizada após o prazo. No prazo = as demais. O centro mostra o % no prazo.') !!}</p>
                     <p class="text-[11px] text-zinc-400 dark:text-zinc-500">% no prazo — demandas com prazo definido (exceto canceladas)</p>
                 </div>
                 <div class="p-4"><div id="chart-prazo"></div></div>
@@ -113,7 +115,10 @@
         {{-- Linha 2: Evolução diária --}}
         <div class="mb-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
-                <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Evolução — últimos 14 dias</p>
+                <div>
+                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Evolução — últimos 14 dias {!! $info('Eixo X por dia. Criadas: contadas pela data de cadastro (created_at). Finalizadas: contadas pela data de conclusão (fim da demanda). As duas séries usam datas diferentes.') !!}</p>
+                    <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Criadas por data de cadastro · Finalizadas por data de conclusão</p>
+                </div>
                 <div class="flex items-center gap-4 text-xs text-zinc-500 dark:text-zinc-400">
                     <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-blue-500"></span>Criadas</span>
                     <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-emerald-500"></span>Finalizadas</span>
@@ -126,7 +131,7 @@
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                 <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
-                    <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Top 10 Rotas</p>
+                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Top 10 Rotas {!! $info('As 10 rotas (origem → destino) com mais demandas. Cada barra é empilhada por status e o número ao final é o total da rota. Considera apenas demandas com origem e destino informados.') !!}</p>
                     <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Origem → Destino mais frequentes</p>
                 </div>
                 <div class="p-4">
@@ -139,7 +144,7 @@
             </div>
             <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                 <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
-                    <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Top 10 Veículos</p>
+                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Top 10 Veículos {!! $info('Os 10 veículos (prefixo) com mais demandas associadas. Cada barra é empilhada por status e o número ao final é o total do veículo. Considera apenas demandas com veículo vinculado.') !!}</p>
                     <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Nº de demandas por prefixo</p>
                 </div>
                 <div class="p-4">
