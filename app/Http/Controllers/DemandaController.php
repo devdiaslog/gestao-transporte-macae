@@ -61,8 +61,17 @@ class DemandaController extends Controller
             ->when($prazo, fn ($q) => $this->filtrarPorPrazo($q, $prazo, $prazoDE, $prazoAte))
             ->when($prazo, fn ($q) => $q->orderBy('prazo_referencia'), fn ($q) => $q->latest())
             ->paginate(25)
-            ->withQueryString()
-            ->appends('status', $status);
+            ->appends([
+                'q' => $search ?? '',
+                'status' => $status ?? '',
+                'tipo' => $tipo ?? '',
+                'prefixo' => $prefixo ?? '',
+                'data_de' => $dataDE ?? '',
+                'data_ate' => $dataAte ?? '',
+                'prazo' => $prazo ?? '',
+                'prazo_de' => $prazoDE ?? '',
+                'prazo_ate' => $prazoAte ?? '',
+            ]);
 
         $equipamentos = Equipamento::query()
             ->whereHas('tipo', fn ($q) => $q->where('nome', 'Motorizado'))
