@@ -307,4 +307,22 @@
     </div>
 </div>
 
+<script>
+(function () {
+    var targets = [1, 11, 21, 31, 41, 51];
+    var now = new Date();
+    var m   = now.getMinutes();
+    var s   = now.getSeconds();
+    var ms  = now.getMilliseconds();
+    var next = null;
+    for (var i = 0; i < targets.length; i++) {
+        if (targets[i] > m) { next = targets[i]; break; }
+    }
+    var delay = next !== null
+        ? (next - m) * 60000 - s * 1000 - ms
+        : (60 - m + targets[0]) * 60000 - s * 1000 - ms;
+    setTimeout(function () { location.reload(); }, delay);
+})();
+</script>
+
 </x-layouts.app>
