@@ -41,7 +41,8 @@ class DemandaController extends Controller
         }
 
         $search = $request->input('q');
-        $status = $request->input('status', 'active');
+        // Padrão da tela: atendimentos em andamento.
+        $status = $request->input('status', StatusDemanda::EmAndamento->value);
         $tipo = $request->input('tipo');
         $fonte = $request->input('fonte');
         $prefixo = $request->input('prefixo');
@@ -108,6 +109,19 @@ class DemandaController extends Controller
                 ->when($ate, fn ($q) => $q->whereDate('prazo_demanda', '<=', $ate)),
             default => $query,
         };
+    }
+
+    public function edit(Demanda $demanda): View
+    {
+        $demanda->load(['itens', 'equipamento', 'criador']);
+
+        $equipamentos = Equipamento::query()
+            ->whereHas('tipo', fn ($q) => $q->where('nome', 'Motorizado'))
+            ->whereNotNull('prefixo')
+            ->orderBy('prefixo')
+            ->get(['id', 'prefixo', 'placa']);
+
+        return view('demandas.edit', compact('demanda', 'equipamentos'));
     }
 
     public function importar(ImportarDemandasRequest $request, ImportadorDemandas $importador): RedirectResponse
@@ -212,11 +226,17 @@ class DemandaController extends Controller
         return response()->json(['ok' => true, 'id' => $demanda->id]);
     }
 
-    public function update(UpdateDemandaRequest $request, Demanda $demanda): JsonResponse
+    public function update(UpdateDemandaRequest $request, Demanda $demanda): JsonResponse|RedirectResponse
     {
         $demanda->update($request->validated());
 
-        return response()->json(['ok' => true]);
+        // O modal da listagem envia via fetch; a página de edição usa form comum.
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true]);
+        }
+
+        return redirect()->route('demandas.edit', $demanda)
+            ->with('success', 'Demanda #'.$demanda->numero_demanda.' atualizada.');
     }
 
     public function cancelar(Demanda $demanda): RedirectResponse

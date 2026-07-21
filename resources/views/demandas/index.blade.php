@@ -152,7 +152,7 @@
             </svg>
             Exportar
         </a>
-        @if($search || $status !== 'active' || $tipo || $fonte || $prefixo || $dataDE || $dataAte || $prazo)
+        @if($search || $status !== 'em_andamento' || $tipo || $fonte || $prefixo || $dataDE || $dataAte || $prazo)
             {{-- prazo_de/prazo_ate acompanham $prazo === 'personalizado' --}}
             <a href="{{ route('demandas.index', ['reset' => '1']) }}"
                class="h-9 inline-flex items-center gap-1 rounded-lg px-3 text-sm text-zinc-400 hover:text-zinc-700
@@ -203,6 +203,9 @@
                                     && ! in_array($demanda->status_demanda->value, ['finalizado', 'cancelada']);
                                 $origens = $demanda->locaisOrigem();
                                 $destinos = $demanda->locaisDestino();
+                                $totalItens = $demanda->itens->count();
+                                $encerrados = $demanda->itensEncerrados();
+                                $tudoFeito = $totalItens > 0 && $encerrados === $totalItens;
                                 $podeFinalizar = $demanda->data_hora_inicio_demanda !== null
                                     && $demanda->status_demanda->value !== 'finalizado'
                                     && $demanda->status_demanda->value !== 'cancelada';
@@ -262,8 +265,15 @@
                                             <span class="text-zinc-400 dark:text-zinc-600"> → </span>
                                             <span>{{ implode(', ', $destinos) ?: '—' }}</span>
                                         </div>
-                                        <div class="mt-0.5 text-[10px] text-zinc-400 dark:text-zinc-600">
-                                            {{ $demanda->itens->count() }} {{ $demanda->itens->count() === 1 ? 'item' : 'itens' }}
+                                        <div class="mt-1 flex items-center gap-1.5">
+                                            <span class="rounded px-1.5 py-0.5 text-[10px] font-bold tabular-nums
+                                                         {{ $tudoFeito
+                                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                                            : 'bg-slate-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400' }}"
+                                                  title="{{ $encerrados }} de {{ $totalItens }} itens concluídos (entregues ou cancelados)">
+                                                {{ $encerrados }}/{{ $totalItens }}
+                                            </span>
+                                            <span class="text-[10px] text-zinc-400 dark:text-zinc-600">itens</span>
                                         </div>
                                     @else
                                         <span class="text-zinc-400 dark:text-zinc-600">—</span>
@@ -322,17 +332,16 @@
                                 {{-- Ações --}}
                                 <td class="whitespace-nowrap px-4 py-3">
                                     <div class="flex items-center gap-1.5">
-                                        {{-- Editar --}}
-                                        <button type="button"
-                                                onclick="editDemanda({{ $demanda->id }}, {{ $demanda->toJson() }})"
-                                                title="Editar"
-                                                class="inline-flex h-7 w-7 items-center justify-center rounded-lg border
-                                                       border-zinc-200 text-zinc-500 transition-colors hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-700
-                                                       dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-800/70">
+                                        {{-- Editar (página completa, com etapas e itens) --}}
+                                        <a href="{{ route('demandas.edit', $demanda) }}"
+                                           title="Abrir demanda"
+                                           class="inline-flex h-7 w-7 items-center justify-center rounded-lg border
+                                                  border-zinc-200 text-zinc-500 transition-colors hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-700
+                                                  dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-800/70">
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/>
                                             </svg>
-                                        </button>
+                                        </a>
 
 
 

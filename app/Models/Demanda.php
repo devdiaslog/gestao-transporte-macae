@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 class Demanda extends Model
 {
@@ -89,6 +90,27 @@ class Demanda extends Model
     public function locaisDestino(): array
     {
         return $this->itens->pluck('local_destino')->filter()->unique()->values()->all();
+    }
+
+    /**
+     * Itens agrupados por etapa — cada par origem → destino é uma etapa da demanda.
+     * Etapas maiores aparecem primeiro.
+     *
+     * @return Collection<string, Collection<int, DemandaItem>>
+     */
+    public function etapas(): Collection
+    {
+        return $this->itens
+            ->groupBy(fn (DemandaItem $item) => ($item->local_origem ?: '—').' → '.($item->local_destino ?: '—'))
+            ->sortByDesc(fn ($grupo) => $grupo->count());
+    }
+
+    /**
+     * Itens já encerrados (entregues ou cancelados).
+     */
+    public function itensEncerrados(): int
+    {
+        return $this->itens->filter(fn (DemandaItem $i) => $i->status_item?->encerrado() === true)->count();
     }
 
     /**

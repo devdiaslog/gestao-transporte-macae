@@ -8,6 +8,7 @@ use App\Http\Controllers\CercaController;
 use App\Http\Controllers\ControlTowerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemandaController;
+use App\Http\Controllers\DemandaItemController;
 use App\Http\Controllers\DivisaoController;
 use App\Http\Controllers\EquipamentoController;
 use App\Http\Controllers\JustificativaController;
@@ -110,6 +111,9 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
     Route::get('demandas', [DemandaController::class, 'index'])->name('demandas.index');
     Route::get('demandas-export', [DemandaController::class, 'export'])->name('demandas.export');
     Route::post('demandas-importar', [DemandaController::class, 'importar'])->name('demandas.importar');
+    Route::get('demandas/{demanda}/editar', [DemandaController::class, 'edit'])->name('demandas.edit');
+    Route::put('demanda-itens/{item}', [DemandaItemController::class, 'update'])->name('demanda-itens.update')->whereNumber('item');
+    Route::delete('demanda-itens/{item}', [DemandaItemController::class, 'destroy'])->name('demanda-itens.destroy')->middleware('can:delete-demanda')->whereNumber('item');
     Route::post('demandas', [DemandaController::class, 'store'])->name('demandas.store');
     Route::put('demandas/{demanda}', [DemandaController::class, 'update'])->name('demandas.update');
     Route::patch('demandas/{demanda}/cancelar', [DemandaController::class, 'cancelar'])->name('demandas.cancelar');
