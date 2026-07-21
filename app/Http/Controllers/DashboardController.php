@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\FonteDemanda;
 use App\Enums\StatusDemanda;
+use App\Enums\StatusItemDemanda;
 use App\Enums\TipoCadastro;
 use App\Enums\TipoDemanda;
 use App\Models\CercaEvento;
@@ -12,6 +14,7 @@ use App\Models\Equipamento;
 use App\Models\StatusEvento;
 use App\Models\TipoEquipamento;
 use App\Services\BigcoreService;
+use App\Services\DemandaCalculadora;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +23,8 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    public function __construct(private DemandaCalculadora $calculadora) {}
+
     /**
      * Registra demandas novas detectadas na resposta da API do E-log.
      * Ignora documentos já cadastrados e valores que não sejam numéricos de 9-10 dígitos.
@@ -81,25 +86,23 @@ class DashboardController extends Controller
             $origem = isset($etaDocs[0]) ? strtoupper(trim($etaDocs[0]['destinationName'] ?? '')) : null;
             $destino = isset($etaDocs[1]) ? strtoupper(trim($etaDocs[1]['destinationName'] ?? '')) : null;
 
-            $pontosChave = ['BMAC', 'PACU', 'PBG'];
-
-            if ($destino && in_array($destino, $pontosChave)) {
-                $tipo = TipoDemanda::Load;
-            } elseif ($origem && in_array($origem, $pontosChave)) {
-                $tipo = TipoDemanda::Backload;
-            } else {
-                $tipo = TipoDemanda::Transferencia;
-            }
-
-            Demanda::create([
+            $demanda = Demanda::create([
                 'numero_demanda' => $numeroDoc,
                 'tipo_cadastro' => TipoCadastro::Integracao,
-                'tipo_demanda' => $tipo,
                 'status_demanda' => StatusDemanda::Pendente,
                 'equipamento_id' => $equipamentoId,
-                'origem' => $origem,
-                'destino' => $destino,
             ]);
+
+            // A API não traz RT nem subitem; o próprio documento identifica o item.
+            $demanda->itens()->create([
+                'numero_rt' => (string) $numeroDoc,
+                'numero_item' => '1',
+                'local_origem' => $origem,
+                'local_destino' => $destino,
+                'status_item' => StatusItemDemanda::Aberto,
+            ]);
+
+            $this->calculadora->recalcular($demanda->load('itens'));
 
             $criados++;
         }
@@ -312,7 +315,7 @@ class DashboardController extends Controller
     {
         $agora = now();
 
-        $demandas = Demanda::query()->with('equipamento:id,prefixo')->get();
+        $demandas = Demanda::query()->with(['equipamento:id,prefixo', 'itens'])->get();
 
         $total = $demandas->count();
 
@@ -325,15 +328,15 @@ class DashboardController extends Controller
 
         // ── Vencidas: prazo já passou e ainda em aberto ──────────────────────────
         $vencidas = $demandas
-            ->filter(fn (Demanda $d) => $d->prazo_referencia !== null
-                && $d->prazo_referencia->isBefore($agora)
+            ->filter(fn (Demanda $d) => $d->prazo_demanda !== null
+                && $d->prazo_demanda->isBefore($agora)
                 && in_array($d->status_demanda, [StatusDemanda::Pendente, StatusDemanda::EmAndamento]))
             ->count();
 
         // ── Vence nas próximas 24h (em aberto) ───────────────────────────────────
         $venceEm24h = $demandas
-            ->filter(fn (Demanda $d) => $d->prazo_referencia !== null
-                && $d->prazo_referencia->isBetween($agora, $agora->copy()->addDay())
+            ->filter(fn (Demanda $d) => $d->prazo_demanda !== null
+                && $d->prazo_demanda->isBetween($agora, $agora->copy()->addDay())
                 && in_array($d->status_demanda, [StatusDemanda::Pendente, StatusDemanda::EmAndamento]))
             ->count();
 
@@ -374,16 +377,16 @@ class DashboardController extends Controller
 
         // ── Cumprimento de prazo (No prazo x Vencidas) ───────────────────────────
         // Base: demandas com prazo definido, exceto canceladas.
-        $comPrazo = $demandas->filter(fn (Demanda $d) => $d->prazo_referencia !== null
+        $comPrazo = $demandas->filter(fn (Demanda $d) => $d->prazo_demanda !== null
             && $d->status_demanda !== StatusDemanda::Cancelada);
 
         $foraPrazoQtd = $comPrazo->filter(function (Demanda $d) use ($agora) {
             if ($d->status_demanda === StatusDemanda::Finalizado) {
                 return $d->data_hora_fim_demanda !== null
-                    && $d->data_hora_fim_demanda->isAfter($d->prazo_referencia);
+                    && $d->data_hora_fim_demanda->isAfter($d->prazo_demanda);
             }
 
-            return $d->prazo_referencia->isBefore($agora);
+            return $d->prazo_demanda->isBefore($agora);
         })->count();
 
         $noPrazoQtd = $comPrazo->count() - $foraPrazoQtd;
@@ -393,6 +396,22 @@ class DashboardController extends Controller
             ['label' => 'No prazo', 'valor' => $noPrazoQtd,   'cor' => '#10b981'],
             ['label' => 'Vencidas', 'valor' => $foraPrazoQtd, 'cor' => '#f43f5e'],
         ];
+
+        // ── Origem do dado (SAP LT x SAP TM) ─────────────────────────────────────
+        $porFonte = collect(FonteDemanda::cases())
+            ->map(fn (FonteDemanda $f) => [
+                'label' => $f->label(),
+                'valor' => $demandas->where('fonte_demanda', $f)->count(),
+                'cor' => $f === FonteDemanda::SapLt ? '#06b6d4' : '#8b5cf6',
+            ])
+            ->push([
+                'label' => 'Sem fonte',
+                'valor' => $demandas->whereNull('fonte_demanda')->count(),
+                'cor' => '#d4d4d8',
+            ])
+            ->filter(fn ($f) => $f['valor'] > 0)
+            ->values()
+            ->all();
 
         // ── Evolução diária — criadas nos últimos 14 dias ────────────────────────
         $criadasPorDia = $demandas->groupBy(fn (Demanda $d) => $d->created_at->toDateString());
@@ -430,10 +449,10 @@ class DashboardController extends Controller
             'cancelada' => $grupo->where('status_demanda', StatusDemanda::Cancelada)->count(),
         ];
 
-        // ── Top rotas (origem → destino), segmentadas por status ─────────────────
+        // ── Top rotas (origens → destinos dos itens), segmentadas por status ─────
         $rotasGroup = $demandas
-            ->filter(fn (Demanda $d) => ! empty($d->origem) && ! empty($d->destino))
-            ->groupBy(fn (Demanda $d) => $d->origem.' → '.$d->destino);
+            ->filter(fn (Demanda $d) => $d->locaisOrigem() !== [] || $d->locaisDestino() !== [])
+            ->groupBy(fn (Demanda $d) => $d->rota());
 
         $topRotas = $rotasGroup
             ->map->count()
@@ -467,7 +486,7 @@ class DashboardController extends Controller
         return view('dashboard.demandas', compact(
             'total', 'emAberto', 'pendentes', 'emAndamento', 'finalizadas', 'canceladas',
             'vencidas', 'venceEm24h', 'naoClassificadas', 'taxaConclusao', 'tempoMedioAtendMin',
-            'porStatus', 'porTipo', 'porPrazo', 'pctNoPrazo', 'evolucao', 'topRotas', 'topVeiculos', 'statusMeta', 'agora'
+            'porStatus', 'porTipo', 'porPrazo', 'pctNoPrazo', 'porFonte', 'evolucao', 'topRotas', 'topVeiculos', 'statusMeta', 'agora'
         ));
     }
 

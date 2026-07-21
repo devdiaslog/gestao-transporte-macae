@@ -24,9 +24,6 @@ class StoreDemandaRequest extends FormRequest
             'tipo_demanda' => ['nullable', Rule::enum(TipoDemanda::class)],
             'equipamento_id' => ['nullable', 'exists:equipamentos,id'],
             'documento_demanda' => ['nullable', 'string', 'max:100'],
-            'origem' => ['nullable', 'string', 'max:500'],
-            'destino' => ['nullable', 'string', 'max:500'],
-            'prazo_referencia' => ['nullable', 'date'],
             'observacao' => ['nullable', 'string', 'max:2000'],
         ];
     }

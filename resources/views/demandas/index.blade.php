@@ -14,6 +14,22 @@
                 Registro e acompanhamento de demandas de transporte
             </p>
         </div>
+        <form method="POST" action="{{ route('demandas.importar') }}" enctype="multipart/form-data"
+              id="form-importar" class="contents">
+            @csrf
+            <input type="file" name="arquivo" id="input-importar" accept=".xlsx,.xls" class="hidden"
+                   onchange="if (this.files.length) { document.getElementById('form-importar').submit(); }">
+            <button type="button" onclick="document.getElementById('input-importar').click()"
+                    title="Importar itens de demanda a partir da planilha do SAP"
+                    class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium
+                           text-zinc-700 shadow-xs transition-colors hover:bg-slate-50
+                           dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                <svg class="h-4 w-4 text-emerald-600 dark:text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M7.5 7.5 12 3m0 0 4.5 4.5M12 3v13.5"/>
+                </svg>
+                Importar planilha
+            </button>
+        </form>
         <button type="button" onclick="openDemandaModal()"
                 class="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white
                        shadow-xs transition-all duration-150 hover:bg-zinc-700 active:scale-[0.98]
@@ -61,6 +77,17 @@
             <option value="">Todos os tipos</option>
             @foreach(\App\Enums\TipoDemanda::cases() as $t)
                 <option value="{{ $t->value }}" @selected($tipo === $t->value)>{{ $t->label() }}</option>
+            @endforeach
+        </select>
+        <select name="fonte"
+                class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
+                       text-zinc-900 shadow-xs outline-none
+                       focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                       dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
+                       dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+            <option value="">Todas as fontes</option>
+            @foreach(\App\Enums\FonteDemanda::cases() as $f)
+                <option value="{{ $f->value }}" @selected($fonte === $f->value)>{{ $f->label() }}</option>
             @endforeach
         </select>
         <select name="prazo"
@@ -125,7 +152,7 @@
             </svg>
             Exportar
         </a>
-        @if($search || $status !== 'active' || $tipo || $prefixo || $dataDE || $dataAte || $prazo)
+        @if($search || $status !== 'active' || $tipo || $fonte || $prefixo || $dataDE || $dataAte || $prazo)
             {{-- prazo_de/prazo_ate acompanham $prazo === 'personalizado' --}}
             <a href="{{ route('demandas.index', ['reset' => '1']) }}"
                class="h-9 inline-flex items-center gap-1 rounded-lg px-3 text-sm text-zinc-400 hover:text-zinc-700
@@ -154,9 +181,9 @@
                         <tr>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Número</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Tipo</th>
+                            <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Fonte</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Veículo</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Origem</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Destino</th>
+                            <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Rota</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Prazo</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Status</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Auditoria</th>
@@ -171,9 +198,11 @@
                                 $sc = $demanda->status_demanda->color();
                                 $tipoColors = ['load' => 'blue', 'backload' => 'amber', 'transferencia' => 'violet'];
                                 $tc = $demanda->tipo_demanda ? ($tipoColors[$demanda->tipo_demanda->value] ?? 'zinc') : null;
-                                $prazoVencido = $demanda->prazo_referencia
-                                    && $demanda->prazo_referencia->isPast()
+                                $prazoVencido = $demanda->prazo_demanda
+                                    && $demanda->prazo_demanda->isPast()
                                     && ! in_array($demanda->status_demanda->value, ['finalizado', 'cancelada']);
+                                $origens = $demanda->locaisOrigem();
+                                $destinos = $demanda->locaisDestino();
                                 $podeFinalizar = $demanda->data_hora_inicio_demanda !== null
                                     && $demanda->status_demanda->value !== 'finalizado'
                                     && $demanda->status_demanda->value !== 'cancelada';
@@ -204,6 +233,18 @@
                                         <span class="text-zinc-400 dark:text-zinc-600">—</span>
                                     @endif
                                 </td>
+                                {{-- Fonte --}}
+                                <td class="whitespace-nowrap px-4 py-3">
+                                    @if($demanda->fonte_demanda)
+                                        <span class="inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium
+                                                     bg-{{ $demanda->fonte_demanda->color() }}-100 text-{{ $demanda->fonte_demanda->color() }}-700
+                                                     dark:bg-{{ $demanda->fonte_demanda->color() }}-950/40 dark:text-{{ $demanda->fonte_demanda->color() }}-400">
+                                            {{ $demanda->fonte_demanda->label() }}
+                                        </span>
+                                    @else
+                                        <span class="text-zinc-400 dark:text-zinc-600">—</span>
+                                    @endif
+                                </td>
                                 {{-- Veículo --}}
                                 <td class="whitespace-nowrap px-4 py-3">
                                     @if($demanda->equipamento)
@@ -213,19 +254,26 @@
                                         <span class="text-zinc-400 dark:text-zinc-600">—</span>
                                     @endif
                                 </td>
-                                {{-- Origem --}}
-                                <td class="max-w-[160px] truncate px-4 py-3 text-xs text-zinc-600 dark:text-zinc-400" title="{{ $demanda->origem }}">
-                                    {{ $demanda->origem ?? '—' }}
-                                </td>
-                                {{-- Destino --}}
-                                <td class="max-w-[160px] truncate px-4 py-3 text-xs text-zinc-600 dark:text-zinc-400" title="{{ $demanda->destino }}">
-                                    {{ $demanda->destino ?? '—' }}
+                                {{-- Rota (origens → destinos dos itens) --}}
+                                <td class="max-w-[280px] px-4 py-3 text-xs text-zinc-600 dark:text-zinc-400">
+                                    @if($origens || $destinos)
+                                        <div class="truncate" title="{{ $demanda->rota() }}">
+                                            <span class="font-medium text-zinc-700 dark:text-zinc-300">{{ implode(', ', $origens) ?: '—' }}</span>
+                                            <span class="text-zinc-400 dark:text-zinc-600"> → </span>
+                                            <span>{{ implode(', ', $destinos) ?: '—' }}</span>
+                                        </div>
+                                        <div class="mt-0.5 text-[10px] text-zinc-400 dark:text-zinc-600">
+                                            {{ $demanda->itens->count() }} {{ $demanda->itens->count() === 1 ? 'item' : 'itens' }}
+                                        </div>
+                                    @else
+                                        <span class="text-zinc-400 dark:text-zinc-600">—</span>
+                                    @endif
                                 </td>
                                 {{-- Prazo --}}
                                 <td class="whitespace-nowrap px-4 py-3 text-xs">
-                                    @if($demanda->prazo_referencia)
+                                    @if($demanda->prazo_demanda)
                                         <span class="{{ $prazoVencido ? 'font-semibold text-rose-600 dark:text-rose-400' : 'text-zinc-600 dark:text-zinc-400' }}">
-                                            {{ $demanda->prazo_referencia->format('d/m/Y H:i') }}
+                                            {{ $demanda->prazo_demanda->format('d/m/Y H:i') }}
                                         </span>
                                     @else
                                         <span class="text-zinc-400 dark:text-zinc-600">—</span>
@@ -449,48 +497,31 @@
                         </div>
                     </div>
 
-                    {{-- Linha 3: Origem + Destino --}}
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                Origem
+                    {{-- Itens da demanda (somente leitura — vêm da importação do SAP) --}}
+                    <div id="f-itens-group" class="hidden" style="display:none">
+                        <div class="mb-1.5 flex items-baseline justify-between">
+                            <label class="block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                                Itens da Demanda
                             </label>
-                            <input type="text" name="origem" id="f-origem"
-                                   placeholder="Local de origem…"
-                                   class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                          text-zinc-900 outline-none shadow-xs
-                                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                          dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+                            <span id="f-itens-resumo" class="text-[11px] text-zinc-400 dark:text-zinc-600"></span>
                         </div>
-                        <div>
-                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                Destino
-                            </label>
-                            <input type="text" name="destino" id="f-destino"
-                                   placeholder="Local de destino…"
-                                   class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                          text-zinc-900 outline-none shadow-xs
-                                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                          dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+                        <div class="max-h-56 overflow-y-auto rounded-lg border border-slate-200 dark:border-zinc-700">
+                            <table class="w-full text-xs">
+                                <thead class="sticky top-0 bg-slate-50 dark:bg-zinc-800">
+                                    <tr class="text-left text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                                        <th class="px-2 py-1.5 font-semibold">RT / Item</th>
+                                        <th class="px-2 py-1.5 font-semibold">Rota</th>
+                                        <th class="px-2 py-1.5 font-semibold">Retirada</th>
+                                        <th class="px-2 py-1.5 font-semibold">Prazo</th>
+                                        <th class="px-2 py-1.5 font-semibold">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="f-itens-body" class="divide-y divide-slate-100 dark:divide-zinc-800"></tbody>
+                            </table>
                         </div>
-                    </div>
-
-                    {{-- Linha 4: Prazo --}}
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                Prazo de Referência
-                            </label>
-                            <input type="datetime-local" name="prazo_referencia" id="f-prazo"
-                                   class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                          text-zinc-900 outline-none shadow-xs
-                                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                          dark:focus:border-zinc-500 dark:focus:ring-zinc-800
-                                          dark:[color-scheme:dark]">
-                        </div>
+                        <p class="mt-1 text-[10px] text-zinc-400 dark:text-zinc-600">
+                            Prazo, tipo e status da demanda são calculados a partir destes itens.
+                        </p>
                     </div>
 
                     {{-- Linha: Início + Fim (só exibido no modo edição) --}}
@@ -660,6 +691,7 @@
         datasGroup.style.display = 'none';
         datasGroup.classList.add('hidden');
         btnFinalizar.classList.add('hidden');
+        renderItens([]);
         cbReset('tipo_demanda');
         cbReset('equipamento_id');
         openModal();
@@ -674,12 +706,11 @@
         errBox.classList.add('hidden');
 
         document.getElementById('f-numero-demanda').value = data.numero_demanda || '';
-        document.getElementById('f-origem').value         = data.origem || '';
-        document.getElementById('f-destino').value        = data.destino || '';
-        document.getElementById('f-prazo').value          = fmtDatetime(data.prazo_referencia);
         document.getElementById('f-inicio').value         = fmtDatetime(data.data_hora_inicio_demanda);
         document.getElementById('f-fim').value            = fmtDatetime(data.data_hora_fim_demanda);
         document.getElementById('f-obs').value            = data.observacao || '';
+
+        renderItens(data.itens || []);
 
         cbSetValue('tipo_demanda',   data.tipo_demanda);
         cbSetValue('equipamento_id', data.equipamento_id);
@@ -781,7 +812,6 @@
             return;
         }
 
-        if (! data.get('prazo_referencia')) { data.delete('prazo_referencia'); }
         if (! data.get('data_hora_inicio_demanda')) { data.delete('data_hora_inicio_demanda'); }
         if (! data.get('data_hora_fim_demanda')) { data.delete('data_hora_fim_demanda'); }
 
@@ -824,6 +854,53 @@
         var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
         return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
             + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    function fmtDataBr(iso) {
+        if (! iso) { return '—'; }
+        var d = new Date(iso);
+        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+        return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear()
+            + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    var STATUS_ITEM = {
+        '04': { label: 'Aberto',    cls: 'text-zinc-600 dark:text-zinc-400' },
+        '07': { label: 'Entregue',  cls: 'text-emerald-600 dark:text-emerald-400' },
+        '18': { label: 'Cancelado', cls: 'text-rose-600 dark:text-rose-400' }
+    };
+
+    function renderItens(itens) {
+        var grupo  = document.getElementById('f-itens-group');
+        var corpo  = document.getElementById('f-itens-body');
+        var resumo = document.getElementById('f-itens-resumo');
+        if (! grupo || ! corpo) { return; }
+
+        if (! itens.length) {
+            grupo.classList.add('hidden');
+            grupo.style.display = 'none';
+            return;
+        }
+
+        corpo.innerHTML = itens.map(function (i) {
+            var st = STATUS_ITEM[i.status_item] || { label: i.status_item || '—', cls: 'text-zinc-400' };
+            var esc = function (v) {
+                return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) {
+                    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+                });
+            };
+            return '<tr class="text-zinc-700 dark:text-zinc-300">'
+                + '<td class="px-2 py-1.5 font-mono text-[11px] whitespace-nowrap">' + esc(i.numero_rt) + ' / ' + esc(i.numero_item) + (i.subitem ? '.' + esc(i.subitem) : '') + '</td>'
+                + '<td class="px-2 py-1.5">' + esc(i.local_origem || '—') + ' → ' + esc(i.local_destino || '—') + '</td>'
+                + '<td class="px-2 py-1.5 text-zinc-500 dark:text-zinc-500">' + esc(i.descricao_local_retirada || '—') + '</td>'
+                + '<td class="px-2 py-1.5 whitespace-nowrap">' + fmtDataBr(i.prazo_item) + '</td>'
+                + '<td class="px-2 py-1.5 font-medium ' + st.cls + '">' + esc(st.label) + '</td>'
+                + '</tr>';
+        }).join('');
+
+        resumo.textContent = itens.length + (itens.length === 1 ? ' item' : ' itens');
+        grupo.classList.remove('hidden');
+        grupo.style.display = 'block';
     }
 
     // Prazo personalizado — revela intervalo de datas

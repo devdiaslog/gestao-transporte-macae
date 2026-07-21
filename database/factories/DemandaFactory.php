@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\StatusDemanda;
+use App\Enums\TipoCadastro;
 use App\Models\Demanda;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,7 +20,10 @@ class DemandaFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'numero_demanda' => fake()->unique()->numberBetween(500000000, 509999999),
+            'tipo_cadastro' => TipoCadastro::Integracao,
+            'status_demanda' => StatusDemanda::Pendente,
+            'status_auditoria' => false,
         ];
     }
 }

@@ -109,6 +109,7 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
     // Demandas de transporte
     Route::get('demandas', [DemandaController::class, 'index'])->name('demandas.index');
     Route::get('demandas-export', [DemandaController::class, 'export'])->name('demandas.export');
+    Route::post('demandas-importar', [DemandaController::class, 'importar'])->name('demandas.importar');
     Route::post('demandas', [DemandaController::class, 'store'])->name('demandas.store');
     Route::put('demandas/{demanda}', [DemandaController::class, 'update'])->name('demandas.update');
     Route::patch('demandas/{demanda}/cancelar', [DemandaController::class, 'cancelar'])->name('demandas.cancelar');

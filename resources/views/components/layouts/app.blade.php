@@ -391,6 +391,35 @@
         {{-- Content --}}
         <main class="min-h-0 flex-1 overflow-y-auto [overflow-x:clip] px-4 sm:px-6 lg:px-8">
 
+            @if(session('error'))
+                <div id="flash-error"
+                     class="mb-6 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm
+                            border-rose-200 bg-rose-50 text-rose-700
+                            dark:border-rose-800/40 dark:bg-rose-950/30 dark:text-rose-400">
+                    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+                    </svg>
+                    <span class="flex-1">{{ session('error') }}</span>
+                    <button onclick="document.getElementById('flash-error').remove()"
+                            class="shrink-0 rounded p-0.5 opacity-50 transition-opacity hover:opacity-100">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            @endif
+
+            @if(isset($errors) && $errors->any())
+                <div class="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700
+                            dark:border-rose-800/40 dark:bg-rose-950/30 dark:text-rose-400">
+                    <ul class="list-inside list-disc space-y-0.5">
+                        @foreach($errors->all() as $erro)
+                            <li>{{ $erro }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             @if(session('success'))
                 <div id="flash-success"
                      class="mb-6 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm

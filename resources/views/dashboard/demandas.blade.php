@@ -88,8 +88,8 @@
             @endforeach
         </div>
 
-        {{-- Linha 1: Status · Tipo · Cadastro --}}
-        <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {{-- Linha 1: Status · Tipo · Prazo · Fonte --}}
+        <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-4">
             <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                 <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
                     <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Por Status {!! $info('Distribuição das demandas pelos status do ciclo de vida: Pendente → Em Andamento (quando há início e veículo) → Finalizado, ou Cancelada. Total no centro do gráfico.') !!}</p>
@@ -109,6 +109,13 @@
                     <p class="text-[11px] text-zinc-400 dark:text-zinc-500">% no prazo — demandas com prazo definido (exceto canceladas)</p>
                 </div>
                 <div class="p-4"><div id="chart-prazo"></div></div>
+            </div>
+            <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
+                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Por Fonte {!! $info('Origem do dado no SAP, definida pelo início do número da demanda: começa com 50 → SAP LT; começa com 61 → SAP TM.') !!}</p>
+                    <p class="text-[11px] text-zinc-400 dark:text-zinc-500">SAP LT (50…) · SAP TM (61…)</p>
+                </div>
+                <div class="p-4"><div id="chart-fonte"></div></div>
             </div>
         </div>
 
@@ -177,6 +184,7 @@
             var porTipo     = @json($porTipo);
             var porPrazo    = @json($porPrazo);
             var pctNoPrazo  = @json($pctNoPrazo);
+            var porFonte    = @json($porFonte);
             var evolucao    = @json($evolucao);
             var topRotas    = @json($topRotas);
             var topVeiculos = @json($topVeiculos);
@@ -216,6 +224,21 @@
                 tooltip: { theme: mode },
                 theme: { mode: mode },
             }).render();
+
+            // Donut — Fonte (SAP LT x SAP TM)
+            if (porFonte.length) {
+                new ApexCharts(document.getElementById('chart-fonte'), {
+                    chart: { type: 'donut', height: 260, background: 'transparent' },
+                    series: porFonte.map(function (s) { return s.valor; }),
+                    labels: porFonte.map(function (s) { return s.label; }),
+                    colors: porFonte.map(function (s) { return s.cor; }),
+                    legend: { position: 'bottom', labels: { colors: lblClr } },
+                    dataLabels: { enabled: true, formatter: function (val, o) { return o.w.config.series[o.seriesIndex]; } },
+                    stroke: { colors: [isDark ? '#18181b' : '#fff'] },
+                    tooltip: { theme: mode },
+                    theme: { mode: mode },
+                }).render();
+            }
 
             // Barra — Tipo
             new ApexCharts(document.getElementById('chart-tipo'), {

@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Enums\StatusDemanda;
 use App\Enums\TipoCadastro;
+use App\Http\Requests\ImportarDemandasRequest;
 use App\Http\Requests\StoreDemandaRequest;
 use App\Http\Requests\UpdateDemandaRequest;
 use App\Models\Demanda;
 use App\Models\Equipamento;
+use App\Services\ImportadorDemandas;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -19,7 +21,7 @@ class DemandaController extends Controller
 {
     public function index(Request $request): View|RedirectResponse
     {
-        $filtroKeys = ['q', 'status', 'tipo', 'prefixo', 'data_de', 'data_ate', 'prazo', 'prazo_de', 'prazo_ate'];
+        $filtroKeys = ['q', 'status', 'tipo', 'fonte', 'prefixo', 'data_de', 'data_ate', 'prazo', 'prazo_de', 'prazo_ate'];
 
         if ($request->boolean('reset')) {
             session()->forget('demandas.filtros');
@@ -41,6 +43,7 @@ class DemandaController extends Controller
         $search = $request->input('q');
         $status = $request->input('status', 'active');
         $tipo = $request->input('tipo');
+        $fonte = $request->input('fonte');
         $prefixo = $request->input('prefixo');
         $dataDE = $request->input('data_de');
         $dataAte = $request->input('data_ate');
@@ -49,22 +52,24 @@ class DemandaController extends Controller
         $prazoAte = $request->input('prazo_ate');
 
         $demandas = Demanda::query()
-            ->with(['equipamento', 'criador'])
+            ->with(['equipamento', 'criador', 'itens'])
             ->when($search, fn ($q) => $q->where(fn ($sub) => $sub->where('numero_demanda', 'like', "%{$search}%")
                 ->orWhere('documento_demanda', 'like', "%{$search}%")))
             ->when($status === 'active', fn ($q) => $q->whereIn('status_demanda', ['pendente', 'em_andamento']))
             ->when($status && $status !== 'active', fn ($q) => $q->where('status_demanda', $status))
             ->when($tipo, fn ($q) => $q->where('tipo_demanda', $tipo))
+            ->when($fonte, fn ($q) => $q->where('fonte_demanda', $fonte))
             ->when($prefixo, fn ($q) => $q->whereHas('equipamento', fn ($eq) => $eq->where('prefixo', 'like', "%{$prefixo}%")))
             ->when($dataDE, fn ($q) => $q->whereDate('created_at', '>=', $dataDE))
             ->when($dataAte, fn ($q) => $q->whereDate('created_at', '<=', $dataAte))
             ->when($prazo, fn ($q) => $this->filtrarPorPrazo($q, $prazo, $prazoDE, $prazoAte))
-            ->when($prazo, fn ($q) => $q->orderBy('prazo_referencia'), fn ($q) => $q->latest())
+            ->when($prazo, fn ($q) => $q->orderBy('prazo_demanda'), fn ($q) => $q->latest())
             ->paginate(25)
             ->appends([
                 'q' => $search ?? '',
                 'status' => $status ?? '',
                 'tipo' => $tipo ?? '',
+                'fonte' => $fonte ?? '',
                 'prefixo' => $prefixo ?? '',
                 'data_de' => $dataDE ?? '',
                 'data_ate' => $dataAte ?? '',
@@ -79,7 +84,7 @@ class DemandaController extends Controller
             ->orderBy('prefixo')
             ->get(['id', 'prefixo', 'placa']);
 
-        return view('demandas.index', compact('demandas', 'equipamentos', 'search', 'status', 'tipo', 'prefixo', 'dataDE', 'dataAte', 'prazo', 'prazoDE', 'prazoAte'));
+        return view('demandas.index', compact('demandas', 'equipamentos', 'search', 'status', 'tipo', 'fonte', 'prefixo', 'dataDE', 'dataAte', 'prazo', 'prazoDE', 'prazoAte'));
     }
 
     /**
@@ -89,20 +94,45 @@ class DemandaController extends Controller
     {
         $agora = now();
 
-        $query->whereNotNull('prazo_referencia')
+        $query->whereNotNull('prazo_demanda')
             ->whereNotIn('status_demanda', ['finalizado', 'cancelada']);
 
         return match ($prazo) {
-            'vencidas' => $query->where('prazo_referencia', '<', $agora),
-            'hoje' => $query->whereDate('prazo_referencia', $agora->toDateString()),
-            '24h' => $query->whereBetween('prazo_referencia', [$agora, $agora->copy()->addDay()]),
-            '3d' => $query->whereBetween('prazo_referencia', [$agora, $agora->copy()->addDays(3)]),
-            '7d' => $query->whereBetween('prazo_referencia', [$agora, $agora->copy()->addDays(7)]),
+            'vencidas' => $query->where('prazo_demanda', '<', $agora),
+            'hoje' => $query->whereDate('prazo_demanda', $agora->toDateString()),
+            '24h' => $query->whereBetween('prazo_demanda', [$agora, $agora->copy()->addDay()]),
+            '3d' => $query->whereBetween('prazo_demanda', [$agora, $agora->copy()->addDays(3)]),
+            '7d' => $query->whereBetween('prazo_demanda', [$agora, $agora->copy()->addDays(7)]),
             'personalizado' => $query
-                ->when($de, fn ($q) => $q->whereDate('prazo_referencia', '>=', $de))
-                ->when($ate, fn ($q) => $q->whereDate('prazo_referencia', '<=', $ate)),
+                ->when($de, fn ($q) => $q->whereDate('prazo_demanda', '>=', $de))
+                ->when($ate, fn ($q) => $q->whereDate('prazo_demanda', '<=', $ate)),
             default => $query,
         };
+    }
+
+    public function importar(ImportarDemandasRequest $request, ImportadorDemandas $importador): RedirectResponse
+    {
+        $resultado = $importador->importar(
+            $request->file('arquivo')->getRealPath(),
+            auth()->id()
+        );
+
+        if ($resultado['erros'] !== []) {
+            $amostra = implode(' · ', array_slice($resultado['erros'], 0, 3));
+            $extras = count($resultado['erros']) > 3 ? ' (+'.(count($resultado['erros']) - 3).')' : '';
+
+            return redirect()->route('demandas.index')
+                ->with('error', "Importação concluída com pendências: {$amostra}{$extras}");
+        }
+
+        $msg = sprintf(
+            '%d demanda(s) criada(s), %d item(ns) importado(s), %d atualizado(s).',
+            $resultado['demandas_criadas'],
+            $resultado['itens_criados'],
+            $resultado['itens_atualizados']
+        );
+
+        return redirect()->route('demandas.index')->with('success', $msg);
     }
 
     public function export(Request $request): Response
@@ -110,39 +140,42 @@ class DemandaController extends Controller
         $status = $request->input('status');
 
         $demandas = Demanda::query()
-            ->with(['equipamento', 'criador'])
+            ->with(['equipamento', 'criador', 'itens'])
             ->when($request->input('q'), fn ($q, $v) => $q->where(fn ($sub) => $sub->where('numero_demanda', 'like', "%{$v}%")
                 ->orWhere('documento_demanda', 'like', "%{$v}%")))
             ->when($status === 'active', fn ($q) => $q->whereIn('status_demanda', ['pendente', 'em_andamento']))
             ->when($status && $status !== 'active', fn ($q) => $q->where('status_demanda', $status))
             ->when($request->input('tipo'), fn ($q, $v) => $q->where('tipo_demanda', $v))
+            ->when($request->input('fonte'), fn ($q, $v) => $q->where('fonte_demanda', $v))
             ->when($request->input('prefixo'), fn ($q, $v) => $q->whereHas('equipamento', fn ($eq) => $eq->where('prefixo', 'like', "%{$v}%")))
             ->when($request->input('data_de'), fn ($q, $v) => $q->whereDate('created_at', '>=', $v))
             ->when($request->input('data_ate'), fn ($q, $v) => $q->whereDate('created_at', '<=', $v))
             ->when($request->input('prazo'), fn ($q, $v) => $this->filtrarPorPrazo($q, $v, $request->input('prazo_de'), $request->input('prazo_ate')))
-            ->when($request->input('prazo'), fn ($q) => $q->orderBy('prazo_referencia'), fn ($q) => $q->latest())
+            ->when($request->input('prazo'), fn ($q) => $q->orderBy('prazo_demanda'), fn ($q) => $q->latest())
             ->get();
 
         $fmt = fn ($dt) => $dt?->format('d/m/Y H:i') ?? '';
 
         $headers = [
-            'Número', 'Tipo', 'Tipo Cadastro',
+            'Número', 'Fonte', 'Tipo', 'Tipo Cadastro',
             'Veículo (Prefixo)', 'Veículo (Placa)',
-            'Documento', 'Origem', 'Destino', 'Prazo Referência',
+            'Documento', 'Itens', 'Origens', 'Destinos', 'Prazo',
             'Início', 'Fim',
             'Status', 'Auditado', 'Criado por', 'Cadastrado em',
         ];
 
         $rows = $demandas->map(fn (Demanda $d) => [
             $d->numero_demanda,
+            $d->fonte_demanda?->label() ?? '',
             $d->tipo_demanda?->label() ?? '',
             $d->tipo_cadastro->label(),
             $d->equipamento?->prefixo ?? '',
             $d->equipamento?->placa ?? '',
             $d->documento_demanda ?? '',
-            $d->origem ?? '',
-            $d->destino ?? '',
-            $fmt($d->prazo_referencia),
+            $d->itens->count(),
+            implode(', ', $d->locaisOrigem()),
+            implode(', ', $d->locaisDestino()),
+            $fmt($d->prazo_demanda),
             $fmt($d->data_hora_inicio_demanda),
             $fmt($d->data_hora_fim_demanda),
             $d->status_demanda->label(),
