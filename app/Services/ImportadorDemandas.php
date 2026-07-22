@@ -106,11 +106,9 @@ class ImportadorDemandas
     }
 
     /**
-     * @return array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, linhas_ignoradas: int, erros: array<int, string>}
-     */
-    /**
      * @param  int|null  $somenteNota  Quando informado, processa apenas as linhas
      *                                 dessa Nota (importação escopada a 1 demanda).
+     * @return array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, linhas_ignoradas: int, erros: array<int, string>}
      */
     public function importar(string $caminho, ?int $usuarioId = null, ?int $somenteNota = null): array
     {
