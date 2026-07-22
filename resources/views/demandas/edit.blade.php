@@ -380,6 +380,7 @@
                                                         'status_item' => $item->status_item?->value,
                                                         'prazo_item' => $item->prazo_item?->format('Y-m-d\TH:i'),
                                                         'data_hora_entrega' => $item->data_hora_entrega?->format('Y-m-d\TH:i'),
+                                                        'observacao' => $item->observacao,
                                                     ];
                                                 @endphp
                                                 <tr class="transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/40">
@@ -549,6 +550,18 @@
                     <p class="-mt-2 text-[10px] text-zinc-400 dark:text-zinc-600">
                         Status e prazo recalculam o status e o prazo da demanda.
                     </p>
+
+                    <div>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Observações</label>
+                        <div id="i-obs-historico"
+                             class="mb-2 hidden max-h-28 overflow-y-auto whitespace-pre-wrap rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-zinc-600
+                                    dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-400"></div>
+                        <textarea name="observacao" id="i-obs" rows="2"
+                                  placeholder="Adicionar observação (o histórico anterior é mantido)"
+                                  class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-xs outline-none
+                                         focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                                         dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"></textarea>
+                    </div>
                 </div>
 
                 <div class="flex items-center justify-between border-t border-slate-100 px-5 py-3 dark:border-zinc-800">
@@ -617,6 +630,11 @@
         document.getElementById('i-status').value    = data.status_item || '';
         document.getElementById('i-prazo').value      = data.prazo_item || '';
         document.getElementById('i-entrega').value    = data.data_hora_entrega || '';
+
+        var historico = document.getElementById('i-obs-historico');
+        historico.textContent = data.observacao || '';
+        historico.classList.toggle('hidden', ! data.observacao);
+        document.getElementById('i-obs').value = '';
     }
 
     function abrir() {

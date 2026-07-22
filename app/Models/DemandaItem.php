@@ -22,6 +22,7 @@ class DemandaItem extends Model
         'status_item',
         'prazo_item',
         'data_hora_entrega',
+        'observacao',
         'campos_editados',
     ];
 
@@ -56,6 +57,24 @@ class DemandaItem extends Model
     public function campoEditadoPeloOperador(string $campo): bool
     {
         return in_array($campo, $this->campos_editados ?? [], true);
+    }
+
+    /**
+     * Acrescenta texto à observação do item (histórico acumulativo): mantém o
+     * conteúdo anterior, pula uma linha e adiciona o novo. Texto vazio ou já
+     * presente na observação é ignorado para reimportações não duplicarem.
+     */
+    public function acrescentarObservacao(?string $texto): void
+    {
+        $texto = trim((string) $texto);
+
+        if ($texto === '' || str_contains((string) $this->observacao, $texto)) {
+            return;
+        }
+
+        $this->observacao = $this->observacao === null || trim($this->observacao) === ''
+            ? $texto
+            : rtrim($this->observacao)."\n\n".$texto;
     }
 
     public function demanda(): BelongsTo

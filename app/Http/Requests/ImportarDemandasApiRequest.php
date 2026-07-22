@@ -36,6 +36,7 @@ class ImportarDemandasApiRequest extends FormRequest
             'itens.*.prazo_hora' => ['nullable', 'string'],
             'itens.*.entrega_data' => ['nullable', 'string'],
             'itens.*.entrega_hora' => ['nullable', 'string'],
+            'itens.*.observacao' => ['nullable', 'string', 'max:5000'],
             'itens.*.equipamento' => ['nullable', 'string', 'max:255'],
         ];
     }

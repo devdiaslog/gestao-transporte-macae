@@ -104,6 +104,33 @@ class DemandaItemEdicaoTest extends TestCase
         $this->assertSame(StatusItemDemanda::Entregue, $demanda->itens->first()->status_item);
     }
 
+    public function test_observacao_do_modal_acrescenta_ao_historico_sem_apagar(): void
+    {
+        $demanda = $this->demandaCom([
+            ['local_origem' => 'A', 'local_destino' => 'B', 'observacao' => 'Vinda do SAP'],
+        ]);
+        $demanda->update(['data_hora_inicio_demanda' => now()->subDay()]);
+        $item = $demanda->itens->first();
+
+        $this->actingAs($this->usuario())
+            ->put(route('demanda-itens.update', $item), [
+                'numero_rt' => $item->numero_rt,
+                'numero_item' => $item->numero_item,
+                'subitem' => $item->subitem,
+                'local_origem' => 'A',
+                'local_destino' => 'B',
+                'observacao' => 'Nota do operador',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $item->refresh();
+
+        $this->assertSame("Vinda do SAP\n\nNota do operador", $item->observacao);
+        // Observação não entra em campos_editados (é acumulativa, sem conflito).
+        $this->assertFalse($item->campoEditadoPeloOperador('observacao'));
+    }
+
     public function test_alterar_status_pela_interface_marca_o_campo_como_do_operador(): void
     {
         $demanda = $this->demandaCom([

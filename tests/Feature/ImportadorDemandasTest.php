@@ -273,6 +273,29 @@ class ImportadorDemandasTest extends TestCase
         $this->assertSame('DESTINO NOVO', $item->local_destino);
     }
 
+    public function test_observacao_acumula_no_item_sem_duplicar_em_reimportacoes(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+        $cabecalho = ['Numero Demanda Viagem', 'Numero Demanda Entrega', 'Item Demanda Entrega', 'Observação'];
+
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800050', '326000400', '1', 'Insight A'],
+        ]));
+
+        // Reimporta com o mesmo texto (não duplica) e depois com texto novo (acrescenta).
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800050', '326000400', '1', 'Insight A'],
+        ]));
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800050', '326000400', '1', 'Insight B'],
+        ]));
+
+        $this->assertSame(
+            "Insight A\n\nInsight B",
+            DemandaItem::where('numero_rt', '326000400')->first()->observacao,
+        );
+    }
+
     public function test_rt_remanejada_para_outra_demanda_cancela_o_item_pendente_na_antiga(): void
     {
         $importador = app(ImportadorDemandas::class);

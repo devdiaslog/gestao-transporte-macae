@@ -152,7 +152,14 @@ class DemandaItemController extends Controller
             return $bloqueio;
         }
 
-        $item->fill($request->validated());
+        $dados = $request->validated();
+
+        // Observação é histórico acumulativo: o texto novo é acrescentado
+        // (pulando uma linha), nunca substitui o anterior.
+        $item->acrescentarObservacao($dados['observacao'] ?? null);
+        unset($dados['observacao']);
+
+        $item->fill($dados);
 
         // Campos alterados pelo operador passam a ser dele: a importação do
         // SAP não volta a sincronizá-los neste item.

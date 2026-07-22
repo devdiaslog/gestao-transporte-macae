@@ -46,6 +46,7 @@ class ImportadorDemandas
         'prazo_hora' => ['Hora Prazo', 'Hora + tar'],
         'entrega_data' => ['Data Entrega', 'Dt entregu'],
         'entrega_hora' => ['Hora Entrega', 'Hr entregu'],
+        'observacao' => ['Observação', 'Observacao'],
         'equipamento' => ['Descrição Veiculo', 'Descrição equipamento'],
     ];
 
@@ -71,6 +72,7 @@ class ImportadorDemandas
         'Hora Prazo',
         'Data Entrega',
         'Hora Entrega',
+        'Observação',
     ];
 
     /**
@@ -79,8 +81,8 @@ class ImportadorDemandas
      * @var array<int, array<int, string>>
      */
     private const EXEMPLOS_MODELO = [
-        ['509538496', 'Backload', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Descrição da carga', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00', '', ''],
-        ['619012345', '', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00', '25.07.2026', '13:45:00'],
+        ['509538496', 'Backload', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Descrição da carga', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00', '', '', ''],
+        ['619012345', '', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00', '25.07.2026', '13:45:00', 'Insight da análise'],
     ];
 
     public function __construct(private DemandaCalculadora $calculadora) {}
@@ -246,6 +248,10 @@ class ImportadorDemandas
                         $item->data_hora_entrega = $entrega;
                     }
                 }
+
+                // Observação é acumulativa: acrescenta ao histórico (pulando
+                // uma linha), nunca sobrescreve; texto repetido não duplica.
+                $item->acrescentarObservacao($linha['observacao'] ?? null);
 
                 $item->save();
 
