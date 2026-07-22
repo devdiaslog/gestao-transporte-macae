@@ -2,10 +2,8 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\TipoDemanda;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateDemandaRequest extends FormRequest
 {
@@ -20,7 +18,8 @@ class UpdateDemandaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tipo_demanda' => ['nullable', Rule::enum(TipoDemanda::class)],
+            // O tipo da demanda é informado na importação (coluna "Tipo Demanda")
+            // ou derivado automaticamente dos itens — não é editado aqui.
             'equipamento_id' => ['nullable', 'exists:equipamentos,id'],
             'documento_demanda' => ['nullable', 'string', 'max:100'],
             // O fim não é informado manualmente: é derivado dos itens (maior

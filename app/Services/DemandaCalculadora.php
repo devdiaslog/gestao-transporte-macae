@@ -31,7 +31,12 @@ class DemandaCalculadora
             : $demanda->itens()->get();
 
         $demanda->fonte_demanda = FonteDemanda::fromNumeroDemanda($demanda->numero_demanda);
-        $demanda->tipo_demanda = $this->tipo($itens);
+
+        // O tipo é derivado dos itens, salvo quando fixado manualmente pelo operador.
+        if (! $demanda->tipo_demanda_manual) {
+            $demanda->tipo_demanda = $this->tipo($itens);
+        }
+
         $demanda->prazo_demanda = $this->prazo($itens);
         $demanda->data_hora_fim_demanda = $this->dataFim($itens);
 

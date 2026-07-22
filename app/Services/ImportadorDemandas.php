@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\StatusDemanda;
 use App\Enums\StatusItemDemanda;
 use App\Enums\TipoCadastro;
+use App\Enums\TipoDemanda;
 use App\Models\Demanda;
 use App\Models\DemandaItem;
 use App\Models\Equipamento;
@@ -32,6 +33,7 @@ class ImportadorDemandas
      */
     private const COLUNAS = [
         'nota' => ['Numero Demanda Viagem', 'Nota'],
+        'tipo_demanda' => ['Tipo Demanda'],
         'numero_rt' => ['Numero Demanda Entrega', 'Nº da RT'],
         'numero_item' => ['Item Demanda Entrega', 'Item da RT'],
         'subitem' => ['Subitem Demanda Entrega', 'Subitem da'],
@@ -55,6 +57,7 @@ class ImportadorDemandas
      */
     private const CABECALHO_MODELO = [
         'Numero Demanda Viagem',
+        'Tipo Demanda',
         'Numero Demanda Entrega',
         'Item Demanda Entrega',
         'Subitem Demanda Entrega',
@@ -76,8 +79,8 @@ class ImportadorDemandas
      * @var array<int, array<int, string>>
      */
     private const EXEMPLOS_MODELO = [
-        ['509538496', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Descrição da carga', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00', '', ''],
-        ['619012345', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00', '25.07.2026', '13:45:00'],
+        ['509538496', 'Backload', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Descrição da carga', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00', '', ''],
+        ['619012345', '', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00', '25.07.2026', '13:45:00'],
     ];
 
     public function __construct(private DemandaCalculadora $calculadora) {}
@@ -172,6 +175,14 @@ class ImportadorDemandas
                         $demanda->equipamento_id = $prefixoParaId[$prefixo];
                         $demanda->save();
                     }
+                }
+
+                // Tipo informado pelo usuário na planilha fixa o tipo manualmente;
+                // coluna vazia mantém a classificação automática pelos itens.
+                if ($tipoInformado = $this->tipoDemandaDe($linha['tipo_demanda'] ?? null)) {
+                    $demanda->tipo_demanda = $tipoInformado;
+                    $demanda->tipo_demanda_manual = true;
+                    $demanda->save();
                 }
 
                 $chave = [
@@ -288,6 +299,20 @@ class ImportadorDemandas
         }
 
         return $mapa;
+    }
+
+    /**
+     * Traduz o tipo informado pelo usuário na planilha (Load, Backload,
+     * Transferência) tolerando caixa e acentos. Valor desconhecido vira null.
+     */
+    private function tipoDemandaDe(?string $valor): ?TipoDemanda
+    {
+        return match ($this->normalizar((string) $valor)) {
+            'load' => TipoDemanda::Load,
+            'backload' => TipoDemanda::Backload,
+            'transferencia' => TipoDemanda::Transferencia,
+            default => null,
+        };
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Enums\StatusItemDemanda;
 use App\Enums\TipoDemanda;
 use App\Models\Demanda;
 use App\Models\DemandaItem;
+use App\Services\DemandaCalculadora;
 use App\Services\ImportadorDemandas;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use OpenSpout\Common\Entity\Row;
@@ -131,6 +132,39 @@ class ImportadorDemandasTest extends TestCase
         // Campos mestres re-sincronizados com o SAP.
         $this->assertSame('SEROPEDICA', $item->local_destino);
         $this->assertSame('Carga atualizada', $item->descricao_item);
+    }
+
+    public function test_tipo_informado_na_planilha_fixa_o_tipo_manualmente(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+        $cabecalho = ['Numero Demanda Viagem', 'Tipo Demanda', 'Numero Demanda Entrega', 'Item Demanda Entrega', 'Descrição Origem', 'Descrição Destino', 'Status Demanda Entrega'];
+
+        // Origem PACU derivaria Backload, mas o usuário informou Load na planilha.
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509700001', 'Load', '326000050', '1', 'PACU', 'ARM-MACAE', '04'],
+        ]));
+
+        $demanda = Demanda::where('numero_demanda', 509700001)->firstOrFail();
+        $this->assertSame(TipoDemanda::Load, $demanda->tipo_demanda);
+        $this->assertTrue($demanda->tipo_demanda_manual);
+
+        // O recálculo (ex.: edição de item) respeita o tipo fixado.
+        app(DemandaCalculadora::class)->recalcular($demanda->load('itens'));
+        $this->assertSame(TipoDemanda::Load, $demanda->fresh()->tipo_demanda);
+    }
+
+    public function test_tipo_vazio_na_planilha_mantem_classificacao_automatica(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+        $cabecalho = ['Numero Demanda Viagem', 'Tipo Demanda', 'Numero Demanda Entrega', 'Item Demanda Entrega', 'Descrição Origem', 'Descrição Destino', 'Status Demanda Entrega'];
+
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509700002', '', '326000051', '1', 'PACU', 'ARM-MACAE', '04'],
+        ]));
+
+        $demanda = Demanda::where('numero_demanda', 509700002)->firstOrFail();
+        $this->assertSame(TipoDemanda::Backload, $demanda->tipo_demanda);
+        $this->assertFalse($demanda->tipo_demanda_manual);
     }
 
     public function test_importacao_escopada_processa_apenas_a_nota_informada(): void

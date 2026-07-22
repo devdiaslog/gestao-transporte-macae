@@ -11,6 +11,13 @@
     $motivoBloqueio = $demanda->motivoBloqueioItens();
     $edicaoBloqueada = $motivoBloqueio !== null;
 
+    // Dados do combobox de veículo (busca por prefixo/placa).
+    $veiculosCombobox = $equipamentos->map(fn ($e) => [
+        'id' => $e->id,
+        'label' => $e->prefixo.' — '.$e->placa,
+        'busca' => mb_strtolower($e->prefixo.' '.$e->placa),
+    ])->values();
+
     $sc = $demanda->status_demanda->color();
     $tipoColors = ['load' => 'blue', 'backload' => 'amber', 'transferencia' => 'violet'];
     $tc = $demanda->tipo_demanda ? ($tipoColors[$demanda->tipo_demanda->value] ?? 'zinc') : null;
@@ -95,25 +102,32 @@
 
                 <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
                     <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Dados da Demanda</p>
-                    <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Tipo, prazo e status são calculados pelos itens</p>
+                    <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Prazo e status são calculados pelos itens</p>
                 </div>
 
                 <div class="space-y-4 p-5">
+                    {{-- Veículo — combobox com busca por prefixo/placa --}}
                     <div>
-                        <label for="e-veiculo" class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                        <label for="e-veiculo-busca" class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                             Veículo
                         </label>
-                        <select name="equipamento_id" id="e-veiculo"
-                                class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-xs outline-none
-                                       focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                       dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-                            <option value="">Sem veículo</option>
-                            @foreach($equipamentos as $eq)
-                                <option value="{{ $eq->id }}" @selected($demanda->equipamento_id === $eq->id)>
-                                    {{ $eq->prefixo }} — {{ $eq->placa }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <div class="relative" id="e-veiculo-cb">
+                            <input type="hidden" name="equipamento_id" id="e-veiculo-id" value="{{ $demanda->equipamento_id }}">
+                            <input type="text" id="e-veiculo-busca" autocomplete="off" placeholder="Buscar prefixo ou placa…"
+                                   value="{{ $demanda->equipamento ? $demanda->equipamento->prefixo.' — '.$demanda->equipamento->placa : '' }}"
+                                   class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 pr-8 text-sm text-zinc-900 shadow-xs outline-none
+                                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+                            <button type="button" id="e-veiculo-limpar" title="Limpar veículo"
+                                    class="absolute inset-y-0 right-2 flex items-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                            <div id="e-veiculo-lista"
+                                 class="absolute z-20 mt-1 hidden max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg
+                                        dark:border-zinc-700 dark:bg-zinc-900"></div>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
@@ -633,6 +647,62 @@
     overlay.addEventListener('click', window.fecharItem);
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && ! modal.classList.contains('hidden')) { window.fecharItem(); }
+    });
+})();
+
+// ── Combobox de veículo com busca por prefixo/placa ──────────────────────────
+(function () {
+    var EQUIPAMENTOS = @json($veiculosCombobox);
+
+    var cb     = document.getElementById('e-veiculo-cb');
+    var input  = document.getElementById('e-veiculo-busca');
+    var hidden = document.getElementById('e-veiculo-id');
+    var lista  = document.getElementById('e-veiculo-lista');
+    var limpar = document.getElementById('e-veiculo-limpar');
+    if (! cb) { return; }
+
+    var labelAtual = input.value;
+
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]; }); }
+
+    function render(q) {
+        q = (q || '').toLowerCase().trim();
+        var items = EQUIPAMENTOS.filter(function (e) { return ! q || e.busca.indexOf(q) !== -1; }).slice(0, 60);
+        lista.innerHTML = items.length
+            ? items.map(function (e) {
+                return '<button type="button" data-id="' + e.id + '" data-label="' + esc(e.label) + '" '
+                    + 'class="block w-full px-3 py-1.5 text-left text-sm text-zinc-700 hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">'
+                    + esc(e.label) + '</button>';
+            }).join('')
+            : '<div class="px-3 py-2 text-xs text-zinc-400">Nenhum veículo encontrado.</div>';
+        lista.classList.remove('hidden');
+    }
+
+    input.addEventListener('focus', function () { input.select(); render(''); });
+    input.addEventListener('input', function () { render(input.value); });
+
+    lista.addEventListener('click', function (e) {
+        var btn = e.target.closest('button[data-id]');
+        if (! btn) { return; }
+        hidden.value = btn.dataset.id;
+        labelAtual = btn.dataset.label;
+        input.value = labelAtual;
+        lista.classList.add('hidden');
+    });
+
+    limpar.addEventListener('click', function () {
+        hidden.value = '';
+        labelAtual = '';
+        input.value = '';
+        lista.classList.add('hidden');
+        input.focus();
+    });
+
+    document.addEventListener('click', function (e) {
+        if (! cb.contains(e.target)) {
+            lista.classList.add('hidden');
+            input.value = labelAtual; // descarta busca não confirmada
+        }
     });
 })();
 </script>
