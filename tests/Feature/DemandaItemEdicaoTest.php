@@ -224,13 +224,14 @@ class DemandaItemEdicaoTest extends TestCase
         $this->assertSame(StatusItemDemanda::Pendente, $item->fresh()->status_item);
     }
 
-    public function test_nao_permite_alterar_item_quando_todos_concluidos_e_sem_fim(): void
+    public function test_permite_alterar_item_mesmo_com_todos_concluidos(): void
     {
+        // O antigo travamento por "fim manual" foi removido: com o fim automático,
+        // alterar itens depois de concluídos é permitido.
         $demanda = $this->demandaCom([
             ['status_item' => StatusItemDemanda::Entregue],
             ['status_item' => StatusItemDemanda::Entregue],
         ]);
-        // Iniciada, mas sem fim, e com todos os itens concluídos.
         $demanda->update(['data_hora_inicio_demanda' => now()->subDay()]);
         $item = $demanda->itens->first();
 
@@ -241,9 +242,9 @@ class DemandaItemEdicaoTest extends TestCase
                 'subitem' => $item->subitem,
                 'status_item' => StatusItemDemanda::Cancelado->value,
             ])
-            ->assertSessionHas('error');
+            ->assertSessionHas('success');
 
-        $this->assertSame(StatusItemDemanda::Entregue, $item->fresh()->status_item);
+        $this->assertSame(StatusItemDemanda::Cancelado, $item->fresh()->status_item);
     }
 
     public function test_permite_alterar_item_com_inicio_e_sem_estar_concluido(): void
@@ -283,40 +284,35 @@ class DemandaItemEdicaoTest extends TestCase
         $this->assertNotNull($demanda->fresh()->data_hora_inicio_demanda);
     }
 
-    public function test_nao_permite_finalizar_demanda_com_itens_pendentes(): void
+    public function test_fim_da_demanda_e_definido_com_a_maior_entrega_quando_tudo_resolvido(): void
     {
+        $menor = now()->subDays(2)->startOfMinute();
+        $maior = now()->subDay()->startOfMinute();
+
         $demanda = $this->demandaCom([
-            ['status_item' => StatusItemDemanda::Entregue],
-            ['status_item' => StatusItemDemanda::Pendente],
+            ['status_item' => StatusItemDemanda::Entregue, 'data_hora_entrega' => $menor],
+            ['status_item' => StatusItemDemanda::Entregue, 'data_hora_entrega' => $maior],
         ]);
+        $demanda->update(['data_hora_inicio_demanda' => now()->subDays(3)]);
 
-        $this->actingAs($this->usuario())
-            ->put(route('demandas.update', $demanda), [
-                'data_hora_inicio_demanda' => now()->subDay()->format('Y-m-d\TH:i'),
-                'data_hora_fim_demanda' => now()->format('Y-m-d\TH:i'),
-            ])
-            ->assertSessionHasErrors('data_hora_fim_demanda');
+        app(DemandaCalculadora::class)->recalcular($demanda->load('itens'));
+        $demanda->refresh();
 
-        $this->assertNull($demanda->fresh()->data_hora_fim_demanda);
+        $this->assertSame(StatusDemanda::Finalizado, $demanda->status_demanda);
+        $this->assertTrue($maior->equalTo($demanda->data_hora_fim_demanda), 'Fim deve ser a maior data de entrega.');
     }
 
-    public function test_permite_finalizar_demanda_com_todos_os_itens_resolvidos(): void
+    public function test_fim_fica_nulo_enquanto_houver_item_pendente(): void
     {
         $demanda = $this->demandaCom([
-            ['status_item' => StatusItemDemanda::Entregue],
-            ['status_item' => StatusItemDemanda::Cancelado],
+            ['status_item' => StatusItemDemanda::Entregue, 'data_hora_entrega' => now()->subDay()],
+            ['status_item' => StatusItemDemanda::Pendente],
         ]);
+        $demanda->update(['data_hora_inicio_demanda' => now()->subDays(2)]);
 
-        $this->actingAs($this->usuario())
-            ->put(route('demandas.update', $demanda), [
-                'data_hora_inicio_demanda' => now()->subDay()->format('Y-m-d\TH:i'),
-                'data_hora_fim_demanda' => now()->format('Y-m-d\TH:i'),
-            ])
-            ->assertSessionHasNoErrors();
+        app(DemandaCalculadora::class)->recalcular($demanda->load('itens'));
 
-        $demanda->refresh();
-        $this->assertNotNull($demanda->data_hora_fim_demanda);
-        $this->assertSame(StatusDemanda::Finalizado, $demanda->status_demanda);
+        $this->assertNull($demanda->fresh()->data_hora_fim_demanda);
     }
 
     public function test_remover_item_recalcula_a_demanda(): void

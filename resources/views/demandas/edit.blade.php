@@ -129,17 +129,18 @@
                                           dark:[color-scheme:dark]">
                         </div>
                         <div>
-                            <label for="e-fim" class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                Fim
+                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                                Fim <span class="normal-case text-[10px] font-normal text-zinc-400">(automático)</span>
                             </label>
-                            <input type="datetime-local" name="data_hora_fim_demanda" id="e-fim"
-                                   value="{{ old('data_hora_fim_demanda', $demanda->data_hora_fim_demanda?->format('Y-m-d\TH:i')) }}"
-                                   class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-xs outline-none
-                                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800
-                                          dark:[color-scheme:dark]">
+                            <div class="flex h-[42px] items-center rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 text-sm
+                                        text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800/40 dark:text-zinc-400">
+                                {{ $demanda->data_hora_fim_demanda?->format('d/m/Y H:i') ?? '—' }}
+                            </div>
                         </div>
                     </div>
+                    <p class="-mt-2 text-[10px] text-zinc-400 dark:text-zinc-600">
+                        O fim é definido automaticamente com a maior data de entrega quando todos os itens são resolvidos.
+                    </p>
 
                     <div>
                         <label for="e-obs" class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">

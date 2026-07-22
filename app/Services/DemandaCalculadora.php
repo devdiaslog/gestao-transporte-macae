@@ -33,6 +33,7 @@ class DemandaCalculadora
         $demanda->fonte_demanda = FonteDemanda::fromNumeroDemanda($demanda->numero_demanda);
         $demanda->tipo_demanda = $this->tipo($itens);
         $demanda->prazo_demanda = $this->prazo($itens);
+        $demanda->data_hora_fim_demanda = $this->dataFim($itens);
 
         if ($novoStatus = $this->status($itens, $demanda)) {
             $demanda->status_demanda = $novoStatus;
@@ -41,6 +42,24 @@ class DemandaCalculadora
         $demanda->save();
 
         return $demanda;
+    }
+
+    /**
+     * Fim da demanda: definido automaticamente com a maior data/hora de entrega
+     * dos itens, mas só quando todos os itens já foram resolvidos (com status).
+     * Enquanto houver item pendente, a demanda não tem fim.
+     *
+     * @param  Collection<int, DemandaItem>  $itens
+     */
+    public function dataFim(Collection $itens): ?Carbon
+    {
+        if ($itens->isEmpty() || $itens->contains(fn ($i) => $i->status_item?->encerrado() !== true)) {
+            return null;
+        }
+
+        $entregas = $itens->pluck('data_hora_entrega')->filter();
+
+        return $entregas->isNotEmpty() ? $entregas->max() : null;
     }
 
     /**

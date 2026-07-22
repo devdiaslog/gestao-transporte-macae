@@ -119,8 +119,6 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
     Route::delete('demanda-itens/{item}', [DemandaItemController::class, 'destroy'])->name('demanda-itens.destroy')->middleware('can:delete-demanda')->whereNumber('item');
     Route::post('demandas', [DemandaController::class, 'store'])->name('demandas.store');
     Route::put('demandas/{demanda}', [DemandaController::class, 'update'])->name('demandas.update');
-    Route::patch('demandas/{demanda}/cancelar', [DemandaController::class, 'cancelar'])->name('demandas.cancelar');
-    Route::patch('demandas/{demanda}/finalizar', [DemandaController::class, 'finalizar'])->name('demandas.finalizar');
     Route::patch('demandas/{demanda}/auditar', [DemandaController::class, 'auditar'])->name('demandas.auditar')->middleware('can:delete-demanda');
     Route::delete('demandas/{demanda}', [DemandaController::class, 'destroy'])->name('demandas.destroy')->middleware('can:delete-demanda');
 

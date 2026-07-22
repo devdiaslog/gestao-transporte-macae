@@ -256,31 +256,6 @@ class DemandaController extends Controller
             ->with('success', 'Demanda #'.$demanda->numero_demanda.' atualizada.');
     }
 
-    public function cancelar(Demanda $demanda): RedirectResponse
-    {
-        abort_if($demanda->status_demanda === StatusDemanda::Finalizado, 403, 'Demanda já finalizada.');
-
-        $demanda->update(['status_demanda' => StatusDemanda::Cancelada]);
-
-        return redirect()->back()->with('success', 'Demanda #'.$demanda->numero_demanda.' cancelada.');
-    }
-
-    public function finalizar(Request $request, Demanda $demanda): RedirectResponse
-    {
-        abort_if($demanda->data_hora_inicio_demanda === null, 403, 'Demanda precisa ser iniciada antes de finalizar.');
-
-        $request->validate(['data_hora_fim_demanda' => ['nullable', 'date']]);
-
-        $demanda->update([
-            'data_hora_fim_demanda' => $request->filled('data_hora_fim_demanda')
-                ? $request->date('data_hora_fim_demanda')
-                : now(),
-            'status_demanda' => StatusDemanda::Finalizado,
-        ]);
-
-        return redirect()->back()->with('success', 'Demanda #'.$demanda->numero_demanda.' finalizada.');
-    }
-
     public function auditar(Demanda $demanda): RedirectResponse
     {
         $demanda->update(['status_auditoria' => ! $demanda->status_auditoria]);

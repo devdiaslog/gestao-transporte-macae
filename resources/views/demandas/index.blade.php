@@ -216,10 +216,6 @@
                                 $totalItens = $demanda->itens->count();
                                 $encerrados = $demanda->itensEncerrados();
                                 $tudoFeito = $totalItens > 0 && $encerrados === $totalItens;
-                                $podeFinalizar = $demanda->data_hora_inicio_demanda !== null
-                                    && $demanda->status_demanda->value !== 'finalizado'
-                                    && $demanda->status_demanda->value !== 'cancelada';
-                                $podeCancelar  = ! in_array($demanda->status_demanda->value, ['finalizado', 'cancelada']);
                             @endphp
                             <tr class="group transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/30">
                                 {{-- Número --}}
@@ -354,22 +350,6 @@
                                         </a>
 
 
-
-                                        {{-- Cancelar --}}
-                                        @if($podeCancelar)
-                                        <form method="POST" action="{{ route('demandas.cancelar', $demanda) }}">
-                                            @csrf @method('PATCH')
-                                            <button type="submit" title="Cancelar demanda"
-                                                    class="inline-flex h-7 items-center gap-1 rounded-lg border px-2 text-[11px] font-medium
-                                                           border-rose-200 text-rose-600 transition-colors hover:bg-rose-50
-                                                           dark:border-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-950/40">
-                                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
-                                                </svg>
-                                                Cancelar
-                                            </button>
-                                        </form>
-                                        @endif
 
                                         {{-- Auditar (admin) --}}
                                         @can('delete-demanda')
@@ -556,17 +536,6 @@
                                           dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
                                           dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
                         </div>
-                        <div>
-                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                Data / Hora de Fim
-                            </label>
-                            <input type="datetime-local" name="data_hora_fim_demanda" id="f-fim"
-                                   class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                                          text-zinc-900 outline-none shadow-xs
-                                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                                          dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
-                        </div>
                     </div>
 
                     {{-- Observação --}}
@@ -599,15 +568,6 @@
                         Cancelar
                     </button>
                     <div class="flex items-center gap-3">
-                        <button type="button" id="btn-finalizar"
-                                class="hidden inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 px-4 py-2
-                                       text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-50
-                                       dark:border-emerald-800/50 dark:text-emerald-400 dark:hover:bg-emerald-950/40">
-                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
-                            </svg>
-                            Finalizar
-                        </button>
                         <button type="submit" id="btn-salvar"
                                 class="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2 text-sm font-semibold text-white
                                        shadow-xs transition-all duration-150 hover:bg-zinc-700 active:scale-[0.98]
@@ -690,18 +650,14 @@
     var form         = document.getElementById('demanda-form');
     var errBox       = document.getElementById('demanda-error');
     var btnSalvar    = document.getElementById('btn-salvar');
-    var btnFinalizar = document.getElementById('btn-finalizar');
     var datasGroup   = document.getElementById('f-datas-group');
     var editingId    = null;
-    var finalizarUrl = null;
 
     var STORE_URL  = '{{ route('demandas.store') }}';
-    var BASE_URL   = '{{ url('/demandas') }}';
     var CSRF_TOKEN = '{{ csrf_token() }}';
 
     window.openDemandaModal = function () {
         editingId = null;
-        finalizarUrl = null;
         titleEl.textContent = 'Nova Demanda';
         form.reset();
         document.getElementById('demanda-method').value = 'POST';
@@ -709,84 +665,11 @@
         errBox.classList.add('hidden');
         datasGroup.style.display = 'none';
         datasGroup.classList.add('hidden');
-        btnFinalizar.classList.add('hidden');
         renderItens([]);
         cbReset('tipo_demanda');
         cbReset('equipamento_id');
         openModal();
     };
-
-    window.editDemanda = function (id, data) {
-        editingId = id;
-        titleEl.textContent = 'Editar Demanda #' + data.numero_demanda;
-        form.reset();
-        document.getElementById('demanda-method').value = 'PUT';
-        document.getElementById('f-numero-demanda').disabled = true;
-        errBox.classList.add('hidden');
-
-        document.getElementById('f-numero-demanda').value = data.numero_demanda || '';
-        document.getElementById('f-inicio').value         = fmtDatetime(data.data_hora_inicio_demanda);
-        document.getElementById('f-fim').value            = fmtDatetime(data.data_hora_fim_demanda);
-        document.getElementById('f-obs').value            = data.observacao || '';
-
-        renderItens(data.itens || []);
-
-        cbSetValue('tipo_demanda',   data.tipo_demanda);
-        cbSetValue('equipamento_id', data.equipamento_id);
-
-        // Mostra campos de data somente no modo edição
-        datasGroup.style.display = 'grid';
-        datasGroup.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
-        datasGroup.style.gap = '1rem';
-        datasGroup.classList.remove('hidden');
-
-        // Botão Finalizar: visível se pode finalizar (iniciado e não finalizado/cancelado)
-        var status = data.status_demanda || '';
-        var podeF  = data.data_hora_inicio_demanda && status !== 'finalizado' && status !== 'cancelada';
-        if (podeF) {
-            finalizarUrl = BASE_URL + '/' + id + '/finalizar';
-            btnFinalizar.classList.remove('hidden');
-        } else {
-            finalizarUrl = null;
-            btnFinalizar.classList.add('hidden');
-        }
-
-        openModal();
-    };
-
-    btnFinalizar.addEventListener('click', function () {
-        if (! finalizarUrl) { return; }
-
-        var inicioVal = document.getElementById('f-inicio').value;
-        var fimVal    = document.getElementById('f-fim').value;
-
-        // Validação: data fim obrigatória
-        if (! fimVal) {
-            showModalError('Preencha a Data / Hora de Fim antes de finalizar.');
-            return;
-        }
-
-        // Validação: data início obrigatória para finalizar
-        if (! inicioVal) {
-            showModalError('Preencha a Data / Hora de Início antes de finalizar.');
-            return;
-        }
-
-        // Validação: fim deve ser igual ou posterior ao início
-        if (new Date(fimVal) < new Date(inicioVal)) {
-            showModalError('A Data / Hora de Fim não pode ser anterior ao Início.');
-            return;
-        }
-
-        var f = document.createElement('form');
-        f.method = 'POST';
-        f.action = finalizarUrl;
-        f.innerHTML = '<input name="_token" value="' + CSRF_TOKEN + '">'
-            + '<input name="_method" value="PATCH">'
-            + '<input name="data_hora_fim_demanda" value="' + fimVal + '">';
-        document.body.appendChild(f);
-        f.submit();
-    });
 
     function showModalError(msg) {
         errBox.textContent = msg;
@@ -819,20 +702,10 @@
         errBox.classList.add('hidden');
         btnSalvar.disabled = true;
 
-        var url  = editingId ? '{{ url('/demandas') }}/' + editingId : STORE_URL;
+        var url  = STORE_URL;
         var data = new FormData(form);
 
-        // Valida coerência de datas quando ambas preenchidas
-        var inicioV = data.get('data_hora_inicio_demanda');
-        var fimV    = data.get('data_hora_fim_demanda');
-        if (inicioV && fimV && new Date(fimV) < new Date(inicioV)) {
-            showModalError('A Data / Hora de Fim não pode ser anterior ao Início.');
-            btnSalvar.disabled = false;
-            return;
-        }
-
         if (! data.get('data_hora_inicio_demanda')) { data.delete('data_hora_inicio_demanda'); }
-        if (! data.get('data_hora_fim_demanda')) { data.delete('data_hora_fim_demanda'); }
 
         fetch(url, {
             method: 'POST',

@@ -125,18 +125,14 @@ class Demanda extends Model
     /**
      * Motivo pelo qual os itens não podem ser alterados agora, ou null se liberado.
      *
-     * Regra de negócio: a demanda precisa estar iniciada para alterar itens; e,
-     * quando todos os itens estão concluídos, o fim da demanda deve ser
-     * registrado antes de novas alterações.
+     * Regra de negócio: a demanda precisa estar iniciada para alterar os itens.
+     * O fim é calculado automaticamente (maior data de entrega quando todos os
+     * itens estão resolvidos), então não há travamento manual de fim.
      */
     public function motivoBloqueioItens(): ?string
     {
         if ($this->data_hora_inicio_demanda === null) {
             return 'Informe o início da demanda para liberar a alteração dos itens.';
-        }
-
-        if ($this->itensConcluidos() && $this->data_hora_fim_demanda === null) {
-            return 'Todos os itens estão concluídos. Informe o fim da demanda antes de novas alterações.';
         }
 
         return null;
