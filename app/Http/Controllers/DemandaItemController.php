@@ -55,11 +55,17 @@ class DemandaItemController extends Controller
                 ->with('error', "A planilha não tinha itens para a demanda #{$demanda->numero_demanda}.");
         }
 
-        return redirect()->route('demandas.edit', $demanda)->with('success', sprintf(
+        $msg = sprintf(
             '%d item(ns) importado(s), %d atualizado(s).',
             $resultado['itens_criados'],
             $resultado['itens_atualizados'],
-        ));
+        );
+
+        if ($resultado['avisos'] !== []) {
+            $msg .= ' '.implode(' · ', array_slice($resultado['avisos'], 0, 3));
+        }
+
+        return redirect()->route('demandas.edit', $demanda)->with('success', $msg);
     }
 
     /**

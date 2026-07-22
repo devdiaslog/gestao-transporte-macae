@@ -108,7 +108,7 @@ class ImportadorDemandas
     /**
      * @param  int|null  $somenteNota  Quando informado, processa apenas as linhas
      *                                 dessa Nota (importação escopada a 1 demanda).
-     * @return array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, linhas_ignoradas: int, erros: array<int, string>}
+     * @return array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, itens_remanejados: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
      */
     public function importar(string $caminho, ?int $usuarioId = null, ?int $somenteNota = null): array
     {
@@ -116,7 +116,9 @@ class ImportadorDemandas
             'demandas_criadas' => 0,
             'itens_criados' => 0,
             'itens_atualizados' => 0,
+            'itens_remanejados' => 0,
             'linhas_ignoradas' => 0,
+            'avisos' => [],
             'erros' => [],
         ];
 
@@ -193,6 +195,10 @@ class ImportadorDemandas
                 $item = DemandaItem::firstOrNew($chave);
                 $novo = ! $item->exists;
 
+                if ($novo) {
+                    $this->cancelarRemanejados($chave, $demanda, $resultado, $demandasTocadas);
+                }
+
                 // Campos mestres do SAP: re-sincronizam quando a coluna existe na
                 // planilha. Coluna ausente não altera nada (import parcial seguro).
                 foreach (['local_origem', 'local_destino', 'descricao_local_retirada', 'descricao_item'] as $campoMestre) {
@@ -225,6 +231,45 @@ class ImportadorDemandas
         });
 
         return $resultado;
+    }
+
+    /**
+     * Quando o SAP remaneja um item para outra viagem, a RT passa a chegar com
+     * outro número de demanda. Ao criar o item na demanda nova, o exemplar ainda
+     * Pendente na demanda antiga é cancelado (mantém o histórico de que passou
+     * por lá e libera o encerramento automático dela). Itens já encerrados pelo
+     * operador na antiga não são alterados.
+     *
+     * @param  array{demanda_id: int, numero_rt: string, numero_item: string, subitem: string|null}  $chave
+     * @param  array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, itens_remanejados: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}  $resultado
+     * @param  array<int, bool>  $demandasTocadas
+     */
+    private function cancelarRemanejados(array $chave, Demanda $demanda, array &$resultado, array &$demandasTocadas): void
+    {
+        $anteriores = DemandaItem::query()
+            ->where('demanda_id', '!=', $chave['demanda_id'])
+            ->where('numero_rt', $chave['numero_rt'])
+            ->where('numero_item', $chave['numero_item'])
+            ->where(function ($query) use ($chave) {
+                $chave['subitem'] === null
+                    ? $query->whereNull('subitem')
+                    : $query->where('subitem', $chave['subitem']);
+            })
+            ->where(function ($query) {
+                $query->whereNull('status_item')->orWhere('status_item', StatusItemDemanda::Pendente);
+            })
+            ->get();
+
+        foreach ($anteriores as $anterior) {
+            $anterior->update(['status_item' => StatusItemDemanda::Cancelado]);
+            $demandasTocadas[$anterior->demanda_id] = true;
+            $resultado['itens_remanejados']++;
+            $resultado['avisos'][] = sprintf(
+                'RT %s remanejada para a demanda #%d: item cancelado na demanda anterior.',
+                $chave['numero_rt'],
+                $demanda->numero_demanda,
+            );
+        }
     }
 
     /**

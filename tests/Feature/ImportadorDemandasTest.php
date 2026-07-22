@@ -193,6 +193,56 @@ class ImportadorDemandasTest extends TestCase
         $this->assertSame('25/07/2026 10:00', $item->prazo_item->format('d/m/Y H:i'));
     }
 
+    public function test_rt_remanejada_para_outra_demanda_cancela_o_item_pendente_na_antiga(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+        $cabecalho = ['Numero Demanda Viagem', 'Numero Demanda Entrega', 'Item Demanda Entrega', 'Descrição Destino', 'Status Demanda Entrega'];
+
+        // 08:00 — RT entra Pendente na demanda antiga.
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800010', '326000080', '1', 'ARM-MACAE', '04'],
+        ]));
+
+        // Importação seguinte — SAP remanejou a RT para outra viagem.
+        $resultado = $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800011', '326000080', '1', 'ARM-MACAE', '04'],
+        ]));
+
+        $this->assertSame(1, $resultado['itens_remanejados']);
+        $this->assertNotEmpty($resultado['avisos']);
+
+        $antiga = Demanda::where('numero_demanda', 509800010)->firstOrFail();
+        $nova = Demanda::where('numero_demanda', 509800011)->firstOrFail();
+
+        // Cancelado na antiga (histórico preservado), criado Pendente na nova.
+        $this->assertSame(StatusItemDemanda::Cancelado, $antiga->itens()->first()->status_item);
+        $this->assertSame(StatusItemDemanda::Pendente, $nova->itens()->first()->status_item);
+
+        // A antiga recalcula e encerra sozinha (único item cancelado → Cancelada).
+        $this->assertSame(StatusDemanda::Cancelada, $antiga->status_demanda);
+    }
+
+    public function test_rt_remanejada_nao_altera_item_ja_encerrado_pelo_operador(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+        $cabecalho = ['Numero Demanda Viagem', 'Numero Demanda Entrega', 'Item Demanda Entrega', 'Status Demanda Entrega'];
+
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800012', '326000090', '1', '04'],
+        ]));
+
+        $antiga = Demanda::where('numero_demanda', 509800012)->firstOrFail();
+        $antiga->itens()->first()->update(['status_item' => StatusItemDemanda::Entregue]);
+
+        $resultado = $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800013', '326000090', '1', '04'],
+        ]));
+
+        $this->assertSame(0, $resultado['itens_remanejados']);
+        $this->assertSame(1, $resultado['itens_criados']);
+        $this->assertSame(StatusItemDemanda::Entregue, $antiga->itens()->first()->status_item);
+    }
+
     public function test_tipo_informado_na_planilha_fixa_o_tipo_manualmente(): void
     {
         $importador = app(ImportadorDemandas::class);

@@ -160,6 +160,10 @@ class DemandaController extends Controller
             $resultado['itens_atualizados']
         );
 
+        if ($resultado['avisos'] !== []) {
+            $msg .= ' '.implode(' · ', array_slice($resultado['avisos'], 0, 3));
+        }
+
         return redirect()->route('demandas.index')->with('success', $msg);
     }
 
