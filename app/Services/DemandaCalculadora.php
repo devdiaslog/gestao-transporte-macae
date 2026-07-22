@@ -38,6 +38,14 @@ class DemandaCalculadora
         }
 
         $demanda->prazo_demanda = $this->prazo($itens);
+
+        // Início automático: se a torre ainda não iniciou mas o SAP já
+        // registrou entregas, assume a mais antiga como início para a demanda
+        // não ficar presa em Pendente. Início definido pelo operador prevalece.
+        if ($demanda->data_hora_inicio_demanda === null && ($inicio = $this->dataInicio($itens))) {
+            $demanda->data_hora_inicio_demanda = $inicio;
+        }
+
         $demanda->data_hora_fim_demanda = $this->dataFim($itens);
 
         if ($novoStatus = $this->status($itens, $demanda)) {
@@ -47,6 +55,19 @@ class DemandaCalculadora
         $demanda->save();
 
         return $demanda;
+    }
+
+    /**
+     * Início sugerido pelas entregas do SAP: a data/hora de entrega mais antiga
+     * entre os itens. Usado apenas quando o operador não definiu o início.
+     *
+     * @param  Collection<int, DemandaItem>  $itens
+     */
+    public function dataInicio(Collection $itens): ?Carbon
+    {
+        $entregas = $itens->pluck('data_hora_entrega')->filter();
+
+        return $entregas->isNotEmpty() ? $entregas->min() : null;
     }
 
     /**

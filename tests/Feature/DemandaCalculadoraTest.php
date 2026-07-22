@@ -128,6 +128,37 @@ class DemandaCalculadoraTest extends TestCase
         );
     }
 
+    public function test_inicio_automatico_usa_a_entrega_mais_antiga_quando_torre_nao_iniciou(): void
+    {
+        $demanda = $this->demandaCom([
+            ['status_item' => StatusItemDemanda::Entregue, 'data_hora_entrega' => now()->subHours(3)],
+            ['status_item' => StatusItemDemanda::Entregue, 'data_hora_entrega' => now()->subHour()],
+            ['status_item' => StatusItemDemanda::Pendente],
+        ]);
+        $demanda->forceFill(['data_hora_inicio_demanda' => null])->save();
+
+        $this->calculadora()->recalcular($demanda);
+        $demanda->refresh();
+
+        $this->assertTrue(now()->subHours(3)->startOfSecond()->equalTo($demanda->data_hora_inicio_demanda));
+        // Com item pendente, o fim continua indefinido.
+        $this->assertNull($demanda->data_hora_fim_demanda);
+    }
+
+    public function test_inicio_definido_pelo_operador_nao_e_sobrescrito_pelas_entregas(): void
+    {
+        $inicioOperador = now()->subHours(5)->startOfSecond();
+
+        $demanda = $this->demandaCom([
+            ['status_item' => StatusItemDemanda::Entregue, 'data_hora_entrega' => now()->subHour()],
+        ]);
+        $demanda->forceFill(['data_hora_inicio_demanda' => $inicioOperador])->save();
+
+        $this->calculadora()->recalcular($demanda->refresh()->load('itens'));
+
+        $this->assertTrue($inicioOperador->equalTo($demanda->refresh()->data_hora_inicio_demanda));
+    }
+
     public function test_status_finalizado_quando_todos_os_itens_entregues(): void
     {
         $demanda = $this->demandaCom([
