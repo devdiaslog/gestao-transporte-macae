@@ -17,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class DemandaController extends Controller
 {
@@ -123,6 +124,13 @@ class DemandaController extends Controller
             ->get(['id', 'prefixo', 'placa']);
 
         return view('demandas.edit', compact('demanda', 'equipamentos'));
+    }
+
+    public function modeloImportacao(ImportadorDemandas $importador): BinaryFileResponse
+    {
+        return response()
+            ->download($importador->gerarModelo(), 'modelo-importacao-demandas.xlsx')
+            ->deleteFileAfterSend();
     }
 
     public function importar(ImportarDemandasRequest $request, ImportadorDemandas $importador): RedirectResponse

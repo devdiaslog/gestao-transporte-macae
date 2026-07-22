@@ -9,7 +9,9 @@ use App\Models\DemandaItem;
 use App\Models\Equipamento;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use OpenSpout\Common\Entity\Row;
 use OpenSpout\Reader\XLSX\Reader as XlsxReader;
+use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
 
 /**
  * Importa itens de demanda a partir do export do SAP em planilha.
@@ -38,7 +40,58 @@ class ImportadorDemandas
         'equipamento' => 'equipamento',
     ];
 
+    /**
+     * Cabeçalho do modelo de importação — nomes compatíveis com o mapeamento
+     * de COLUNAS, na ordem em que a RT precede o item da RT.
+     *
+     * @var array<int, string>
+     */
+    private const CABECALHO_MODELO = [
+        'Nota',
+        'Nº da RT',
+        'Item da RT',
+        'Subitem da',
+        'Origem',
+        'Local retirada',
+        'Destino',
+        'Descrição',
+        'Descrição equipamento',
+        'Status do',
+        'Data + tar',
+        'Hora + tar',
+    ];
+
+    /**
+     * Linhas de exemplo mostrando o formato esperado de cada coluna.
+     *
+     * @var array<int, array<int, string>>
+     */
+    private const EXEMPLOS_MODELO = [
+        ['509538496', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Descrição da carga', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00'],
+        ['619012345', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00'],
+    ];
+
     public function __construct(private DemandaCalculadora $calculadora) {}
+
+    /**
+     * Gera o modelo .xlsx de importação num arquivo temporário e devolve o caminho.
+     */
+    public function gerarModelo(): string
+    {
+        $caminho = tempnam(sys_get_temp_dir(), 'modelo_demandas_').'.xlsx';
+
+        $writer = new XlsxWriter;
+        $writer->openToFile($caminho);
+        $writer->addRow(Row::fromValues(self::CABECALHO_MODELO));
+
+        foreach (self::EXEMPLOS_MODELO as $linha) {
+            $writer->addRow(Row::fromValues($linha));
+        }
+
+        $writer->close();
+
+        return $caminho;
+    }
 
     /**
      * @return array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, linhas_ignoradas: int, erros: array<int, string>}

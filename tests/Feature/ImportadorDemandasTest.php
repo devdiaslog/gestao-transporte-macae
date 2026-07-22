@@ -81,6 +81,22 @@ class ImportadorDemandasTest extends TestCase
         $this->assertSame(StatusDemanda::Finalizado, $load->status_demanda);
     }
 
+    public function test_modelo_gerado_e_compativel_com_o_proprio_importador(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+
+        $caminho = $importador->gerarModelo();
+        $this->assertFileExists($caminho);
+
+        $resultado = $importador->importar($caminho);
+
+        $this->assertSame([], $resultado['erros']);
+        $this->assertGreaterThan(0, $resultado['demandas_criadas']);
+        $this->assertGreaterThan(0, $resultado['itens_criados']);
+
+        @unlink($caminho);
+    }
+
     public function test_prazo_da_demanda_usa_o_menor_item_ainda_exequivel(): void
     {
         $this->travelTo(now()->setDate(2026, 7, 21)->setTime(8, 0));
