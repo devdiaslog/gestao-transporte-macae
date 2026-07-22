@@ -325,6 +325,7 @@ class DashboardController extends Controller
         $finalizadas = $demandas->where('status_demanda', StatusDemanda::Finalizado)->count();
         $canceladas = $demandas->where('status_demanda', StatusDemanda::Cancelada)->count();
         $recusadas = $demandas->where('status_demanda', StatusDemanda::Recusa)->count();
+        $suspensas = $demandas->where('status_demanda', StatusDemanda::Suspensa)->count();
         $emAberto = $pendentes + $emAndamento;
 
         // ── Vencidas: prazo já passou e ainda em aberto ──────────────────────────
@@ -367,6 +368,7 @@ class DashboardController extends Controller
             ['label' => 'Finalizado',   'valor' => $finalizadas, 'cor' => '#10b981'],
             ['label' => 'Cancelada',    'valor' => $canceladas,  'cor' => '#f43f5e'],
             ['label' => 'Recusa',       'valor' => $recusadas,   'cor' => '#f97316'],
+            ['label' => 'Suspensa',     'valor' => $suspensas,   'cor' => '#f59e0b'],
         ];
 
         // ── Distribuição por tipo (barra) ────────────────────────────────────────
@@ -443,6 +445,7 @@ class DashboardController extends Controller
             ['key' => 'finalizado',   'label' => 'Finalizado',   'cor' => '#10b981'],
             ['key' => 'cancelada',    'label' => 'Cancelada',    'cor' => '#f43f5e'],
             ['key' => 'recusa',       'label' => 'Recusa',       'cor' => '#f97316'],
+            ['key' => 'suspensa',     'label' => 'Suspensa',     'cor' => '#f59e0b'],
         ];
 
         $porStatusDe = fn ($grupo): array => [
@@ -451,6 +454,7 @@ class DashboardController extends Controller
             'finalizado' => $grupo->where('status_demanda', StatusDemanda::Finalizado)->count(),
             'cancelada' => $grupo->where('status_demanda', StatusDemanda::Cancelada)->count(),
             'recusa' => $grupo->where('status_demanda', StatusDemanda::Recusa)->count(),
+            'suspensa' => $grupo->where('status_demanda', StatusDemanda::Suspensa)->count(),
         ];
 
         // ── Top rotas (origens → destinos dos itens), segmentadas por status ─────

@@ -99,6 +99,39 @@ class ImportadorDemandasTest extends TestCase
         @unlink($caminho);
     }
 
+    public function test_traduz_os_codigos_de_status_do_sap(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+
+        $planilha = $this->planilhaComCabecalho(
+            ['Numero Demanda Viagem', 'Numero Demanda Entrega', 'Item Demanda Entrega', 'Status Demanda Entrega'],
+            null,
+            [
+                ['509300001', '326000010', '1', '04'],
+                ['509300001', '326000011', '2', '07'],
+                ['509300001', '326000012', '3', '09'],
+                ['509300001', '326000013', '4', '13'],
+                ['509300001', '326000014', '5', '18'],
+            ]
+        );
+
+        $importador->importar($planilha);
+
+        $esperado = [
+            '326000010' => StatusItemDemanda::Pendente,
+            '326000011' => StatusItemDemanda::Entregue,
+            '326000012' => StatusItemDemanda::Cancelado,
+            '326000013' => StatusItemDemanda::Suspenso,
+            '326000014' => StatusItemDemanda::Suspenso,
+        ];
+
+        foreach ($esperado as $rt => $status) {
+            $this->assertSame($status, DemandaItem::where('numero_rt', $rt)->first()->status_item, "RT {$rt}");
+        }
+
+        @unlink($planilha);
+    }
+
     public function test_reconhece_cabecalho_generico_e_alias_do_sap(): void
     {
         $importador = app(ImportadorDemandas::class);
@@ -130,15 +163,20 @@ class ImportadorDemandasTest extends TestCase
 
     /**
      * @param  array<int, string>  $cabecalho
-     * @param  array<int, string>  $linha
+     * @param  array<int, string>|null  $linha  Linha única (atalho)
+     * @param  array<int, array<int, string>>  $linhas  Várias linhas
      */
-    private function planilhaComCabecalho(array $cabecalho, array $linha): string
+    private function planilhaComCabecalho(array $cabecalho, ?array $linha = null, array $linhas = []): string
     {
         $caminho = tempnam(sys_get_temp_dir(), 'planilha_').'.xlsx';
         $writer = new Writer;
         $writer->openToFile($caminho);
         $writer->addRow(Row::fromValues($cabecalho));
-        $writer->addRow(Row::fromValues($linha));
+
+        foreach ($linha !== null ? [$linha] : $linhas as $l) {
+            $writer->addRow(Row::fromValues($l));
+        }
+
         $writer->close();
 
         return $caminho;

@@ -20,9 +20,10 @@
         && ! in_array($demanda->status_demanda->value, ['finalizado', 'cancelada']);
 
     $statusItemCores = [
-        '04' => 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
-        '07' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
-        '18' => 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400',
+        'pendente' => 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
+        'entregue' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
+        'cancelado' => 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400',
+        'suspenso' => 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400',
         'recusado' => 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400',
     ];
 @endphp

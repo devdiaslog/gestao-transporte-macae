@@ -101,9 +101,9 @@ class DemandaCalculadora
 
     /**
      * Status da demanda derivado dos itens:
-     * todos cancelados → Cancelada; todos recusados → Recusa; todos os itens
-     * resolvidos (entregue/cancelado/recusado, mesmo misto) → Finalizado;
-     * algum resolvido ou demanda já iniciada → Em Andamento; senão Pendente.
+     * todos cancelados → Cancelada; todos recusados → Recusa; todos suspensos →
+     * Suspensa; todos os itens resolvidos (mesmo misto) → Finalizado; algum
+     * resolvido ou demanda já iniciada → Em Andamento; senão Pendente.
      *
      * @param  Collection<int, DemandaItem>  $itens
      */
@@ -121,6 +121,7 @@ class DemandaCalculadora
 
         $cancelados = $statuses->filter(fn ($s) => $s === StatusItemDemanda::Cancelado)->count();
         $recusados = $statuses->filter(fn ($s) => $s === StatusItemDemanda::Recusado)->count();
+        $suspensos = $statuses->filter(fn ($s) => $s === StatusItemDemanda::Suspenso)->count();
         $encerrados = $statuses->filter(fn ($s) => $s->encerrado())->count();
         $total = $statuses->count();
 
@@ -132,7 +133,11 @@ class DemandaCalculadora
             return StatusDemanda::Recusa;
         }
 
-        // Todos os itens resolvidos (mesmo com mistura de entregues e cancelados).
+        if ($suspensos === $total) {
+            return StatusDemanda::Suspensa;
+        }
+
+        // Todos os itens resolvidos (mesmo com mistura de entregues/cancelados/suspensos).
         if ($encerrados === $total) {
             return StatusDemanda::Finalizado;
         }

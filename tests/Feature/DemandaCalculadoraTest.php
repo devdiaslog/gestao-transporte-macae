@@ -175,11 +175,30 @@ class DemandaCalculadoraTest extends TestCase
             ['status_item' => StatusItemDemanda::Entregue],
             ['status_item' => StatusItemDemanda::Cancelado],
             ['status_item' => StatusItemDemanda::Recusado],
+            ['status_item' => StatusItemDemanda::Suspenso],
         ]);
 
         $this->calculadora()->recalcular($demanda);
 
         $this->assertSame(StatusDemanda::Finalizado, $demanda->fresh()->status_demanda);
+    }
+
+    public function test_status_suspensa_apenas_quando_todos_os_itens_suspensos(): void
+    {
+        $todos = $this->demandaCom([
+            ['status_item' => StatusItemDemanda::Suspenso],
+            ['status_item' => StatusItemDemanda::Suspenso],
+        ], 509000020);
+        $this->calculadora()->recalcular($todos);
+        $this->assertSame(StatusDemanda::Suspensa, $todos->fresh()->status_demanda);
+
+        // Um item entregue no meio impede a Suspensa (todos resolvidos → Finalizado).
+        $misto = $this->demandaCom([
+            ['status_item' => StatusItemDemanda::Suspenso],
+            ['status_item' => StatusItemDemanda::Entregue],
+        ], 509000021);
+        $this->calculadora()->recalcular($misto);
+        $this->assertSame(StatusDemanda::Finalizado, $misto->fresh()->status_demanda);
     }
 
     public function test_status_em_andamento_quando_ha_itens_encerrados_e_abertos(): void

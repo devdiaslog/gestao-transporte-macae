@@ -103,7 +103,7 @@ class DemandaController extends Controller
         $agora = now();
 
         $query->whereNotNull('prazo_demanda')
-            ->whereNotIn('status_demanda', ['finalizado', 'cancelada', 'recusa']);
+            ->whereNotIn('status_demanda', ['finalizado', 'cancelada', 'recusa', 'suspensa']);
 
         return match ($prazo) {
             'vencidas' => $query->where('prazo_demanda', '<', $agora),

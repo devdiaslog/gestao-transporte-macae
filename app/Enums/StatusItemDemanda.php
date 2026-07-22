@@ -5,20 +5,16 @@ namespace App\Enums;
 /**
  * Status do item de demanda.
  *
- * Os códigos 04, 07 e 18 vêm do SAP. O 07 foi confirmado como "entregue": no
- * export de referência todas as 96 linhas com status 07 possuíam data de
- * entrega preenchida, e nenhuma das demais possuía. O 04 é o estado corrente
- * da maioria dos itens (Pendente) e o 18 representa cancelamento.
- *
- * "Recusado" é um estado atribuído manualmente na edição do item (não há
- * código SAP correspondente); quando todos os itens são recusados, a demanda
- * passa a ter status Recusa.
+ * O valor interno é canônico (não é o código do SAP), porque um mesmo status
+ * pode vir de mais de um código — Suspenso corresponde tanto a 13 quanto a 18.
+ * A tradução do código bruto do SAP é feita em {@see self::fromCodigo()}.
  */
 enum StatusItemDemanda: string
 {
-    case Pendente = '04';
-    case Entregue = '07';
-    case Cancelado = '18';
+    case Pendente = 'pendente';
+    case Entregue = 'entregue';
+    case Cancelado = 'cancelado';
+    case Suspenso = 'suspenso';
     case Recusado = 'recusado';
 
     public function label(): string
@@ -27,6 +23,7 @@ enum StatusItemDemanda: string
             self::Pendente => 'Pendente',
             self::Entregue => 'Entregue',
             self::Cancelado => 'Cancelado',
+            self::Suspenso => 'Suspenso',
             self::Recusado => 'Recusado',
         };
     }
@@ -37,12 +34,14 @@ enum StatusItemDemanda: string
             self::Pendente => 'zinc',
             self::Entregue => 'emerald',
             self::Cancelado => 'rose',
+            self::Suspenso => 'amber',
             self::Recusado => 'orange',
         };
     }
 
     /**
-     * Item que já teve seu ciclo encerrado (entregue, cancelado ou recusado).
+     * Item que já teve seu ciclo encerrado (qualquer status diferente de Pendente).
+     * Entregue, Cancelado, Suspenso e Recusado contam como resolvidos.
      */
     public function encerrado(): bool
     {
@@ -50,8 +49,8 @@ enum StatusItemDemanda: string
     }
 
     /**
-     * Resolve o código bruto do SAP, tolerando valores desconhecidos.
-     * Aceita tanto "4" quanto "04".
+     * Traduz o código bruto do SAP para o status interno.
+     * Tolera valores de 1 dígito ("4" vira "04") e códigos desconhecidos (null).
      */
     public static function fromCodigo(string|int|null $codigo): ?self
     {
@@ -59,6 +58,12 @@ enum StatusItemDemanda: string
             return null;
         }
 
-        return self::tryFrom(str_pad((string) $codigo, 2, '0', STR_PAD_LEFT));
+        return match (str_pad((string) $codigo, 2, '0', STR_PAD_LEFT)) {
+            '04' => self::Pendente,
+            '07' => self::Entregue,
+            '09' => self::Cancelado,
+            '13', '18' => self::Suspenso,
+            default => null,
+        };
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\StatusDemanda;
+use App\Enums\StatusItemDemanda;
 use App\Enums\TipoCadastro;
 use App\Models\Demanda;
 use App\Models\DemandaItem;
@@ -172,7 +173,7 @@ class ImportadorDemandas
                     'local_destino' => $this->limpar($linha['local_destino'] ?? null),
                     'descricao_local_retirada' => $this->limpar($linha['descricao_local_retirada'] ?? null),
                     'descricao_item' => $this->limpar($linha['descricao_item'] ?? null),
-                    'status_item' => $this->limpar($linha['status_item'] ?? null),
+                    'status_item' => StatusItemDemanda::fromCodigo($this->limpar($linha['status_item'] ?? null)),
                     'prazo_item' => $this->montarPrazo($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null),
                 ]);
 
