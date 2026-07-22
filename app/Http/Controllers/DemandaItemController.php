@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\StatusItemDemanda;
+use App\Http\Requests\AtualizarStatusEtapaRequest;
 use App\Http\Requests\UpdateDemandaItemRequest;
+use App\Models\Demanda;
 use App\Models\DemandaItem;
 use App\Services\DemandaCalculadora;
 use Illuminate\Http\RedirectResponse;
@@ -10,6 +13,24 @@ use Illuminate\Http\RedirectResponse;
 class DemandaItemController extends Controller
 {
     public function __construct(private DemandaCalculadora $calculadora) {}
+
+    /**
+     * Define o mesmo status para todos os itens de uma etapa da demanda.
+     */
+    public function atualizarStatusEtapa(AtualizarStatusEtapaRequest $request, Demanda $demanda): RedirectResponse
+    {
+        $status = StatusItemDemanda::from($request->input('status_item'));
+
+        $afetados = $demanda->itens()
+            ->whereIn('id', $request->input('itens'))
+            ->update(['status_item' => $status->value]);
+
+        $this->calculadora->recalcular($demanda->load('itens'));
+
+        return redirect()
+            ->route('demandas.edit', $demanda)
+            ->with('success', "{$afetados} item(ns) da etapa marcados como {$status->label()}.");
+    }
 
     public function update(UpdateDemandaItemRequest $request, DemandaItem $item): RedirectResponse
     {

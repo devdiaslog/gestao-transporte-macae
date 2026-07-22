@@ -134,6 +134,49 @@ class DemandaItemEdicaoTest extends TestCase
             ->assertSee('1/2');
     }
 
+    public function test_aplicar_status_em_lote_marca_todos_os_itens_da_etapa(): void
+    {
+        $demanda = $this->demandaCom([
+            ['local_origem' => 'ARM-MACAE', 'local_destino' => 'ARM-RIO', 'status_item' => StatusItemDemanda::Pendente],
+            ['local_origem' => 'ARM-MACAE', 'local_destino' => 'ARM-RIO', 'status_item' => StatusItemDemanda::Pendente],
+        ]);
+
+        $ids = $demanda->itens->pluck('id')->all();
+
+        $this->actingAs($this->usuario())
+            ->put(route('demandas.status-etapa', $demanda), [
+                'itens' => $ids,
+                'status_item' => StatusItemDemanda::Entregue->value,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $demanda->refresh()->load('itens');
+
+        $this->assertTrue($demanda->itens->every(fn ($i) => $i->status_item === StatusItemDemanda::Entregue));
+        $this->assertSame(StatusDemanda::Finalizado, $demanda->status_demanda);
+    }
+
+    public function test_nao_aplica_status_em_itens_de_outra_demanda(): void
+    {
+        $demanda = $this->demandaCom([['local_origem' => 'A', 'local_destino' => 'B']]);
+
+        $outra = Demanda::factory()->create(['numero_demanda' => 509999002]);
+        $itemAlheio = $outra->itens()->create([
+            'numero_rt' => '999', 'numero_item' => '1', 'subitem' => '1',
+            'status_item' => StatusItemDemanda::Pendente,
+        ]);
+
+        $this->actingAs($this->usuario())
+            ->put(route('demandas.status-etapa', $demanda), [
+                'itens' => [$itemAlheio->id],
+                'status_item' => StatusItemDemanda::Entregue->value,
+            ])
+            ->assertSessionHasErrors('itens.0');
+
+        $this->assertSame(StatusItemDemanda::Pendente, $itemAlheio->fresh()->status_item);
+    }
+
     public function test_remover_item_recalcula_a_demanda(): void
     {
         $admin = User::factory()->create(['role' => UserRole::Administrador]);

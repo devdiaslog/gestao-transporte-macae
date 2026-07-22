@@ -203,19 +203,47 @@
                             @endphp
                             <section class="overflow-hidden rounded-lg border border-slate-200 dark:border-zinc-700">
                                 {{-- Cabeçalho da etapa --}}
-                                <header class="flex items-center justify-between gap-3 border-b px-4 py-2.5
+                                <header class="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-2.5
                                                {{ $completa
                                                   ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/20'
                                                   : 'border-slate-100 bg-slate-50 dark:border-zinc-800 dark:bg-zinc-800/40' }}">
-                                    <p class="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200" title="{{ $rota }}">
-                                        {{ $rota }}
-                                    </p>
-                                    <span class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums
-                                                 {{ $completa
-                                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
-                                                    : 'bg-white text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400' }}">
-                                        {{ $etapaEncerrados }}/{{ $etapaTotal }}
-                                    </span>
+                                    <div class="flex min-w-0 items-center gap-2">
+                                        <p class="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200" title="{{ $rota }}">
+                                            {{ $rota }}
+                                        </p>
+                                        <span class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums
+                                                     {{ $completa
+                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
+                                                        : 'bg-white text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400' }}">
+                                            {{ $etapaEncerrados }}/{{ $etapaTotal }}
+                                        </span>
+                                    </div>
+
+                                    {{-- Aplicar um status a todos os itens da etapa --}}
+                                    <form method="POST" action="{{ route('demandas.status-etapa', $demanda) }}"
+                                          class="flex shrink-0 items-center gap-1.5">
+                                        @csrf
+                                        @method('PUT')
+                                        @foreach($itens as $item)
+                                            <input type="hidden" name="itens[]" value="{{ $item->id }}">
+                                        @endforeach
+                                        <span class="text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Etapa:</span>
+                                        <select name="status_item" required
+                                                class="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-zinc-900 shadow-xs outline-none
+                                                       focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                                                       dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+                                            <option value="" disabled selected>Definir status…</option>
+                                            @foreach(\App\Enums\StatusItemDemanda::cases() as $s)
+                                                <option value="{{ $s->value }}">{{ $s->label() }}</option>
+                                            @endforeach
+                                        </select>
+                                        <button type="submit"
+                                                class="h-8 shrink-0 rounded-lg bg-zinc-900 px-3 text-xs font-semibold text-white
+                                                       transition-colors hover:bg-zinc-700 active:scale-[0.98]
+                                                       dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
+                                            Aplicar
+                                        </button>
+                                    </form>
                                 </header>
 
                                 {{-- Itens da etapa --}}

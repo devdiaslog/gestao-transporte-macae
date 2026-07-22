@@ -112,6 +112,7 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
     Route::get('demandas-export', [DemandaController::class, 'export'])->name('demandas.export');
     Route::post('demandas-importar', [DemandaController::class, 'importar'])->name('demandas.importar');
     Route::get('demandas/{demanda}/editar', [DemandaController::class, 'edit'])->name('demandas.edit');
+    Route::put('demandas/{demanda}/status-etapa', [DemandaItemController::class, 'atualizarStatusEtapa'])->name('demandas.status-etapa');
     Route::put('demanda-itens/{item}', [DemandaItemController::class, 'update'])->name('demanda-itens.update')->whereNumber('item');
     Route::delete('demanda-itens/{item}', [DemandaItemController::class, 'destroy'])->name('demanda-itens.destroy')->middleware('can:delete-demanda')->whereNumber('item');
     Route::post('demandas', [DemandaController::class, 'store'])->name('demandas.store');
