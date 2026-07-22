@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Enums\FonteDemanda;
 use App\Enums\StatusDemanda;
-use App\Enums\StatusItemDemanda;
 use App\Enums\TipoCadastro;
 use App\Enums\TipoDemanda;
 use App\Models\CercaEvento;
@@ -14,7 +13,6 @@ use App\Models\Equipamento;
 use App\Models\StatusEvento;
 use App\Models\TipoEquipamento;
 use App\Services\BigcoreService;
-use App\Services\DemandaCalculadora;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,8 +21,6 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function __construct(private DemandaCalculadora $calculadora) {}
-
     /**
      * Registra demandas novas detectadas na resposta da API do E-log.
      * Ignora documentos já cadastrados e valores que não sejam numéricos de 9-10 dígitos.
@@ -82,27 +78,16 @@ class DashboardController extends Controller
             $placa = strtoupper($veiculo['licensePlate'] ?? '');
             $equipamentoId = $placa ? ($placaParaId->get($placa) ?? null) : null;
 
-            $etaDocs = $veiculo['etaDocument']['etaDocuments'] ?? [];
-            $origem = isset($etaDocs[0]) ? strtoupper(trim($etaDocs[0]['destinationName'] ?? '')) : null;
-            $destino = isset($etaDocs[1]) ? strtoupper(trim($etaDocs[1]['destinationName'] ?? '')) : null;
-
-            $demanda = Demanda::create([
+            // Do E-log cadastramos apenas o número da demanda e o veículo.
+            // Rota, itens e status chegam depois pela importação do SAP, que
+            // localiza esta demanda pelo número e completa o resto.
+            Demanda::create([
                 'numero_demanda' => $numeroDoc,
                 'tipo_cadastro' => TipoCadastro::Integracao,
+                'fonte_demanda' => FonteDemanda::fromNumeroDemanda($numeroDoc),
                 'status_demanda' => StatusDemanda::Pendente,
                 'equipamento_id' => $equipamentoId,
             ]);
-
-            // A API não traz RT nem subitem; o próprio documento identifica o item.
-            $demanda->itens()->create([
-                'numero_rt' => (string) $numeroDoc,
-                'numero_item' => '1',
-                'local_origem' => $origem,
-                'local_destino' => $destino,
-                'status_item' => StatusItemDemanda::Pendente,
-            ]);
-
-            $this->calculadora->recalcular($demanda->load('itens'));
 
             $criados++;
         }
