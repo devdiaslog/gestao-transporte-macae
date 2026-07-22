@@ -169,6 +169,19 @@ class DemandaCalculadoraTest extends TestCase
         $this->assertSame(StatusDemanda::EmAndamento, $parcial->fresh()->status_demanda);
     }
 
+    public function test_status_finalizado_quando_todos_resolvidos_mesmo_com_mistura(): void
+    {
+        $demanda = $this->demandaCom([
+            ['status_item' => StatusItemDemanda::Entregue],
+            ['status_item' => StatusItemDemanda::Cancelado],
+            ['status_item' => StatusItemDemanda::Recusado],
+        ]);
+
+        $this->calculadora()->recalcular($demanda);
+
+        $this->assertSame(StatusDemanda::Finalizado, $demanda->fresh()->status_demanda);
+    }
+
     public function test_status_em_andamento_quando_ha_itens_encerrados_e_abertos(): void
     {
         $demanda = $this->demandaCom([

@@ -242,6 +242,58 @@ class DemandaItemEdicaoTest extends TestCase
         $this->assertSame(StatusItemDemanda::Entregue, $item->fresh()->status_item);
     }
 
+    public function test_permite_iniciar_demanda_com_itens_pendentes(): void
+    {
+        $demanda = $this->demandaCom([
+            ['status_item' => StatusItemDemanda::Pendente],
+        ]);
+
+        $this->actingAs($this->usuario())
+            ->put(route('demandas.update', $demanda), [
+                'data_hora_inicio_demanda' => now()->format('Y-m-d\TH:i'),
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success');
+
+        $this->assertNotNull($demanda->fresh()->data_hora_inicio_demanda);
+    }
+
+    public function test_nao_permite_finalizar_demanda_com_itens_pendentes(): void
+    {
+        $demanda = $this->demandaCom([
+            ['status_item' => StatusItemDemanda::Entregue],
+            ['status_item' => StatusItemDemanda::Pendente],
+        ]);
+
+        $this->actingAs($this->usuario())
+            ->put(route('demandas.update', $demanda), [
+                'data_hora_inicio_demanda' => now()->subDay()->format('Y-m-d\TH:i'),
+                'data_hora_fim_demanda' => now()->format('Y-m-d\TH:i'),
+            ])
+            ->assertSessionHasErrors('data_hora_fim_demanda');
+
+        $this->assertNull($demanda->fresh()->data_hora_fim_demanda);
+    }
+
+    public function test_permite_finalizar_demanda_com_todos_os_itens_resolvidos(): void
+    {
+        $demanda = $this->demandaCom([
+            ['status_item' => StatusItemDemanda::Entregue],
+            ['status_item' => StatusItemDemanda::Cancelado],
+        ]);
+
+        $this->actingAs($this->usuario())
+            ->put(route('demandas.update', $demanda), [
+                'data_hora_inicio_demanda' => now()->subDay()->format('Y-m-d\TH:i'),
+                'data_hora_fim_demanda' => now()->format('Y-m-d\TH:i'),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $demanda->refresh();
+        $this->assertNotNull($demanda->data_hora_fim_demanda);
+        $this->assertSame(StatusDemanda::Finalizado, $demanda->status_demanda);
+    }
+
     public function test_remover_item_recalcula_a_demanda(): void
     {
         $admin = User::factory()->create(['role' => UserRole::Administrador]);

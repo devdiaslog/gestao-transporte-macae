@@ -9,6 +9,7 @@ use App\Http\Requests\StoreDemandaRequest;
 use App\Http\Requests\UpdateDemandaRequest;
 use App\Models\Demanda;
 use App\Models\Equipamento;
+use App\Services\DemandaCalculadora;
 use App\Services\ImportadorDemandas;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -226,9 +227,12 @@ class DemandaController extends Controller
         return response()->json(['ok' => true, 'id' => $demanda->id]);
     }
 
-    public function update(UpdateDemandaRequest $request, Demanda $demanda): JsonResponse|RedirectResponse
+    public function update(UpdateDemandaRequest $request, Demanda $demanda, DemandaCalculadora $calculadora): JsonResponse|RedirectResponse
     {
         $demanda->update($request->validated());
+
+        // Início/fim influenciam o status derivado; mantém tudo consistente.
+        $calculadora->recalcular($demanda->load('itens'));
 
         // O modal da listagem envia via fetch; a página de edição usa form comum.
         if ($request->expectsJson()) {
