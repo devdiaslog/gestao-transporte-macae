@@ -242,7 +242,13 @@ class DemandaController extends Controller
 
     public function update(UpdateDemandaRequest $request, Demanda $demanda, DemandaCalculadora $calculadora): JsonResponse|RedirectResponse
     {
-        $demanda->update($request->validated());
+        $dados = $request->validated();
+
+        // Tipo escolhido no select fixa o tipo manualmente; "Automático" (vazio)
+        // devolve o controle ao cálculo pelos itens.
+        $dados['tipo_demanda_manual'] = $request->filled('tipo_demanda');
+
+        $demanda->update($dados);
 
         // Início/fim influenciam o status derivado; mantém tudo consistente.
         $calculadora->recalcular($demanda->load('itens'));

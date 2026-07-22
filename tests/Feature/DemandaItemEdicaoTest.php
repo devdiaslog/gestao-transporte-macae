@@ -268,6 +268,41 @@ class DemandaItemEdicaoTest extends TestCase
         $this->assertSame(StatusItemDemanda::Entregue, $item->fresh()->status_item);
     }
 
+    public function test_fixa_tipo_manual_pela_edicao_mesmo_sem_itens(): void
+    {
+        // Demanda capturada do E-log: sem itens, tipo indefinido.
+        $demanda = Demanda::factory()->create(['numero_demanda' => 509999005]);
+
+        $this->actingAs($this->usuario())
+            ->put(route('demandas.update', $demanda), [
+                'tipo_demanda' => TipoDemanda::Load->value,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $demanda->refresh();
+        $this->assertSame(TipoDemanda::Load, $demanda->tipo_demanda);
+        $this->assertTrue($demanda->tipo_demanda_manual);
+    }
+
+    public function test_tipo_automatico_na_edicao_volta_a_derivar_dos_itens(): void
+    {
+        $demanda = $this->demandaCom([
+            ['local_origem' => 'PACU', 'local_destino' => 'ARM-MACAE', 'status_item' => StatusItemDemanda::Pendente],
+        ]);
+        $demanda->update(['tipo_demanda' => TipoDemanda::Load, 'tipo_demanda_manual' => true]);
+
+        // Volta para "Automático" (tipo vazio) → deriva Backload da origem PACU.
+        $this->actingAs($this->usuario())
+            ->put(route('demandas.update', $demanda), [
+                'tipo_demanda' => '',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $demanda->refresh();
+        $this->assertFalse($demanda->tipo_demanda_manual);
+        $this->assertSame(TipoDemanda::Backload, $demanda->tipo_demanda);
+    }
+
     public function test_permite_iniciar_demanda_com_itens_pendentes(): void
     {
         $demanda = $this->demandaCom([

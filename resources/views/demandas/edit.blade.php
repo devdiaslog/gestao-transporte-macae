@@ -106,6 +106,24 @@
                 </div>
 
                 <div class="space-y-4 p-5">
+                    <div>
+                        <label for="e-tipo" class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                            Tipo
+                        </label>
+                        <select name="tipo_demanda" id="e-tipo"
+                                class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-xs outline-none
+                                       focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                                       dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+                            <option value="" @selected(! $demanda->tipo_demanda_manual)>Automático (pelos itens)</option>
+                            @foreach(\App\Enums\TipoDemanda::cases() as $t)
+                                <option value="{{ $t->value }}" @selected($demanda->tipo_demanda_manual && $demanda->tipo_demanda === $t)>{{ $t->label() }}</option>
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-[10px] text-zinc-400 dark:text-zinc-600">
+                            Automático classifica pela rota dos itens (BMAC · PACU · PBG). Escolha um tipo para fixar manualmente.
+                        </p>
+                    </div>
+
                     {{-- Veículo — combobox com busca por prefixo/placa --}}
                     <div>
                         <label for="e-veiculo-busca" class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
