@@ -39,6 +39,7 @@ class UpdateDemandaItemRequest extends FormRequest
             'descricao_item' => ['nullable', 'string', 'max:2000'],
             'status_item' => ['nullable', Rule::enum(StatusItemDemanda::class)],
             'prazo_item' => ['nullable', 'date'],
+            'data_hora_entrega' => ['nullable', 'date'],
         ];
     }
 

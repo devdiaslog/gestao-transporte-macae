@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\StatusItemDemanda;
+use App\Http\Requests\AtualizarEntregaEtapaRequest;
 use App\Http\Requests\AtualizarStatusEtapaRequest;
 use App\Http\Requests\UpdateDemandaItemRequest;
 use App\Models\Demanda;
@@ -46,6 +47,24 @@ class DemandaItemController extends Controller
         return redirect()
             ->route('demandas.edit', $demanda)
             ->with('success', "{$afetados} item(ns) da etapa marcados como {$status->label()}.");
+    }
+
+    /**
+     * Define a mesma data/hora de entrega para todos os itens de uma etapa.
+     */
+    public function atualizarEntregaEtapa(AtualizarEntregaEtapaRequest $request, Demanda $demanda): RedirectResponse
+    {
+        if ($bloqueio = $this->bloqueio($demanda)) {
+            return $bloqueio;
+        }
+
+        $afetados = $demanda->itens()
+            ->whereIn('id', $request->input('itens'))
+            ->update(['data_hora_entrega' => $request->date('data_hora_entrega')]);
+
+        return redirect()
+            ->route('demandas.edit', $demanda)
+            ->with('success', "Data de entrega aplicada a {$afetados} item(ns) da etapa.");
     }
 
     public function update(UpdateDemandaItemRequest $request, DemandaItem $item): RedirectResponse

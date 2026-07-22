@@ -159,6 +159,31 @@ class DemandaItemEdicaoTest extends TestCase
         $this->assertSame(StatusDemanda::Finalizado, $demanda->status_demanda);
     }
 
+    public function test_aplicar_data_de_entrega_em_lote_na_etapa(): void
+    {
+        $demanda = $this->demandaCom([
+            ['local_origem' => 'ARM-MACAE', 'local_destino' => 'ARM-RIO', 'status_item' => StatusItemDemanda::Pendente],
+            ['local_origem' => 'ARM-MACAE', 'local_destino' => 'ARM-RIO', 'status_item' => StatusItemDemanda::Pendente],
+        ]);
+        $demanda->update(['data_hora_inicio_demanda' => now()->subDay()]);
+
+        $entrega = now()->startOfMinute();
+
+        $this->actingAs($this->usuario())
+            ->put(route('demandas.entrega-etapa', $demanda), [
+                'itens' => $demanda->itens->pluck('id')->all(),
+                'data_hora_entrega' => $entrega->format('Y-m-d\TH:i'),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $demanda->refresh()->load('itens');
+
+        $this->assertTrue($demanda->itens->every(
+            fn ($i) => $i->data_hora_entrega !== null && $entrega->equalTo($i->data_hora_entrega)
+        ));
+    }
+
     public function test_nao_aplica_status_em_itens_de_outra_demanda(): void
     {
         $demanda = $this->demandaCom([['local_origem' => 'A', 'local_destino' => 'B']]);

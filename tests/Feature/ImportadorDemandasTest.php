@@ -99,6 +99,30 @@ class ImportadorDemandasTest extends TestCase
         @unlink($caminho);
     }
 
+    public function test_importa_a_data_hora_de_entrega_do_item(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+
+        $planilha = $this->planilhaComCabecalho(
+            ['Numero Demanda Viagem', 'Numero Demanda Entrega', 'Item Demanda Entrega', 'Status Demanda Entrega', 'Data Entrega', 'Hora Entrega'],
+            null,
+            [
+                ['509400001', '326000020', '1', '07', '16.07.2026', '04:08:37'],
+                ['509400001', '326000021', '2', '04', '', ''],
+            ]
+        );
+
+        $importador->importar($planilha);
+
+        $entregue = DemandaItem::where('numero_rt', '326000020')->firstOrFail();
+        $this->assertSame('16/07/2026 04:08', $entregue->data_hora_entrega->format('d/m/Y H:i'));
+
+        $pendente = DemandaItem::where('numero_rt', '326000021')->firstOrFail();
+        $this->assertNull($pendente->data_hora_entrega);
+
+        @unlink($planilha);
+    }
+
     public function test_traduz_os_codigos_de_status_do_sap(): void
     {
         $importador = app(ImportadorDemandas::class);

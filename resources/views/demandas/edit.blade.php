@@ -234,31 +234,55 @@
                                         </span>
                                     </div>
 
-                                    {{-- Aplicar um status a todos os itens da etapa --}}
-                                    <form method="POST" action="{{ route('demandas.status-etapa', $demanda) }}"
-                                          class="flex shrink-0 items-center gap-1.5">
-                                        @csrf
-                                        @method('PUT')
-                                        @foreach($itens as $item)
-                                            <input type="hidden" name="itens[]" value="{{ $item->id }}">
-                                        @endforeach
-                                        <span class="text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Etapa:</span>
-                                        <select name="status_item" required @disabled($edicaoBloqueada)
-                                                class="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-zinc-900 shadow-xs outline-none
-                                                       focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:opacity-50
-                                                       dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-                                            <option value="" disabled selected>Definir status…</option>
-                                            @foreach(\App\Enums\StatusItemDemanda::cases() as $s)
-                                                <option value="{{ $s->value }}">{{ $s->label() }}</option>
+                                    {{-- Ações em lote para todos os itens da etapa (mesmo destino) --}}
+                                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                                        {{-- Status --}}
+                                        <form method="POST" action="{{ route('demandas.status-etapa', $demanda) }}"
+                                              class="flex shrink-0 items-center gap-1.5">
+                                            @csrf
+                                            @method('PUT')
+                                            @foreach($itens as $item)
+                                                <input type="hidden" name="itens[]" value="{{ $item->id }}">
                                             @endforeach
-                                        </select>
-                                        <button type="submit" @disabled($edicaoBloqueada)
-                                                class="h-8 shrink-0 rounded-lg bg-zinc-900 px-3 text-xs font-semibold text-white
-                                                       transition-colors hover:bg-zinc-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-zinc-900
-                                                       dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 dark:disabled:hover:bg-white">
-                                            Aplicar
-                                        </button>
-                                    </form>
+                                            <span class="text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Status:</span>
+                                            <select name="status_item" required @disabled($edicaoBloqueada)
+                                                    class="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-zinc-900 shadow-xs outline-none
+                                                           focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:opacity-50
+                                                           dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+                                                <option value="" disabled selected>Definir…</option>
+                                                @foreach(\App\Enums\StatusItemDemanda::cases() as $s)
+                                                    <option value="{{ $s->value }}">{{ $s->label() }}</option>
+                                                @endforeach
+                                            </select>
+                                            <button type="submit" @disabled($edicaoBloqueada)
+                                                    class="h-8 shrink-0 rounded-lg bg-zinc-900 px-3 text-xs font-semibold text-white
+                                                           transition-colors hover:bg-zinc-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-zinc-900
+                                                           dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 dark:disabled:hover:bg-white">
+                                                Aplicar
+                                            </button>
+                                        </form>
+
+                                        {{-- Data/hora de entrega --}}
+                                        <form method="POST" action="{{ route('demandas.entrega-etapa', $demanda) }}"
+                                              class="flex shrink-0 items-center gap-1.5">
+                                            @csrf
+                                            @method('PUT')
+                                            @foreach($itens as $item)
+                                                <input type="hidden" name="itens[]" value="{{ $item->id }}">
+                                            @endforeach
+                                            <span class="text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Entrega:</span>
+                                            <input type="datetime-local" name="data_hora_entrega" required @disabled($edicaoBloqueada)
+                                                   class="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-zinc-900 shadow-xs outline-none
+                                                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:opacity-50
+                                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
+                                            <button type="submit" @disabled($edicaoBloqueada)
+                                                    class="h-8 shrink-0 rounded-lg bg-zinc-900 px-3 text-xs font-semibold text-white
+                                                           transition-colors hover:bg-zinc-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-zinc-900
+                                                           dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 dark:disabled:hover:bg-white">
+                                                Aplicar
+                                            </button>
+                                        </form>
+                                    </div>
                                 </header>
 
                                 {{-- Itens da etapa --}}
@@ -266,10 +290,11 @@
                                     <table class="w-full text-xs">
                                         <thead class="bg-white dark:bg-zinc-900">
                                             <tr class="text-left text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                                                <th class="px-3 py-1.5 font-semibold">Entrega / Item</th>
+                                                <th class="px-3 py-1.5 font-semibold">Nº Entrega / Item</th>
                                                 <th class="px-3 py-1.5 font-semibold">Descrição</th>
                                                 <th class="px-3 py-1.5 font-semibold">Retirada</th>
                                                 <th class="px-3 py-1.5 font-semibold">Prazo</th>
+                                                <th class="px-3 py-1.5 font-semibold">Entregue em</th>
                                                 <th class="px-3 py-1.5 font-semibold">Status</th>
                                                 <th class="w-10 px-3 py-1.5"></th>
                                             </tr>
@@ -293,6 +318,7 @@
                                                         'descricao_item' => $item->descricao_item,
                                                         'status_item' => $item->status_item?->value,
                                                         'prazo_item' => $item->prazo_item?->format('Y-m-d\TH:i'),
+                                                        'data_hora_entrega' => $item->data_hora_entrega?->format('Y-m-d\TH:i'),
                                                     ];
                                                 @endphp
                                                 <tr class="transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/40">
@@ -309,6 +335,9 @@
                                                     </td>
                                                     <td class="whitespace-nowrap px-3 py-2 {{ $itemVencido ? 'font-semibold text-rose-600 dark:text-rose-400' : 'text-zinc-600 dark:text-zinc-400' }}">
                                                         {{ $item->prazo_item?->format('d/m/Y H:i') ?? '—' }}
+                                                    </td>
+                                                    <td class="whitespace-nowrap px-3 py-2 {{ $item->data_hora_entrega ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-400 dark:text-zinc-600' }}">
+                                                        {{ $item->data_hora_entrega?->format('d/m/Y H:i') ?? '—' }}
                                                     </td>
                                                     <td class="whitespace-nowrap px-3 py-2">
                                                         <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium {{ $cor }}">
@@ -447,6 +476,15 @@
                                           dark:[color-scheme:dark]">
                         </div>
                     </div>
+
+                    <div>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Data / Hora de Entrega</label>
+                        <input type="datetime-local" name="data_hora_entrega" id="i-entrega"
+                               class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-xs outline-none
+                                      focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                                      dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800
+                                      dark:[color-scheme:dark]">
+                    </div>
                     <p class="-mt-2 text-[10px] text-zinc-400 dark:text-zinc-600">
                         Status e prazo recalculam o status e o prazo da demanda.
                     </p>
@@ -515,7 +553,8 @@
         document.getElementById('i-descricao').value = data.descricao_item || '';
         document.getElementById('i-retirada').value  = data.descricao_local_retirada || '';
         document.getElementById('i-status').value    = data.status_item || '';
-        document.getElementById('i-prazo').value     = data.prazo_item || '';
+        document.getElementById('i-prazo').value      = data.prazo_item || '';
+        document.getElementById('i-entrega').value    = data.data_hora_entrega || '';
 
         modal.classList.remove('hidden');
         requestAnimationFrame(function () {

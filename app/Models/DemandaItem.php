@@ -21,6 +21,7 @@ class DemandaItem extends Model
         'descricao_item',
         'status_item',
         'prazo_item',
+        'data_hora_entrega',
     ];
 
     protected function casts(): array
@@ -28,6 +29,7 @@ class DemandaItem extends Model
         return [
             'status_item' => StatusItemDemanda::class,
             'prazo_item' => 'datetime',
+            'data_hora_entrega' => 'datetime',
         ];
     }
 

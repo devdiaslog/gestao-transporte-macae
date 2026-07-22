@@ -42,6 +42,8 @@ class ImportadorDemandas
         'status_item' => ['Status Demanda Entrega', 'Status do'],
         'prazo_data' => ['Data Prazo', 'Data + tar'],
         'prazo_hora' => ['Hora Prazo', 'Hora + tar'],
+        'entrega_data' => ['Data Entrega', 'Dt entregu'],
+        'entrega_hora' => ['Hora Entrega', 'Hr entregu'],
         'equipamento' => ['Descrição Veiculo', 'Descrição equipamento'],
     ];
 
@@ -64,6 +66,8 @@ class ImportadorDemandas
         'Status Demanda Entrega',
         'Data Prazo',
         'Hora Prazo',
+        'Data Entrega',
+        'Hora Entrega',
     ];
 
     /**
@@ -72,8 +76,8 @@ class ImportadorDemandas
      * @var array<int, array<int, string>>
      */
     private const EXEMPLOS_MODELO = [
-        ['509538496', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Descrição da carga', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00'],
-        ['619012345', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00'],
+        ['509538496', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Descrição da carga', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00', '', ''],
+        ['619012345', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00', '25.07.2026', '13:45:00'],
     ];
 
     public function __construct(private DemandaCalculadora $calculadora) {}
@@ -174,7 +178,8 @@ class ImportadorDemandas
                     'descricao_local_retirada' => $this->limpar($linha['descricao_local_retirada'] ?? null),
                     'descricao_item' => $this->limpar($linha['descricao_item'] ?? null),
                     'status_item' => StatusItemDemanda::fromCodigo($this->limpar($linha['status_item'] ?? null)),
-                    'prazo_item' => $this->montarPrazo($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null),
+                    'prazo_item' => $this->montarDataHora($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null),
+                    'data_hora_entrega' => $this->montarDataHora($linha['entrega_data'] ?? null, $linha['entrega_hora'] ?? null),
                 ]);
 
                 $existente ? $resultado['itens_atualizados']++ : $resultado['itens_criados']++;
@@ -307,7 +312,7 @@ class ImportadorDemandas
      * Combina data (dd.mm.aaaa) e hora do SAP num datetime.
      * Tolera hora com ou sem segundos e data já com hora embutida.
      */
-    private function montarPrazo(?string $data, ?string $hora): ?Carbon
+    private function montarDataHora(?string $data, ?string $hora): ?Carbon
     {
         $data = $this->limpar($data);
 
