@@ -133,6 +133,28 @@ class ImportadorDemandasTest extends TestCase
         $this->assertSame('Carga atualizada', $item->descricao_item);
     }
 
+    public function test_importacao_escopada_processa_apenas_a_nota_informada(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+
+        $planilha = $this->planilhaComCabecalho(
+            ['Numero Demanda Viagem', 'Numero Demanda Entrega', 'Item Demanda Entrega', 'Descrição Destino', 'Status Demanda Entrega'],
+            null,
+            [
+                ['509600001', '326000040', '1', 'ARM-MACAE', '04'],
+                ['509600002', '326000041', '1', 'BMAC', '04'], // outra Nota — deve ser ignorada
+            ]
+        );
+
+        $resultado = $importador->importar($planilha, null, 509600001);
+
+        $this->assertSame(1, $resultado['itens_criados']);
+        $this->assertSame(1, Demanda::where('numero_demanda', 509600001)->count());
+        $this->assertSame(0, Demanda::where('numero_demanda', 509600002)->count());
+
+        @unlink($planilha);
+    }
+
     public function test_importa_a_data_hora_de_entrega_do_item(): void
     {
         $importador = app(ImportadorDemandas::class);

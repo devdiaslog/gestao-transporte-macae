@@ -105,7 +105,11 @@ class ImportadorDemandas
     /**
      * @return array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, linhas_ignoradas: int, erros: array<int, string>}
      */
-    public function importar(string $caminho, ?int $usuarioId = null): array
+    /**
+     * @param  int|null  $somenteNota  Quando informado, processa apenas as linhas
+     *                                 dessa Nota (importação escopada a 1 demanda).
+     */
+    public function importar(string $caminho, ?int $usuarioId = null, ?int $somenteNota = null): array
     {
         $resultado = [
             'demandas_criadas' => 0,
@@ -126,12 +130,19 @@ class ImportadorDemandas
         $prefixoParaId = $this->mapaPrefixoEquipamento();
         $demandasTocadas = [];
 
-        DB::transaction(function () use ($linhas, $prefixoParaId, $usuarioId, &$resultado, &$demandasTocadas) {
+        DB::transaction(function () use ($linhas, $prefixoParaId, $usuarioId, $somenteNota, &$resultado, &$demandasTocadas) {
             foreach ($linhas as $numeroLinha => $linha) {
                 $nota = $this->limpar($linha['nota'] ?? null);
                 $numeroRt = $this->limpar($linha['numero_rt'] ?? null);
 
                 if ($nota === null || ! ctype_digit($nota)) {
+                    $resultado['linhas_ignoradas']++;
+
+                    continue;
+                }
+
+                // Importação escopada: ignora linhas de outras demandas.
+                if ($somenteNota !== null && (int) $nota !== $somenteNota) {
                     $resultado['linhas_ignoradas']++;
 
                     continue;

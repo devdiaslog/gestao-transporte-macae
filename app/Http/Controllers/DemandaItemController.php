@@ -5,15 +5,62 @@ namespace App\Http\Controllers;
 use App\Enums\StatusItemDemanda;
 use App\Http\Requests\AtualizarEntregaEtapaRequest;
 use App\Http\Requests\AtualizarStatusEtapaRequest;
+use App\Http\Requests\ImportarDemandasRequest;
+use App\Http\Requests\StoreDemandaItemRequest;
 use App\Http\Requests\UpdateDemandaItemRequest;
 use App\Models\Demanda;
 use App\Models\DemandaItem;
 use App\Services\DemandaCalculadora;
+use App\Services\ImportadorDemandas;
 use Illuminate\Http\RedirectResponse;
 
 class DemandaItemController extends Controller
 {
     public function __construct(private DemandaCalculadora $calculadora) {}
+
+    /**
+     * Cadastra manualmente um novo item na demanda (fallback quando a
+     * importação em lote falha ou já foi feita).
+     */
+    public function store(StoreDemandaItemRequest $request, Demanda $demanda): RedirectResponse
+    {
+        $item = $demanda->itens()->create($request->validated());
+
+        $this->calculadora->recalcular($demanda->load('itens'));
+
+        return redirect()
+            ->route('demandas.edit', $demanda)
+            ->with('success', "Item {$item->numero_rt} / {$item->numero_item} adicionado.");
+    }
+
+    /**
+     * Importa itens de uma planilha apenas para esta demanda (escopado à Nota).
+     */
+    public function importar(ImportarDemandasRequest $request, Demanda $demanda, ImportadorDemandas $importador): RedirectResponse
+    {
+        $resultado = $importador->importar(
+            $request->file('arquivo')->getRealPath(),
+            auth()->id(),
+            $demanda->numero_demanda,
+        );
+
+        if ($resultado['erros'] !== []) {
+            $amostra = implode(' · ', array_slice($resultado['erros'], 0, 3));
+
+            return redirect()->route('demandas.edit', $demanda)->with('error', $amostra);
+        }
+
+        if ($resultado['itens_criados'] === 0 && $resultado['itens_atualizados'] === 0) {
+            return redirect()->route('demandas.edit', $demanda)
+                ->with('error', "A planilha não tinha itens para a demanda #{$demanda->numero_demanda}.");
+        }
+
+        return redirect()->route('demandas.edit', $demanda)->with('success', sprintf(
+            '%d item(ns) importado(s), %d atualizado(s).',
+            $resultado['itens_criados'],
+            $resultado['itens_atualizados'],
+        ));
+    }
 
     /**
      * Redireciona de volta com erro quando a demanda não permite alterar itens.

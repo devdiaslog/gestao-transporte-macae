@@ -315,6 +315,50 @@ class DemandaItemEdicaoTest extends TestCase
         $this->assertNull($demanda->fresh()->data_hora_fim_demanda);
     }
 
+    public function test_adiciona_item_manualmente_na_demanda(): void
+    {
+        $demanda = $this->demandaCom([
+            ['local_origem' => 'ARM-MACAE', 'local_destino' => 'RIO', 'status_item' => StatusItemDemanda::Pendente],
+        ]);
+
+        $this->actingAs($this->usuario())
+            ->post(route('demandas.itens.store', $demanda), [
+                'numero_rt' => '326999000',
+                'numero_item' => '2',
+                'subitem' => '1',
+                'local_origem' => 'ARM-MACAE',
+                'local_destino' => 'CENPES',
+                'status_item' => StatusItemDemanda::Pendente->value,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame(2, $demanda->itens()->count());
+        $this->assertDatabaseHas('demanda_itens', [
+            'demanda_id' => $demanda->id,
+            'numero_rt' => '326999000',
+            'local_destino' => 'CENPES',
+        ]);
+    }
+
+    public function test_nao_adiciona_item_duplicado(): void
+    {
+        $demanda = $this->demandaCom([
+            ['status_item' => StatusItemDemanda::Pendente],
+        ]);
+        $existente = $demanda->itens->first();
+
+        $this->actingAs($this->usuario())
+            ->post(route('demandas.itens.store', $demanda), [
+                'numero_rt' => $existente->numero_rt,
+                'numero_item' => $existente->numero_item,
+                'subitem' => $existente->subitem,
+            ])
+            ->assertSessionHasErrors('numero_rt');
+
+        $this->assertSame(1, $demanda->itens()->count());
+    }
+
     public function test_remover_item_recalcula_a_demanda(): void
     {
         $admin = User::factory()->create(['role' => UserRole::Administrador]);

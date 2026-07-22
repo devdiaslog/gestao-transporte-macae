@@ -182,16 +182,44 @@
         {{-- ── Coluna 2: etapas e itens ───────────────────────────────────── --}}
         <div class="lg:col-span-2">
             <div class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
                     <div>
                         <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Etapas da Demanda</p>
                         <p class="text-[11px] text-zinc-400 dark:text-zinc-500">
-                            Cada par origem → destino agrupa os itens de entrega
+                            {{ $etapas->count() }} {{ $etapas->count() === 1 ? 'etapa' : 'etapas' }} · {{ $totalItens }} {{ $totalItens === 1 ? 'item' : 'itens' }}
                         </p>
                     </div>
-                    <span class="text-xs text-zinc-400 dark:text-zinc-500">
-                        {{ $etapas->count() }} {{ $etapas->count() === 1 ? 'etapa' : 'etapas' }} · {{ $totalItens }} {{ $totalItens === 1 ? 'item' : 'itens' }}
-                    </span>
+
+                    <div class="flex items-center gap-2">
+                        {{-- Importar itens (escopado a esta demanda) --}}
+                        <form method="POST" action="{{ route('demandas.itens.importar', $demanda) }}"
+                              enctype="multipart/form-data" id="form-importar-itens" class="contents">
+                            @csrf
+                            <input type="file" name="arquivo" id="input-importar-itens" accept=".xlsx,.xls" class="hidden"
+                                   onchange="if (this.files.length) { document.getElementById('form-importar-itens').submit(); }">
+                            <button type="button" onclick="document.getElementById('input-importar-itens').click()"
+                                    title="Importar itens da planilha apenas para esta demanda"
+                                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium
+                                           text-zinc-700 shadow-xs transition-colors hover:bg-slate-50
+                                           dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                                <svg class="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M7.5 7.5 12 3m0 0 4.5 4.5M12 3v13.5"/>
+                                </svg>
+                                Importar itens
+                            </button>
+                        </form>
+
+                        {{-- Adicionar item manualmente --}}
+                        <button type="button" onclick="novoItem()"
+                                class="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white
+                                       shadow-xs transition-all duration-150 hover:bg-zinc-700 active:scale-[0.98]
+                                       dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                            </svg>
+                            Adicionar item
+                        </button>
+                    </div>
                 </div>
 
                 @if($edicaoBloqueada && $totalItens > 0)
@@ -382,7 +410,7 @@
 
             <form id="item-form" method="POST">
                 @csrf
-                @method('PUT')
+                <input type="hidden" name="_method" id="i-method" value="PUT">
 
                 <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-zinc-800">
                     <h2 id="item-modal-title" class="text-base font-semibold text-zinc-900 dark:text-zinc-100">Editar Item</h2>
@@ -493,7 +521,7 @@
 
                 <div class="flex items-center justify-between border-t border-slate-100 px-5 py-3 dark:border-zinc-800">
                     @can('delete-demanda')
-                        <button type="button" onclick="removerItem()"
+                        <button type="button" onclick="removerItem()" id="i-btn-remover"
                                 class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-rose-600
                                        transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30">
                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -538,14 +566,15 @@
     var panel   = document.getElementById('item-panel');
     var form    = document.getElementById('item-form');
     var delForm = document.getElementById('item-delete-form');
+    var metodo  = document.getElementById('i-method');
+    var titulo  = document.getElementById('item-modal-title');
+    var btnRemover = document.getElementById('i-btn-remover');
     var itemId  = null;
 
     var UPDATE_URL = '{{ url('demanda-itens') }}';
+    var STORE_URL  = '{{ route('demandas.itens.store', $demanda) }}';
 
-    window.editarItem = function (data) {
-        itemId = data.id;
-        form.action = UPDATE_URL + '/' + data.id;
-
+    function preencher(data) {
         document.getElementById('i-rt').value        = data.numero_rt || '';
         document.getElementById('i-item').value      = data.numero_item || '';
         document.getElementById('i-subitem').value   = data.subitem || '';
@@ -556,13 +585,35 @@
         document.getElementById('i-status').value    = data.status_item || '';
         document.getElementById('i-prazo').value      = data.prazo_item || '';
         document.getElementById('i-entrega').value    = data.data_hora_entrega || '';
+    }
 
+    function abrir() {
         modal.classList.remove('hidden');
         requestAnimationFrame(function () {
             overlay.classList.add('opacity-100');
             panel.classList.remove('scale-95', 'opacity-0');
             panel.classList.add('scale-100', 'opacity-100');
         });
+    }
+
+    window.editarItem = function (data) {
+        itemId = data.id;
+        form.action = UPDATE_URL + '/' + data.id;
+        metodo.value = 'PUT';
+        titulo.textContent = 'Editar Item';
+        if (btnRemover) { btnRemover.style.display = ''; }
+        preencher(data);
+        abrir();
+    };
+
+    window.novoItem = function () {
+        itemId = null;
+        form.action = STORE_URL;
+        metodo.value = 'POST';
+        titulo.textContent = 'Adicionar Item';
+        if (btnRemover) { btnRemover.style.display = 'none'; }
+        preencher({ numero_item: '1' });
+        abrir();
     };
 
     window.fecharItem = function () {
