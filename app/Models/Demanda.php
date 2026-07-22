@@ -30,7 +30,9 @@ class Demanda extends Model
         'documento_demanda',
         'prazo_demanda',
         'data_hora_inicio_demanda',
+        'inicio_automatico',
         'data_hora_fim_demanda',
+        'fim_automatico',
         'status_demanda',
         'status_auditoria',
         'observacao',
@@ -47,7 +49,9 @@ class Demanda extends Model
             'status_demanda' => StatusDemanda::class,
             'prazo_demanda' => 'datetime',
             'data_hora_inicio_demanda' => 'datetime',
+            'inicio_automatico' => 'boolean',
             'data_hora_fim_demanda' => 'datetime',
+            'fim_automatico' => 'boolean',
             'status_auditoria' => 'boolean',
         ];
     }

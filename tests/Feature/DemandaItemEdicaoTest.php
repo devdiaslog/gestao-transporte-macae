@@ -7,6 +7,7 @@ use App\Enums\StatusItemDemanda;
 use App\Enums\TipoDemanda;
 use App\Enums\UserPermission;
 use App\Enums\UserRole;
+use App\Models\Alerta;
 use App\Models\Demanda;
 use App\Models\DemandaItem;
 use App\Models\User;
@@ -102,6 +103,73 @@ class DemandaItemEdicaoTest extends TestCase
         $this->assertSame(TipoDemanda::Transferencia, $demanda->tipo_demanda);
         $this->assertSame(StatusDemanda::Finalizado, $demanda->status_demanda);
         $this->assertSame(StatusItemDemanda::Entregue, $demanda->itens->first()->status_item);
+    }
+
+    public function test_finalizacao_pelo_operador_cria_alerta_proprio(): void
+    {
+        $demanda = $this->demandaCom([
+            ['local_origem' => 'A', 'local_destino' => 'B', 'status_item' => StatusItemDemanda::Pendente],
+        ]);
+        $demanda->update(['data_hora_inicio_demanda' => now()->subDay()]);
+
+        $this->actingAs($this->usuario())
+            ->put(route('demandas.status-etapa', $demanda), [
+                'itens' => [$demanda->itens->first()->id],
+                'status_item' => StatusItemDemanda::Entregue->value,
+            ])
+            ->assertRedirect();
+
+        $alerta = Alerta::where('condicao', 'demanda_finalizada_operador')->first();
+        $this->assertNotNull($alerta);
+        $this->assertTrue($alerta->para_todos);
+        $this->assertStringContainsString((string) $demanda->numero_demanda, $alerta->lembrete);
+    }
+
+    public function test_fim_informado_pelo_operador_prevalece_sobre_o_automatico(): void
+    {
+        $demanda = $this->demandaCom([
+            [
+                'local_origem' => 'A',
+                'local_destino' => 'B',
+                'status_item' => StatusItemDemanda::Entregue,
+                'data_hora_entrega' => now()->subDay()->startOfDay(),
+            ],
+        ]);
+        $demanda->update(['data_hora_inicio_demanda' => now()->subDays(2)]);
+        app(DemandaCalculadora::class)->recalcular($demanda->load('itens'));
+        $this->assertTrue($demanda->refresh()->fim_automatico);
+
+        $fimOperador = now()->subDay()->setTime(15, 30);
+
+        $this->actingAs($this->usuario())
+            ->put(route('demandas.update', $demanda), [
+                'data_hora_inicio_demanda' => $demanda->data_hora_inicio_demanda->format('Y-m-d\TH:i'),
+                'data_hora_fim_demanda' => $fimOperador->format('Y-m-d\TH:i'),
+            ])
+            ->assertRedirect();
+
+        $demanda->refresh();
+
+        // Fim do operador assumido: flag cai e o recálculo não sobrescreve.
+        $this->assertFalse($demanda->fim_automatico);
+        $this->assertTrue($fimOperador->startOfMinute()->equalTo($demanda->data_hora_fim_demanda));
+    }
+
+    public function test_fim_manual_bloqueado_enquanto_houver_item_pendente(): void
+    {
+        $demanda = $this->demandaCom([
+            ['local_origem' => 'A', 'local_destino' => 'B', 'status_item' => StatusItemDemanda::Pendente],
+        ]);
+        $demanda->update(['data_hora_inicio_demanda' => now()->subDay()]);
+
+        $this->actingAs($this->usuario())
+            ->put(route('demandas.update', $demanda), [
+                'data_hora_fim_demanda' => now()->format('Y-m-d\TH:i'),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertNull($demanda->refresh()->data_hora_fim_demanda);
     }
 
     public function test_observacao_do_modal_acrescenta_ao_historico_sem_apagar(): void

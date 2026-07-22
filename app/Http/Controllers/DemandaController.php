@@ -8,6 +8,7 @@ use App\Http\Requests\ImportarDemandasRequest;
 use App\Http\Requests\StoreDemandaRequest;
 use App\Http\Requests\UpdateDemandaRequest;
 use App\Models\Demanda;
+use App\Models\DemandaItem;
 use App\Models\Equipamento;
 use App\Services\DemandaCalculadora;
 use App\Services\ImportadorDemandas;
@@ -16,6 +17,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -23,7 +25,7 @@ class DemandaController extends Controller
 {
     public function index(Request $request): View|RedirectResponse
     {
-        $filtroKeys = ['q', 'status', 'tipo', 'fonte', 'prefixo', 'data_de', 'data_ate', 'prazo', 'prazo_de', 'prazo_ate'];
+        $filtroKeys = ['q', 'status', 'tipo', 'fonte', 'prefixo', 'data_de', 'data_ate', 'prazo_de', 'prazo_ate', 'ajuste'];
 
         if ($request->boolean('reset')) {
             session()->forget('demandas.filtros');
@@ -55,23 +57,19 @@ class DemandaController extends Controller
         $prefixo = $request->input('prefixo');
         $dataDE = $request->input('data_de');
         $dataAte = $request->input('data_ate');
-        $prazo = $request->input('prazo');
         $prazoDE = $request->input('prazo_de');
         $prazoAte = $request->input('prazo_ate');
+        $ajuste = $request->input('ajuste');
 
-        $demandas = Demanda::query()
+        $base = $this->queryFiltrada($request, $status);
+
+        $totalItens = DemandaItem::query()
+            ->whereIn('demanda_id', (clone $base)->select('id'))
+            ->count();
+
+        $demandas = $base
             ->with(['equipamento', 'criador', 'itens'])
-            ->when($search, fn ($q) => $q->where(fn ($sub) => $sub->where('numero_demanda', 'like', "%{$search}%")
-                ->orWhere('documento_demanda', 'like', "%{$search}%")))
-            ->when($status === 'active', fn ($q) => $q->whereIn('status_demanda', ['pendente', 'em_andamento']))
-            ->when($status && $status !== 'active', fn ($q) => $q->where('status_demanda', $status))
-            ->when($tipo, fn ($q) => $q->where('tipo_demanda', $tipo))
-            ->when($fonte, fn ($q) => $q->where('fonte_demanda', $fonte))
-            ->when($prefixo, fn ($q) => $q->whereHas('equipamento', fn ($eq) => $eq->where('prefixo', 'like', "%{$prefixo}%")))
-            ->when($dataDE, fn ($q) => $q->whereDate('created_at', '>=', $dataDE))
-            ->when($dataAte, fn ($q) => $q->whereDate('created_at', '<=', $dataAte))
-            ->when($prazo, fn ($q) => $this->filtrarPorPrazo($q, $prazo, $prazoDE, $prazoAte))
-            ->when($prazo, fn ($q) => $q->orderBy('prazo_demanda'), fn ($q) => $q->latest())
+            ->when($prazoDE || $prazoAte, fn ($q) => $q->orderBy('prazo_demanda'), fn ($q) => $q->latest())
             ->paginate(10)
             ->appends([
                 'q' => $search ?? '',
@@ -81,9 +79,9 @@ class DemandaController extends Controller
                 'prefixo' => $prefixo ?? '',
                 'data_de' => $dataDE ?? '',
                 'data_ate' => $dataAte ?? '',
-                'prazo' => $prazo ?? '',
                 'prazo_de' => $prazoDE ?? '',
                 'prazo_ate' => $prazoAte ?? '',
+                'ajuste' => $ajuste ?? '',
             ]);
 
         $equipamentos = Equipamento::query()
@@ -92,30 +90,29 @@ class DemandaController extends Controller
             ->orderBy('prefixo')
             ->get(['id', 'prefixo', 'placa']);
 
-        return view('demandas.index', compact('demandas', 'equipamentos', 'search', 'status', 'tipo', 'fonte', 'prefixo', 'dataDE', 'dataAte', 'prazo', 'prazoDE', 'prazoAte'));
+        return view('demandas.index', compact('demandas', 'equipamentos', 'totalItens', 'search', 'status', 'tipo', 'fonte', 'prefixo', 'dataDE', 'dataAte', 'prazoDE', 'prazoAte', 'ajuste'));
     }
 
     /**
-     * Aplica o filtro de prazo (vencimento) a demandas ainda em aberto.
+     * Monta a query de demandas com todos os filtros da tela — usada pela
+     * listagem, pelo contador de itens e pelo export (mesmo resultado).
      */
-    private function filtrarPorPrazo(Builder $query, string $prazo, ?string $de = null, ?string $ate = null): Builder
+    private function queryFiltrada(Request $request, ?string $status): Builder
     {
-        $agora = now();
-
-        $query->whereNotNull('prazo_demanda')
-            ->whereNotIn('status_demanda', ['finalizado', 'cancelada', 'recusa', 'suspensa']);
-
-        return match ($prazo) {
-            'vencidas' => $query->where('prazo_demanda', '<', $agora),
-            'hoje' => $query->whereDate('prazo_demanda', $agora->toDateString()),
-            '24h' => $query->whereBetween('prazo_demanda', [$agora, $agora->copy()->addDay()]),
-            '3d' => $query->whereBetween('prazo_demanda', [$agora, $agora->copy()->addDays(3)]),
-            '7d' => $query->whereBetween('prazo_demanda', [$agora, $agora->copy()->addDays(7)]),
-            'personalizado' => $query
-                ->when($de, fn ($q) => $q->whereDate('prazo_demanda', '>=', $de))
-                ->when($ate, fn ($q) => $q->whereDate('prazo_demanda', '<=', $ate)),
-            default => $query,
-        };
+        return Demanda::query()
+            ->when($request->input('q'), fn ($q, $v) => $q->where(fn ($sub) => $sub->where('numero_demanda', 'like', "%{$v}%")
+                ->orWhere('documento_demanda', 'like', "%{$v}%")))
+            ->when($status === 'active', fn ($q) => $q->whereIn('status_demanda', ['pendente', 'em_andamento']))
+            ->when($status && $status !== 'active', fn ($q) => $q->where('status_demanda', $status))
+            ->when($request->input('tipo'), fn ($q, $v) => $q->where('tipo_demanda', $v))
+            ->when($request->input('fonte'), fn ($q, $v) => $q->where('fonte_demanda', $v))
+            ->when($request->input('prefixo'), fn ($q, $v) => $q->whereHas('equipamento', fn ($eq) => $eq->where('prefixo', 'like', "%{$v}%")))
+            ->when($request->input('data_de'), fn ($q, $v) => $q->whereDate('created_at', '>=', $v))
+            ->when($request->input('data_ate'), fn ($q, $v) => $q->whereDate('created_at', '<=', $v))
+            ->when($request->input('prazo_de'), fn ($q, $v) => $q->whereNotNull('prazo_demanda')->where('prazo_demanda', '>=', Carbon::parse($v)))
+            ->when($request->input('prazo_ate'), fn ($q, $v) => $q->whereNotNull('prazo_demanda')->where('prazo_demanda', '<=', Carbon::parse($v)))
+            ->when($request->input('ajuste') === 'pendente', fn ($q) => $q->where(fn ($sub) => $sub
+                ->where('inicio_automatico', true)->orWhere('fim_automatico', true)));
     }
 
     public function edit(Demanda $demanda): View
@@ -169,21 +166,10 @@ class DemandaController extends Controller
 
     public function export(Request $request): Response
     {
-        $status = $request->input('status');
-
-        $demandas = Demanda::query()
+        // O export respeita exatamente os filtros aplicados na listagem.
+        $demandas = $this->queryFiltrada($request, $request->input('status'))
             ->with(['equipamento', 'criador', 'itens'])
-            ->when($request->input('q'), fn ($q, $v) => $q->where(fn ($sub) => $sub->where('numero_demanda', 'like', "%{$v}%")
-                ->orWhere('documento_demanda', 'like', "%{$v}%")))
-            ->when($status === 'active', fn ($q) => $q->whereIn('status_demanda', ['pendente', 'em_andamento']))
-            ->when($status && $status !== 'active', fn ($q) => $q->where('status_demanda', $status))
-            ->when($request->input('tipo'), fn ($q, $v) => $q->where('tipo_demanda', $v))
-            ->when($request->input('fonte'), fn ($q, $v) => $q->where('fonte_demanda', $v))
-            ->when($request->input('prefixo'), fn ($q, $v) => $q->whereHas('equipamento', fn ($eq) => $eq->where('prefixo', 'like', "%{$v}%")))
-            ->when($request->input('data_de'), fn ($q, $v) => $q->whereDate('created_at', '>=', $v))
-            ->when($request->input('data_ate'), fn ($q, $v) => $q->whereDate('created_at', '<=', $v))
-            ->when($request->input('prazo'), fn ($q, $v) => $this->filtrarPorPrazo($q, $v, $request->input('prazo_de'), $request->input('prazo_ate')))
-            ->when($request->input('prazo'), fn ($q) => $q->orderBy('prazo_demanda'), fn ($q) => $q->latest())
+            ->when($request->input('prazo_de') || $request->input('prazo_ate'), fn ($q) => $q->orderBy('prazo_demanda'), fn ($q) => $q->latest())
             ->get();
 
         $fmt = fn ($dt) => $dt?->format('d/m/Y H:i') ?? '';
@@ -192,7 +178,7 @@ class DemandaController extends Controller
             'Número', 'Fonte', 'Tipo', 'Tipo Cadastro',
             'Veículo (Prefixo)', 'Veículo (Placa)',
             'Documento', 'Itens', 'Origens', 'Destinos', 'Prazo',
-            'Início', 'Fim',
+            'Início', 'Fim', 'Ajuste Pendente',
             'Status', 'Auditado', 'Criado por', 'Cadastrado em',
         ];
 
@@ -210,6 +196,7 @@ class DemandaController extends Controller
             $fmt($d->prazo_demanda),
             $fmt($d->data_hora_inicio_demanda),
             $fmt($d->data_hora_fim_demanda),
+            $d->inicio_automatico || $d->fim_automatico ? 'Sim' : 'Não',
             $d->status_demanda->label(),
             $d->status_auditoria ? 'Sim' : 'Não',
             $d->criador?->name ?? '',
@@ -251,6 +238,26 @@ class DemandaController extends Controller
         // Tipo escolhido no select fixa o tipo manualmente; "Automático" (vazio)
         // devolve o controle ao cálculo pelos itens.
         $dados['tipo_demanda_manual'] = $request->filled('tipo_demanda');
+
+        // Início/fim informados pelo operador deixam de ser automáticos (a tag
+        // de ajuste some); vazio devolve o horário ao cálculo automático.
+        if ($request->filled('data_hora_inicio_demanda')) {
+            $dados['inicio_automatico'] = false;
+        }
+        if (array_key_exists('data_hora_fim_demanda', $dados)) {
+            $temItemPendente = $demanda->itens()
+                ->where(fn ($q) => $q->whereNull('status_item')->orWhere('status_item', 'pendente'))
+                ->exists();
+
+            if ($request->filled('data_hora_fim_demanda') && $temItemPendente) {
+                return $request->expectsJson()
+                    ? response()->json(['ok' => false, 'message' => 'Defina o status de todos os itens antes de informar o fim.'], 422)
+                    : redirect()->route('demandas.edit', $demanda)
+                        ->with('error', 'Defina o status de todos os itens antes de informar o fim da demanda.');
+            }
+
+            $dados['fim_automatico'] = ! $request->filled('data_hora_fim_demanda');
+        }
 
         $demanda->update($dados);
 

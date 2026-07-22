@@ -6,6 +6,7 @@ use App\Enums\FonteDemanda;
 use App\Enums\StatusDemanda;
 use App\Enums\StatusItemDemanda;
 use App\Enums\TipoDemanda;
+use App\Models\Alerta;
 use App\Models\Demanda;
 use App\Models\DemandaItem;
 use App\Services\DemandaCalculadora;
@@ -162,6 +163,34 @@ class ImportadorDemandasTest extends TestCase
         // A demanda encerra automaticamente com o fim vindo do SAP.
         $demanda = $item->demanda->refresh();
         $this->assertNotNull($demanda->data_hora_fim_demanda);
+    }
+
+    public function test_finalizacao_via_sap_cria_alerta_e_marca_inicio_e_fim_como_automaticos(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+        $cabecalho = ['Numero Demanda Viagem', 'Numero Demanda Entrega', 'Item Demanda Entrega', 'Status Demanda Entrega', 'Data Entrega', 'Hora Entrega'];
+
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800060', '326000500', '1', '07', '22.07.2026', '00:00:00'],
+        ]));
+
+        $demanda = Demanda::where('numero_demanda', 509800060)->firstOrFail();
+
+        // Início e fim automáticos: demanda entra na tag/filtro de ajuste.
+        $this->assertTrue($demanda->inicio_automatico);
+        $this->assertTrue($demanda->fim_automatico);
+
+        // Alerta padrão criado, visível a todos, identificando a origem SAP.
+        $alerta = Alerta::where('condicao', 'demanda_finalizada_sap')->first();
+        $this->assertNotNull($alerta);
+        $this->assertTrue($alerta->para_todos);
+        $this->assertStringContainsString('509800060', $alerta->lembrete);
+
+        // Reimportar não duplica o alerta (status já era Finalizado).
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800060', '326000500', '1', '07', '22.07.2026', '00:00:00'],
+        ]));
+        $this->assertSame(1, Alerta::where('condicao', 'demanda_finalizada_sap')->count());
     }
 
     public function test_status_vazio_ou_desconhecido_do_sap_nao_apaga_o_status_atual(): void

@@ -24,9 +24,10 @@ class UpdateDemandaRequest extends FormRequest
             'tipo_demanda' => ['nullable', Rule::enum(TipoDemanda::class)],
             'equipamento_id' => ['nullable', 'exists:equipamentos,id'],
             'documento_demanda' => ['nullable', 'string', 'max:100'],
-            // O fim não é informado manualmente: é derivado dos itens (maior
-            // data de entrega quando todos estão resolvidos).
             'data_hora_inicio_demanda' => ['nullable', 'date'],
+            // O fim é automático (maior entrega dos itens), mas o operador pode
+            // ajustá-lo quando o SAP traz hora genérica; ajustado, passa a ser dele.
+            'data_hora_fim_demanda' => ['nullable', 'date', 'after_or_equal:data_hora_inicio_demanda'],
             'observacao' => ['nullable', 'string', 'max:2000'],
         ];
     }
@@ -38,6 +39,7 @@ class UpdateDemandaRequest extends FormRequest
     {
         return [
             'data_hora_inicio_demanda' => 'início da demanda',
+            'data_hora_fim_demanda' => 'fim da demanda',
         ];
     }
 }

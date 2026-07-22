@@ -52,7 +52,7 @@
     </div>
 
     {{-- Filtros --}}
-    <form method="GET" action="{{ route('demandas.index') }}"
+    <form id="form-filtros-demandas" method="GET" action="{{ route('demandas.index') }}"
           class="mb-5 flex flex-wrap items-center gap-3">
         <input type="text" name="q" value="{{ $search }}" placeholder="Número ou documento…"
                class="h-9 w-44 rounded-lg border border-slate-200 bg-white px-3 text-sm
@@ -100,30 +100,25 @@
                 <option value="{{ $f->value }}" @selected($fonte === $f->value)>{{ $f->label() }}</option>
             @endforeach
         </select>
-        <select name="prazo"
+        <select name="ajuste"
                 class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
                        text-zinc-900 shadow-xs outline-none
                        focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
                        dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
                        dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-            <option value="">Prazo — todos</option>
-            <option value="vencidas" @selected($prazo === 'vencidas')>⚠ Vencidas</option>
-            <option value="hoje" @selected($prazo === 'hoje')>Vence hoje</option>
-            <option value="24h" @selected($prazo === '24h')>Próximas 24h</option>
-            <option value="3d" @selected($prazo === '3d')>Próximos 3 dias</option>
-            <option value="7d" @selected($prazo === '7d')>Próximos 7 dias</option>
-            <option value="personalizado" @selected($prazo === 'personalizado')>Personalizado…</option>
+            <option value="">Ajuste — todas</option>
+            <option value="pendente" @selected($ajuste === 'pendente')>⚙ Ajustar início/fim</option>
         </select>
-        <div id="prazo-range" class="flex items-center gap-1.5 {{ $prazo === 'personalizado' ? '' : 'hidden' }}">
-            <span class="text-xs text-zinc-400 dark:text-zinc-600">Prazo:</span>
-            <input type="date" name="prazo_de" value="{{ $prazoDE }}"
+        <div class="flex items-center gap-1.5">
+            <span class="text-xs text-zinc-400 dark:text-zinc-600">Vencimento:</span>
+            <input type="datetime-local" name="prazo_de" value="{{ $prazoDE }}"
                    class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
                           text-zinc-900 shadow-xs outline-none
                           focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
                           dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
                           dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
             <span class="text-xs text-zinc-400 dark:text-zinc-600">até</span>
-            <input type="date" name="prazo_ate" value="{{ $prazoAte }}"
+            <input type="datetime-local" name="prazo_ate" value="{{ $prazoAte }}"
                    class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
                           text-zinc-900 shadow-xs outline-none
                           focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
@@ -162,8 +157,7 @@
             </svg>
             Exportar
         </a>
-        @if($search || $status !== 'em_andamento' || $tipo || $fonte || $prefixo || $dataDE || $dataAte || $prazo)
-            {{-- prazo_de/prazo_ate acompanham $prazo === 'personalizado' --}}
+        @if($search || $status !== 'em_andamento' || $tipo || $fonte || $prefixo || $dataDE || $dataAte || $prazoDE || $prazoAte || $ajuste)
             <a href="{{ route('demandas.index', ['reset' => '1']) }}"
                class="h-9 inline-flex items-center gap-1 rounded-lg px-3 text-sm text-zinc-400 hover:text-zinc-700
                       dark:hover:text-zinc-200">
@@ -302,6 +296,13 @@
                                                  dark:bg-{{ $sc }}-950/40 dark:text-{{ $sc }}-400">
                                         {{ $demanda->status_demanda->label() }}
                                     </span>
+                                    @if($demanda->inicio_automatico || $demanda->fim_automatico)
+                                        <span class="ml-1 inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700
+                                                     dark:bg-amber-950/40 dark:text-amber-400"
+                                              title="Início/fim definidos automaticamente pelo SAP (hora pode estar genérica) — ajuste em Editar; ao ajustar, o horário passa a ser do operador.">
+                                            ⚙ Ajustar
+                                        </span>
+                                    @endif
                                     @if($demanda->data_hora_inicio_demanda)
                                         <div class="mt-0.5 text-[10px] text-zinc-400 dark:text-zinc-600">
                                             Início: {{ $demanda->data_hora_inicio_demanda->format('d/m/Y H:i') }}
@@ -390,11 +391,14 @@
                 </table>
             </div>
 
-            @if($demandas->hasPages())
-                <div class="border-t border-slate-100 px-4 py-3 dark:border-zinc-800">
-                    {{ $demandas->links() }}
-                </div>
-            @endif
+            <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-3 dark:border-zinc-800">
+                <span class="text-xs text-zinc-500 dark:text-zinc-400">
+                    {{ $totalItens }} {{ $totalItens === 1 ? 'item de demanda' : 'itens de demanda' }} no filtro atual
+                </span>
+                @if($demandas->hasPages())
+                    <div>{{ $demandas->links() }}</div>
+                @endif
+            </div>
         @endif
     </div>
 </div>
@@ -795,20 +799,10 @@
         grupo.style.display = 'block';
     }
 
-    // Prazo personalizado — revela intervalo de datas
-    (function () {
-        var prazoSel   = document.querySelector('select[name="prazo"]');
-        var prazoRange = document.getElementById('prazo-range');
-        if (! prazoSel || ! prazoRange) { return; }
-        prazoSel.addEventListener('change', function () {
-            prazoRange.classList.toggle('hidden', prazoSel.value !== 'personalizado');
-        });
-    })();
-
     // Exportar — mantém filtros no href
     (function () {
         var exportBtn  = document.getElementById('btn-export-demandas');
-        var filterForm = document.querySelector('form[action*="demandas"]');
+        var filterForm = document.getElementById('form-filtros-demandas');
         var baseUrl    = '{{ route('demandas.export') }}';
         if (! exportBtn || ! filterForm) { return; }
         function syncExportUrl() {

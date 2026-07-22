@@ -6,6 +6,7 @@ use App\Enums\FonteDemanda;
 use App\Enums\StatusDemanda;
 use App\Enums\StatusItemDemanda;
 use App\Enums\TipoDemanda;
+use App\Models\Alerta;
 use App\Models\Demanda;
 use App\Models\DemandaItem;
 use Illuminate\Support\Carbon;
@@ -23,8 +24,10 @@ class DemandaCalculadora
 
     /**
      * Recalcula fonte, tipo, prazo e status a partir dos itens e persiste.
+     * $origem identifica quem provocou o recálculo ('operador' ou 'sap') e
+     * define o texto do alerta criado quando a demanda finaliza.
      */
-    public function recalcular(Demanda $demanda): Demanda
+    public function recalcular(Demanda $demanda, string $origem = 'operador'): Demanda
     {
         $itens = $demanda->relationLoaded('itens')
             ? $demanda->itens
@@ -41,20 +44,57 @@ class DemandaCalculadora
 
         // Início automático: se a torre ainda não iniciou mas o SAP já
         // registrou entregas, assume a mais antiga como início para a demanda
-        // não ficar presa em Pendente. Início definido pelo operador prevalece.
+        // não ficar presa em Pendente. Início definido pelo operador prevalece;
+        // a flag marca a demanda para o operador conferir o horário (o SAP
+        // costuma trazer hora genérica 00:00).
         if ($demanda->data_hora_inicio_demanda === null && ($inicio = $this->dataInicio($itens))) {
             $demanda->data_hora_inicio_demanda = $inicio;
+            $demanda->inicio_automatico = true;
         }
 
-        $demanda->data_hora_fim_demanda = $this->dataFim($itens);
+        // Fim: gerido automaticamente enquanto o operador não assumir o
+        // horário (fim_automatico falso com fim preenchido = fim do operador).
+        if ($demanda->fim_automatico || $demanda->data_hora_fim_demanda === null) {
+            $novoFim = $this->dataFim($itens);
+            $demanda->data_hora_fim_demanda = $novoFim;
+            $demanda->fim_automatico = $novoFim !== null;
+        }
 
         if ($novoStatus = $this->status($itens, $demanda)) {
             $demanda->status_demanda = $novoStatus;
         }
 
+        $finalizouAgora = $demanda->isDirty('status_demanda')
+            && $demanda->status_demanda === StatusDemanda::Finalizado;
+
         $demanda->save();
 
+        if ($finalizouAgora) {
+            $this->alertarFinalizacao($demanda, $origem);
+        }
+
         return $demanda;
+    }
+
+    /**
+     * Alerta padrão do sistema quando a demanda finaliza: visível a todos e
+     * disparado de imediato no sino, identificando quem finalizou.
+     */
+    private function alertarFinalizacao(Demanda $demanda, string $origem): void
+    {
+        $lembrete = $origem === 'sap'
+            ? "Demanda #{$demanda->numero_demanda} finalizada via SAP — confira o início e o fim (hora pode estar genérica)."
+            : "Demanda #{$demanda->numero_demanda} finalizada pelo operador.";
+
+        Alerta::create([
+            'equipamento_id' => $demanda->equipamento_id,
+            'criado_por' => auth()->id(),
+            'lembrete' => $lembrete,
+            'tipo' => 'demanda',
+            'data_hora_alerta' => now(),
+            'condicao' => 'demanda_finalizada_'.$origem,
+            'para_todos' => true,
+        ]);
     }
 
     /**

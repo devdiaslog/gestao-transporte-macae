@@ -261,7 +261,7 @@ class ImportadorDemandas
 
             // Recalcula os derivados só depois que todos os itens entraram.
             Demanda::with('itens')->whereIn('id', array_keys($demandasTocadas))->get()
-                ->each(fn (Demanda $d) => $this->calculadora->recalcular($d));
+                ->each(fn (Demanda $d) => $this->calculadora->recalcular($d, 'sap'));
         });
 
         return $resultado;
