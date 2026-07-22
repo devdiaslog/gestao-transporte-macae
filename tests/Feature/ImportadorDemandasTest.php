@@ -99,6 +99,40 @@ class ImportadorDemandasTest extends TestCase
         @unlink($caminho);
     }
 
+    public function test_reimportacao_preserva_status_e_entrega_do_operador_e_sincroniza_mestres(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+        $cabecalho = ['Numero Demanda Viagem', 'Numero Demanda Entrega', 'Item Demanda Entrega', 'Descrição Destino', 'Descrição Demanda Entrega', 'Status Demanda Entrega', 'Data Entrega', 'Hora Entrega'];
+
+        // 1º import: cria o item com dados do SAP.
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509500001', '326000030', '1', 'ARM-MACAE', 'Carga original', '04', '', ''],
+        ]));
+
+        // Operador da torre assume: muda o status e define a entrega.
+        $item = DemandaItem::where('numero_rt', '326000030')->firstOrFail();
+        $entregaOperador = now()->subDay()->startOfMinute();
+        $item->update([
+            'status_item' => StatusItemDemanda::Recusado,
+            'data_hora_entrega' => $entregaOperador,
+        ]);
+
+        // 2º import: SAP manda status e entrega diferentes, e destino/descrição novos.
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509500001', '326000030', '1', 'SEROPEDICA', 'Carga atualizada', '07', '20.07.2026', '08:00:00'],
+        ]));
+
+        $item->refresh();
+
+        // Gestão do operador preservada.
+        $this->assertSame(StatusItemDemanda::Recusado, $item->status_item);
+        $this->assertTrue($entregaOperador->equalTo($item->data_hora_entrega));
+
+        // Campos mestres re-sincronizados com o SAP.
+        $this->assertSame('SEROPEDICA', $item->local_destino);
+        $this->assertSame('Carga atualizada', $item->descricao_item);
+    }
+
     public function test_importa_a_data_hora_de_entrega_do_item(): void
     {
         $importador = app(ImportadorDemandas::class);

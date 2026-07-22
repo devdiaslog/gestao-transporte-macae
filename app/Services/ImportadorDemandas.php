@@ -170,19 +170,28 @@ class ImportadorDemandas
                     'subitem' => $this->limpar($linha['subitem'] ?? null),
                 ];
 
-                $existente = DemandaItem::where($chave)->exists();
+                $item = DemandaItem::firstOrNew($chave);
+                $novo = ! $item->exists;
 
-                DemandaItem::updateOrCreate($chave, [
-                    'local_origem' => $this->limpar($linha['local_origem'] ?? null),
-                    'local_destino' => $this->limpar($linha['local_destino'] ?? null),
-                    'descricao_local_retirada' => $this->limpar($linha['descricao_local_retirada'] ?? null),
-                    'descricao_item' => $this->limpar($linha['descricao_item'] ?? null),
-                    'status_item' => StatusItemDemanda::fromCodigo($this->limpar($linha['status_item'] ?? null)),
-                    'prazo_item' => $this->montarDataHora($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null),
-                    'data_hora_entrega' => $this->montarDataHora($linha['entrega_data'] ?? null, $linha['entrega_hora'] ?? null),
-                ]);
+                // Campos mestres do SAP: sempre re-sincronizam com a planilha.
+                $item->local_origem = $this->limpar($linha['local_origem'] ?? null);
+                $item->local_destino = $this->limpar($linha['local_destino'] ?? null);
+                $item->descricao_local_retirada = $this->limpar($linha['descricao_local_retirada'] ?? null);
+                $item->descricao_item = $this->limpar($linha['descricao_item'] ?? null);
+                $item->prazo_item = $this->montarDataHora($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null);
 
-                $existente ? $resultado['itens_atualizados']++ : $resultado['itens_criados']++;
+                // Status e entrega são geridos pelo operador da torre: o SAP só
+                // preenche quando ainda estão vazios, nunca sobrescreve.
+                if ($item->status_item === null) {
+                    $item->status_item = StatusItemDemanda::fromCodigo($this->limpar($linha['status_item'] ?? null));
+                }
+                if ($item->data_hora_entrega === null) {
+                    $item->data_hora_entrega = $this->montarDataHora($linha['entrega_data'] ?? null, $linha['entrega_hora'] ?? null);
+                }
+
+                $item->save();
+
+                $novo ? $resultado['itens_criados']++ : $resultado['itens_atualizados']++;
                 $demandasTocadas[$demanda->id] = true;
             }
 
