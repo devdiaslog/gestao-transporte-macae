@@ -110,12 +110,14 @@ class ImportadorDemandasTest extends TestCase
             ['509500001', '326000030', '1', 'ARM-MACAE', 'Carga original', '04', '', ''],
         ]));
 
-        // Operador da torre assume: muda o status e define a entrega.
+        // Operador da torre assume pela interface: muda o status e a entrega
+        // (a UI marca os campos em campos_editados).
         $item = DemandaItem::where('numero_rt', '326000030')->firstOrFail();
         $entregaOperador = now()->subDay()->startOfMinute();
         $item->update([
             'status_item' => StatusItemDemanda::Recusado,
             'data_hora_entrega' => $entregaOperador,
+            'campos_editados' => ['status_item', 'data_hora_entrega'],
         ]);
 
         // 2º import: SAP manda status e entrega diferentes, e destino/descrição novos.
@@ -134,6 +136,57 @@ class ImportadorDemandasTest extends TestCase
         $this->assertSame('Carga atualizada', $item->descricao_item);
     }
 
+    public function test_sap_finaliza_item_em_reimportacoes_sucessivas_quando_torre_nao_assumiu(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+        $cabecalho = ['Numero Demanda Viagem', 'Numero Demanda Entrega', 'Item Demanda Entrega', 'Status Demanda Entrega', 'Data Entrega', 'Hora Entrega'];
+
+        // 08:00 — item chega Pendente.
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800040', '326000300', '1', '04', '', ''],
+        ]));
+
+        $item = DemandaItem::where('numero_rt', '326000300')->firstOrFail();
+        $this->assertSame(StatusItemDemanda::Pendente, $item->status_item);
+
+        // 09:00 — SAP já finalizou o item (entrega feita fora da torre).
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800040', '326000300', '1', '07', '22.07.2026', '08:45:00'],
+        ]));
+
+        $item->refresh();
+
+        $this->assertSame(StatusItemDemanda::Entregue, $item->status_item);
+        $this->assertSame('22/07/2026 08:45', $item->data_hora_entrega->format('d/m/Y H:i'));
+
+        // A demanda encerra automaticamente com o fim vindo do SAP.
+        $demanda = $item->demanda->refresh();
+        $this->assertNotNull($demanda->data_hora_fim_demanda);
+    }
+
+    public function test_status_vazio_ou_desconhecido_do_sap_nao_apaga_o_status_atual(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+        $cabecalho = ['Numero Demanda Viagem', 'Numero Demanda Entrega', 'Item Demanda Entrega', 'Status Demanda Entrega'];
+
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800041', '326000310', '1', '07'],
+        ]));
+
+        // Reimporta com status vazio e depois com código desconhecido.
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800041', '326000310', '1', ''],
+        ]));
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800041', '326000310', '1', '99'],
+        ]));
+
+        $this->assertSame(
+            StatusItemDemanda::Entregue,
+            DemandaItem::where('numero_rt', '326000310')->first()->status_item,
+        );
+    }
+
     public function test_reimportacao_inclui_itens_novos_que_surgiram_no_sap(): void
     {
         $importador = app(ImportadorDemandas::class);
@@ -147,8 +200,11 @@ class ImportadorDemandasTest extends TestCase
         $demanda = Demanda::where('numero_demanda', 509800001)->firstOrFail();
         $this->assertSame(1, $demanda->itens()->count());
 
-        // Operador mexe no item existente nesse meio tempo.
-        $demanda->itens()->first()->update(['status_item' => StatusItemDemanda::Entregue]);
+        // Operador assume o item existente nesse meio tempo (via interface).
+        $demanda->itens()->first()->update([
+            'status_item' => StatusItemDemanda::Entregue,
+            'campos_editados' => ['status_item'],
+        ]);
 
         // 10:00 — SAP ganhou mais 2 itens; reimporta com os 3.
         $resultado = $importador->importar($this->planilhaComCabecalho($cabecalho, null, [

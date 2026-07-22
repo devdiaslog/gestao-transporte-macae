@@ -231,13 +231,20 @@ class ImportadorDemandas
                     $item->prazo_item = $this->montarDataHora($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null);
                 }
 
-                // Status e entrega são geridos pelo operador da torre: o SAP só
-                // preenche quando ainda estão vazios, nunca sobrescreve.
-                if ($item->status_item === null) {
-                    $item->status_item = StatusItemDemanda::fromCodigo($this->limpar($linha['status_item'] ?? null));
+                // Status e entrega: o SAP atualiza livremente (itens podem ser
+                // finalizados por operadores fora da torre) até o operador da
+                // torre alterá-los pela interface — daí o campo passa a ser dele.
+                if (! $item->campoEditadoPeloOperador('status_item')) {
+                    $status = StatusItemDemanda::fromCodigo($this->limpar($linha['status_item'] ?? null));
+                    if ($status !== null) {
+                        $item->status_item = $status;
+                    }
                 }
-                if ($item->data_hora_entrega === null) {
-                    $item->data_hora_entrega = $this->montarDataHora($linha['entrega_data'] ?? null, $linha['entrega_hora'] ?? null);
+                if (! $item->campoEditadoPeloOperador('data_hora_entrega')) {
+                    $entrega = $this->montarDataHora($linha['entrega_data'] ?? null, $linha['entrega_hora'] ?? null);
+                    if ($entrega !== null) {
+                        $item->data_hora_entrega = $entrega;
+                    }
                 }
 
                 $item->save();

@@ -26,17 +26,21 @@ class DemandaItem extends Model
     ];
 
     /**
-     * Campos mestres do SAP que o operador pode assumir; quando presentes em
-     * campos_editados, a importação deixa de sincronizá-los neste item.
+     * Campos sincronizados do SAP que o operador pode assumir; quando presentes
+     * em campos_editados, a importação deixa de sincronizá-los neste item.
+     * Inclui o status e a entrega: o SAP os atualiza livremente até a torre
+     * alterá-los pela interface.
      *
      * @var array<int, string>
      */
-    public const CAMPOS_MESTRES = [
+    public const CAMPOS_SINCRONIZADOS = [
         'local_origem',
         'local_destino',
         'descricao_local_retirada',
         'descricao_item',
         'prazo_item',
+        'status_item',
+        'data_hora_entrega',
     ];
 
     protected function casts(): array

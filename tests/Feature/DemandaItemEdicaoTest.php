@@ -104,6 +104,29 @@ class DemandaItemEdicaoTest extends TestCase
         $this->assertSame(StatusItemDemanda::Entregue, $demanda->itens->first()->status_item);
     }
 
+    public function test_alterar_status_pela_interface_marca_o_campo_como_do_operador(): void
+    {
+        $demanda = $this->demandaCom([
+            ['local_origem' => 'A', 'local_destino' => 'B', 'status_item' => StatusItemDemanda::Pendente],
+        ]);
+        $demanda->update(['data_hora_inicio_demanda' => now()->subDay()]);
+        $item = $demanda->itens->first();
+
+        $this->actingAs($this->usuario())
+            ->put(route('demandas.status-etapa', $demanda), [
+                'itens' => [$item->id],
+                'status_item' => StatusItemDemanda::Entregue->value,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $item->refresh();
+
+        $this->assertSame(StatusItemDemanda::Entregue, $item->status_item);
+        $this->assertTrue($item->campoEditadoPeloOperador('status_item'));
+        $this->assertFalse($item->campoEditadoPeloOperador('data_hora_entrega'));
+    }
+
     public function test_alterar_campo_mestre_marca_o_campo_como_editado_pelo_operador(): void
     {
         $demanda = $this->demandaCom([

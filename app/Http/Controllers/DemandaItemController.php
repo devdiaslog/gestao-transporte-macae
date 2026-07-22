@@ -69,6 +69,22 @@ class DemandaItemController extends Controller
     }
 
     /**
+     * Registra em campos_editados os campos sincronizáveis que o operador
+     * alterou; a importação do SAP deixa de tocá-los neste item.
+     *
+     * @param  array<int, string>  $campos
+     */
+    private function marcarCamposEditados(DemandaItem $item, array $campos): void
+    {
+        $editados = array_values(array_unique(array_merge(
+            $item->campos_editados ?? [],
+            array_intersect($campos, DemandaItem::CAMPOS_SINCRONIZADOS),
+        )));
+
+        $item->campos_editados = $editados === [] ? null : $editados;
+    }
+
+    /**
      * Redireciona de volta com erro quando a demanda não permite alterar itens.
      */
     private function bloqueio(Demanda $demanda): ?RedirectResponse
@@ -91,9 +107,13 @@ class DemandaItemController extends Controller
 
         $status = StatusItemDemanda::from($request->input('status_item'));
 
-        $afetados = $demanda->itens()
-            ->whereIn('id', $request->input('itens'))
-            ->update(['status_item' => $status->value]);
+        $afetados = 0;
+        foreach ($demanda->itens()->whereIn('id', $request->input('itens'))->get() as $itemEtapa) {
+            $itemEtapa->status_item = $status;
+            $this->marcarCamposEditados($itemEtapa, ['status_item']);
+            $itemEtapa->save();
+            $afetados++;
+        }
 
         $this->calculadora->recalcular($demanda->load('itens'));
 
@@ -111,9 +131,13 @@ class DemandaItemController extends Controller
             return $bloqueio;
         }
 
-        $afetados = $demanda->itens()
-            ->whereIn('id', $request->input('itens'))
-            ->update(['data_hora_entrega' => $request->date('data_hora_entrega')]);
+        $afetados = 0;
+        foreach ($demanda->itens()->whereIn('id', $request->input('itens'))->get() as $itemEtapa) {
+            $itemEtapa->data_hora_entrega = $request->date('data_hora_entrega');
+            $this->marcarCamposEditados($itemEtapa, ['data_hora_entrega']);
+            $itemEtapa->save();
+            $afetados++;
+        }
 
         return redirect()
             ->route('demandas.edit', $demanda)
@@ -130,13 +154,9 @@ class DemandaItemController extends Controller
 
         $item->fill($request->validated());
 
-        // Campos mestres alterados pelo operador passam a ser dele: a
-        // importação do SAP não volta a sincronizá-los neste item.
-        $editados = array_values(array_unique(array_merge(
-            $item->campos_editados ?? [],
-            array_intersect(array_keys($item->getDirty()), DemandaItem::CAMPOS_MESTRES),
-        )));
-        $item->campos_editados = $editados === [] ? null : $editados;
+        // Campos alterados pelo operador passam a ser dele: a importação do
+        // SAP não volta a sincronizá-los neste item.
+        $this->marcarCamposEditados($item, array_keys($item->getDirty()));
         $item->save();
 
         // Origem, destino, status e prazo do item alimentam os campos derivados.

@@ -90,7 +90,7 @@ class ApiImportacaoDemandasTest extends TestCase
 
         DemandaItem::where('numero_rt', '326000210')
             ->firstOrFail()
-            ->update(['status_item' => StatusItemDemanda::Recusado]);
+            ->update(['status_item' => StatusItemDemanda::Recusado, 'campos_editados' => ['status_item']]);
 
         $this->postJson(route('api.demandas.importar'), $payload)
             ->assertOk()
