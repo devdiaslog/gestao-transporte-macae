@@ -134,6 +134,65 @@ class ImportadorDemandasTest extends TestCase
         $this->assertSame('Carga atualizada', $item->descricao_item);
     }
 
+    public function test_reimportacao_inclui_itens_novos_que_surgiram_no_sap(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+        $cabecalho = ['Numero Demanda Viagem', 'Numero Demanda Entrega', 'Item Demanda Entrega', 'Descrição Destino', 'Status Demanda Entrega'];
+
+        // 09:00 — primeira importação com 1 item.
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800001', '326000060', '1', 'ARM-MACAE', '04'],
+        ]));
+
+        $demanda = Demanda::where('numero_demanda', 509800001)->firstOrFail();
+        $this->assertSame(1, $demanda->itens()->count());
+
+        // Operador mexe no item existente nesse meio tempo.
+        $demanda->itens()->first()->update(['status_item' => StatusItemDemanda::Entregue]);
+
+        // 10:00 — SAP ganhou mais 2 itens; reimporta com os 3.
+        $resultado = $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800001', '326000060', '1', 'ARM-MACAE', '04'],
+            ['509800001', '326000061', '1', 'SEROPEDICA', '04'],
+            ['509800001', '326000062', '1', 'CENPES', '04'],
+        ]));
+
+        $this->assertSame(2, $resultado['itens_criados']);
+        $this->assertSame(1, $resultado['itens_atualizados']);
+        $this->assertSame(3, $demanda->itens()->count());
+
+        // O status que o operador definiu no item antigo permanece.
+        $this->assertSame(
+            StatusItemDemanda::Entregue,
+            $demanda->itens()->where('numero_rt', '326000060')->first()->status_item
+        );
+    }
+
+    public function test_importacao_parcial_sem_colunas_mestres_nao_apaga_dados(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+
+        // Import completo: item com origem/destino/descrição/prazo.
+        $importador->importar($this->planilhaComCabecalho(
+            ['Numero Demanda Viagem', 'Numero Demanda Entrega', 'Item Demanda Entrega', 'Descrição Origem', 'Descrição Destino', 'Descrição Demanda Entrega', 'Data Prazo', 'Hora Prazo'],
+            ['509800002', '326000070', '1', 'PACU', 'ARM-MACAE', 'Carga X', '25.07.2026', '10:00:00']
+        ));
+
+        // Reimport PARCIAL: planilha só com número/RT/item (sem colunas mestres).
+        $importador->importar($this->planilhaComCabecalho(
+            ['Numero Demanda Viagem', 'Numero Demanda Entrega', 'Item Demanda Entrega'],
+            ['509800002', '326000070', '1']
+        ));
+
+        $item = DemandaItem::where('numero_rt', '326000070')->firstOrFail();
+
+        // Colunas ausentes = campos intocados.
+        $this->assertSame('PACU', $item->local_origem);
+        $this->assertSame('ARM-MACAE', $item->local_destino);
+        $this->assertSame('Carga X', $item->descricao_item);
+        $this->assertSame('25/07/2026 10:00', $item->prazo_item->format('d/m/Y H:i'));
+    }
+
     public function test_tipo_informado_na_planilha_fixa_o_tipo_manualmente(): void
     {
         $importador = app(ImportadorDemandas::class);

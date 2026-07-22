@@ -193,12 +193,16 @@ class ImportadorDemandas
                 $item = DemandaItem::firstOrNew($chave);
                 $novo = ! $item->exists;
 
-                // Campos mestres do SAP: sempre re-sincronizam com a planilha.
-                $item->local_origem = $this->limpar($linha['local_origem'] ?? null);
-                $item->local_destino = $this->limpar($linha['local_destino'] ?? null);
-                $item->descricao_local_retirada = $this->limpar($linha['descricao_local_retirada'] ?? null);
-                $item->descricao_item = $this->limpar($linha['descricao_item'] ?? null);
-                $item->prazo_item = $this->montarDataHora($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null);
+                // Campos mestres do SAP: re-sincronizam quando a coluna existe na
+                // planilha. Coluna ausente não altera nada (import parcial seguro).
+                foreach (['local_origem', 'local_destino', 'descricao_local_retirada', 'descricao_item'] as $campoMestre) {
+                    if (array_key_exists($campoMestre, $linha)) {
+                        $item->{$campoMestre} = $this->limpar($linha[$campoMestre]);
+                    }
+                }
+                if (array_key_exists('prazo_data', $linha) || array_key_exists('prazo_hora', $linha)) {
+                    $item->prazo_item = $this->montarDataHora($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null);
+                }
 
                 // Status e entrega são geridos pelo operador da torre: o SAP só
                 // preenche quando ainda estão vazios, nunca sobrescreve.
