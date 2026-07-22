@@ -7,6 +7,10 @@
     $totalItens = $demanda->itens->count();
     $encerrados = $demanda->itensEncerrados();
 
+    // Regra: sem início não altera item; com tudo concluído exige o fim antes de novas alterações.
+    $motivoBloqueio = $demanda->motivoBloqueioItens();
+    $edicaoBloqueada = $motivoBloqueio !== null;
+
     $sc = $demanda->status_demanda->color();
     $tipoColors = ['load' => 'blue', 'backload' => 'amber', 'transferencia' => 'violet'];
     $tc = $demanda->tipo_demanda ? ($tipoColors[$demanda->tipo_demanda->value] ?? 'zinc') : null;
@@ -188,6 +192,16 @@
                     </span>
                 </div>
 
+                @if($edicaoBloqueada && $totalItens > 0)
+                    <div class="flex items-start gap-2.5 border-b border-amber-200 bg-amber-50 px-5 py-3 text-xs text-amber-800
+                                dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+                        <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+                        </svg>
+                        <span>{{ $motivoBloqueio }}</span>
+                    </div>
+                @endif
+
                 @if($totalItens === 0)
                     <p class="py-16 text-center text-sm text-zinc-400 dark:text-zinc-600">
                         Esta demanda ainda não possui itens.
@@ -228,19 +242,19 @@
                                             <input type="hidden" name="itens[]" value="{{ $item->id }}">
                                         @endforeach
                                         <span class="text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Etapa:</span>
-                                        <select name="status_item" required
+                                        <select name="status_item" required @disabled($edicaoBloqueada)
                                                 class="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-zinc-900 shadow-xs outline-none
-                                                       focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                                                       focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:opacity-50
                                                        dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
                                             <option value="" disabled selected>Definir status…</option>
                                             @foreach(\App\Enums\StatusItemDemanda::cases() as $s)
                                                 <option value="{{ $s->value }}">{{ $s->label() }}</option>
                                             @endforeach
                                         </select>
-                                        <button type="submit"
+                                        <button type="submit" @disabled($edicaoBloqueada)
                                                 class="h-8 shrink-0 rounded-lg bg-zinc-900 px-3 text-xs font-semibold text-white
-                                                       transition-colors hover:bg-zinc-700 active:scale-[0.98]
-                                                       dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
+                                                       transition-colors hover:bg-zinc-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-zinc-900
+                                                       dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 dark:disabled:hover:bg-white">
                                             Aplicar
                                         </button>
                                     </form>
@@ -301,12 +315,11 @@
                                                         </span>
                                                     </td>
                                                     <td class="px-3 py-2 text-right">
-                                                        <button type="button"
-                                                                data-item="{{ json_encode($payload) }}"
-                                                                onclick="editarItem(JSON.parse(this.dataset.item))"
-                                                                title="Editar item"
+                                                        <button type="button" @disabled($edicaoBloqueada)
+                                                                @unless($edicaoBloqueada) data-item="{{ json_encode($payload) }}" onclick="editarItem(JSON.parse(this.dataset.item))" @endunless
+                                                                title="{{ $edicaoBloqueada ? $motivoBloqueio : 'Editar item' }}"
                                                                 class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 text-zinc-500
-                                                                       transition-colors hover:bg-white hover:text-zinc-800
+                                                                       transition-colors hover:bg-white hover:text-zinc-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-zinc-500
                                                                        dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200">
                                                             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/>

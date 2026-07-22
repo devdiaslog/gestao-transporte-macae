@@ -107,11 +107,39 @@ class Demanda extends Model
     }
 
     /**
-     * Itens já encerrados (entregues ou cancelados).
+     * Itens já encerrados (entregues, cancelados ou recusados).
      */
     public function itensEncerrados(): int
     {
         return $this->itens->filter(fn (DemandaItem $i) => $i->status_item?->encerrado() === true)->count();
+    }
+
+    /**
+     * Todos os itens já foram concluídos.
+     */
+    public function itensConcluidos(): bool
+    {
+        return $this->itens->isNotEmpty() && $this->itensEncerrados() === $this->itens->count();
+    }
+
+    /**
+     * Motivo pelo qual os itens não podem ser alterados agora, ou null se liberado.
+     *
+     * Regra de negócio: a demanda precisa estar iniciada para alterar itens; e,
+     * quando todos os itens estão concluídos, o fim da demanda deve ser
+     * registrado antes de novas alterações.
+     */
+    public function motivoBloqueioItens(): ?string
+    {
+        if ($this->data_hora_inicio_demanda === null) {
+            return 'Informe o início da demanda para liberar a alteração dos itens.';
+        }
+
+        if ($this->itensConcluidos() && $this->data_hora_fim_demanda === null) {
+            return 'Todos os itens estão concluídos. Informe o fim da demanda antes de novas alterações.';
+        }
+
+        return null;
     }
 
     /**

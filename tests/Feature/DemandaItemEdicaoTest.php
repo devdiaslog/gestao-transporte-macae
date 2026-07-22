@@ -78,6 +78,7 @@ class DemandaItemEdicaoTest extends TestCase
         $demanda = $this->demandaCom([
             ['local_origem' => 'PACU', 'local_destino' => 'ARM-MACAE', 'status_item' => StatusItemDemanda::Pendente],
         ]);
+        $demanda->update(['data_hora_inicio_demanda' => now()->subDay()]);
         $item = $demanda->itens->first();
 
         $this->assertSame(TipoDemanda::Backload, $demanda->fresh()->tipo_demanda);
@@ -140,6 +141,7 @@ class DemandaItemEdicaoTest extends TestCase
             ['local_origem' => 'ARM-MACAE', 'local_destino' => 'ARM-RIO', 'status_item' => StatusItemDemanda::Pendente],
             ['local_origem' => 'ARM-MACAE', 'local_destino' => 'ARM-RIO', 'status_item' => StatusItemDemanda::Pendente],
         ]);
+        $demanda->update(['data_hora_inicio_demanda' => now()->subDay()]);
 
         $ids = $demanda->itens->pluck('id')->all();
 
@@ -177,6 +179,69 @@ class DemandaItemEdicaoTest extends TestCase
         $this->assertSame(StatusItemDemanda::Pendente, $itemAlheio->fresh()->status_item);
     }
 
+    public function test_nao_permite_alterar_item_sem_inicio_da_demanda(): void
+    {
+        $demanda = $this->demandaCom([
+            ['status_item' => StatusItemDemanda::Pendente],
+        ]);
+        // Sem data_hora_inicio_demanda (factory não define).
+        $item = $demanda->itens->first();
+
+        $this->actingAs($this->usuario())
+            ->put(route('demanda-itens.update', $item), [
+                'numero_rt' => $item->numero_rt,
+                'numero_item' => $item->numero_item,
+                'subitem' => $item->subitem,
+                'status_item' => StatusItemDemanda::Entregue->value,
+            ])
+            ->assertSessionHas('error');
+
+        $this->assertSame(StatusItemDemanda::Pendente, $item->fresh()->status_item);
+    }
+
+    public function test_nao_permite_alterar_item_quando_todos_concluidos_e_sem_fim(): void
+    {
+        $demanda = $this->demandaCom([
+            ['status_item' => StatusItemDemanda::Entregue],
+            ['status_item' => StatusItemDemanda::Entregue],
+        ]);
+        // Iniciada, mas sem fim, e com todos os itens concluídos.
+        $demanda->update(['data_hora_inicio_demanda' => now()->subDay()]);
+        $item = $demanda->itens->first();
+
+        $this->actingAs($this->usuario())
+            ->put(route('demanda-itens.update', $item), [
+                'numero_rt' => $item->numero_rt,
+                'numero_item' => $item->numero_item,
+                'subitem' => $item->subitem,
+                'status_item' => StatusItemDemanda::Cancelado->value,
+            ])
+            ->assertSessionHas('error');
+
+        $this->assertSame(StatusItemDemanda::Entregue, $item->fresh()->status_item);
+    }
+
+    public function test_permite_alterar_item_com_inicio_e_sem_estar_concluido(): void
+    {
+        $demanda = $this->demandaCom([
+            ['status_item' => StatusItemDemanda::Pendente],
+            ['status_item' => StatusItemDemanda::Pendente],
+        ]);
+        $demanda->update(['data_hora_inicio_demanda' => now()->subDay()]);
+        $item = $demanda->itens->first();
+
+        $this->actingAs($this->usuario())
+            ->put(route('demanda-itens.update', $item), [
+                'numero_rt' => $item->numero_rt,
+                'numero_item' => $item->numero_item,
+                'subitem' => $item->subitem,
+                'status_item' => StatusItemDemanda::Entregue->value,
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertSame(StatusItemDemanda::Entregue, $item->fresh()->status_item);
+    }
+
     public function test_remover_item_recalcula_a_demanda(): void
     {
         $admin = User::factory()->create(['role' => UserRole::Administrador]);
@@ -186,6 +251,7 @@ class DemandaItemEdicaoTest extends TestCase
             ['local_origem' => 'BMAC', 'local_destino' => 'X', 'status_item' => StatusItemDemanda::Pendente],
             ['local_origem' => 'Y', 'local_destino' => 'Z', 'status_item' => StatusItemDemanda::Entregue],
         ]);
+        $demanda->update(['data_hora_inicio_demanda' => now()->subDay()]);
         $itemBackload = $demanda->itens->first();
 
         $this->assertSame(TipoDemanda::Backload, $demanda->fresh()->tipo_demanda);
