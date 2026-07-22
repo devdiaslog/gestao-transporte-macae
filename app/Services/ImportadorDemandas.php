@@ -112,6 +112,33 @@ class ImportadorDemandas
      */
     public function importar(string $caminho, ?int $usuarioId = null, ?int $somenteNota = null): array
     {
+        $linhas = $this->lerPlanilha($caminho);
+
+        if ($linhas === []) {
+            return [
+                'demandas_criadas' => 0,
+                'itens_criados' => 0,
+                'itens_atualizados' => 0,
+                'itens_remanejados' => 0,
+                'linhas_ignoradas' => 0,
+                'avisos' => [],
+                'erros' => ['Nenhuma linha de dados encontrada na planilha.'],
+            ];
+        }
+
+        return $this->importarLinhas($linhas, $usuarioId, $somenteNota);
+    }
+
+    /**
+     * Processa linhas já estruturadas (vindas da planilha ou da API), aplicando
+     * as mesmas regras de negócio: campos do operador nunca sobrescritos,
+     * campos mestres sincronizados, remanejo de RT e recálculo dos derivados.
+     *
+     * @param  array<int|string, array<string, string|null>>  $linhas
+     * @return array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, itens_remanejados: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
+     */
+    public function importarLinhas(array $linhas, ?int $usuarioId = null, ?int $somenteNota = null): array
+    {
         $resultado = [
             'demandas_criadas' => 0,
             'itens_criados' => 0,
@@ -121,14 +148,6 @@ class ImportadorDemandas
             'avisos' => [],
             'erros' => [],
         ];
-
-        $linhas = $this->lerPlanilha($caminho);
-
-        if ($linhas === []) {
-            $resultado['erros'][] = 'Nenhuma linha de dados encontrada na planilha.';
-
-            return $resultado;
-        }
 
         $prefixoParaId = $this->mapaPrefixoEquipamento();
         $demandasTocadas = [];

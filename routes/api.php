@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DemandaImportacaoController;
 use App\Http\Controllers\Api\OcorrenciaController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,4 +19,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
 
     Route::get('/ocorrencias', [OcorrenciaController::class, 'index'])->name('api.ocorrencias.index');
+
+    Route::post('/demandas/importar', [DemandaImportacaoController::class, 'store'])->name('api.demandas.importar');
 });
