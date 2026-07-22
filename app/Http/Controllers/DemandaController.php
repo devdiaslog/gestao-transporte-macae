@@ -34,7 +34,12 @@ class DemandaController extends Controller
         $temFiltro = $request->hasAny($filtroKeys) || $request->has('page');
 
         if (! $temFiltro) {
-            $salvos = session('demandas.filtros', []);
+            // Considera apenas filtros com valor: um conjunto só de vazios/null
+            // seria descartado pelo route() e cairia em loop de redirect.
+            $salvos = array_filter(
+                session('demandas.filtros', []),
+                fn ($v) => $v !== null && $v !== ''
+            );
             if (! empty($salvos)) {
                 return redirect()->route('demandas.index', $salvos);
             }
