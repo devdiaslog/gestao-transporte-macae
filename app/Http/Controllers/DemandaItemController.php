@@ -128,7 +128,16 @@ class DemandaItemController extends Controller
             return $bloqueio;
         }
 
-        $item->update($request->validated());
+        $item->fill($request->validated());
+
+        // Campos mestres alterados pelo operador passam a ser dele: a
+        // importação do SAP não volta a sincronizá-los neste item.
+        $editados = array_values(array_unique(array_merge(
+            $item->campos_editados ?? [],
+            array_intersect(array_keys($item->getDirty()), DemandaItem::CAMPOS_MESTRES),
+        )));
+        $item->campos_editados = $editados === [] ? null : $editados;
+        $item->save();
 
         // Origem, destino, status e prazo do item alimentam os campos derivados.
         $this->calculadora->recalcular($demanda->load('itens'));

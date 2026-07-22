@@ -22,6 +22,21 @@ class DemandaItem extends Model
         'status_item',
         'prazo_item',
         'data_hora_entrega',
+        'campos_editados',
+    ];
+
+    /**
+     * Campos mestres do SAP que o operador pode assumir; quando presentes em
+     * campos_editados, a importação deixa de sincronizá-los neste item.
+     *
+     * @var array<int, string>
+     */
+    public const CAMPOS_MESTRES = [
+        'local_origem',
+        'local_destino',
+        'descricao_local_retirada',
+        'descricao_item',
+        'prazo_item',
     ];
 
     protected function casts(): array
@@ -30,7 +45,13 @@ class DemandaItem extends Model
             'status_item' => StatusItemDemanda::class,
             'prazo_item' => 'datetime',
             'data_hora_entrega' => 'datetime',
+            'campos_editados' => 'array',
         ];
+    }
+
+    public function campoEditadoPeloOperador(string $campo): bool
+    {
+        return in_array($campo, $this->campos_editados ?? [], true);
     }
 
     public function demanda(): BelongsTo

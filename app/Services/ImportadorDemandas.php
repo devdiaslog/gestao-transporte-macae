@@ -200,13 +200,15 @@ class ImportadorDemandas
                 }
 
                 // Campos mestres do SAP: re-sincronizam quando a coluna existe na
-                // planilha. Coluna ausente não altera nada (import parcial seguro).
+                // planilha. Coluna ausente não altera nada (import parcial seguro)
+                // e campo assumido pelo operador (campos_editados) não é tocado.
                 foreach (['local_origem', 'local_destino', 'descricao_local_retirada', 'descricao_item'] as $campoMestre) {
-                    if (array_key_exists($campoMestre, $linha)) {
+                    if (array_key_exists($campoMestre, $linha) && ! $item->campoEditadoPeloOperador($campoMestre)) {
                         $item->{$campoMestre} = $this->limpar($linha[$campoMestre]);
                     }
                 }
-                if (array_key_exists('prazo_data', $linha) || array_key_exists('prazo_hora', $linha)) {
+                if ((array_key_exists('prazo_data', $linha) || array_key_exists('prazo_hora', $linha))
+                    && ! $item->campoEditadoPeloOperador('prazo_item')) {
                     $item->prazo_item = $this->montarDataHora($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null);
                 }
 

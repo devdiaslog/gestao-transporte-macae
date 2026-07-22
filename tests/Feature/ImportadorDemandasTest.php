@@ -193,6 +193,30 @@ class ImportadorDemandasTest extends TestCase
         $this->assertSame('25/07/2026 10:00', $item->prazo_item->format('d/m/Y H:i'));
     }
 
+    public function test_reimportacao_nao_sobrescreve_campo_mestre_editado_pelo_operador(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+        $cabecalho = ['Numero Demanda Viagem', 'Numero Demanda Entrega', 'Item Demanda Entrega', 'Descrição Origem', 'Descrição Destino'];
+
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800020', '326000100', '1', 'GENERICO SAP', 'DESTINO SAP'],
+        ]));
+
+        // Operador renomeia a origem para um termo amigável.
+        $item = DemandaItem::where('numero_rt', '326000100')->firstOrFail();
+        $item->update(['local_origem' => 'Empresa X - Bairro Y', 'campos_editados' => ['local_origem']]);
+
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800020', '326000100', '1', 'GENERICO SAP', 'DESTINO NOVO'],
+        ]));
+
+        $item->refresh();
+
+        // Origem do operador preservada; destino (não editado) re-sincroniza.
+        $this->assertSame('Empresa X - Bairro Y', $item->local_origem);
+        $this->assertSame('DESTINO NOVO', $item->local_destino);
+    }
+
     public function test_rt_remanejada_para_outra_demanda_cancela_o_item_pendente_na_antiga(): void
     {
         $importador = app(ImportadorDemandas::class);

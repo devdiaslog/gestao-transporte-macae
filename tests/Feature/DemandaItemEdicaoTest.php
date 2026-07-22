@@ -104,6 +104,32 @@ class DemandaItemEdicaoTest extends TestCase
         $this->assertSame(StatusItemDemanda::Entregue, $demanda->itens->first()->status_item);
     }
 
+    public function test_alterar_campo_mestre_marca_o_campo_como_editado_pelo_operador(): void
+    {
+        $demanda = $this->demandaCom([
+            ['local_origem' => 'GENERICO SAP', 'local_destino' => 'ARM-MACAE'],
+        ]);
+        $demanda->update(['data_hora_inicio_demanda' => now()->subDay()]);
+        $item = $demanda->itens->first();
+
+        $this->actingAs($this->usuario())
+            ->put(route('demanda-itens.update', $item), [
+                'numero_rt' => $item->numero_rt,
+                'numero_item' => $item->numero_item,
+                'subitem' => $item->subitem,
+                'local_origem' => 'Empresa X - Bairro Y',
+                'local_destino' => 'ARM-MACAE',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $item->refresh();
+
+        // Só o campo alterado é marcado; o destino, mantido igual, não.
+        $this->assertTrue($item->campoEditadoPeloOperador('local_origem'));
+        $this->assertFalse($item->campoEditadoPeloOperador('local_destino'));
+    }
+
     public function test_nao_permite_duplicar_a_identificacao_de_item_na_mesma_demanda(): void
     {
         $demanda = $this->demandaCom([
