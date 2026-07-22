@@ -65,7 +65,7 @@ class DemandaController extends Controller
             ->when($dataAte, fn ($q) => $q->whereDate('created_at', '<=', $dataAte))
             ->when($prazo, fn ($q) => $this->filtrarPorPrazo($q, $prazo, $prazoDE, $prazoAte))
             ->when($prazo, fn ($q) => $q->orderBy('prazo_demanda'), fn ($q) => $q->latest())
-            ->paginate(25)
+            ->paginate(10)
             ->appends([
                 'q' => $search ?? '',
                 'status' => $status ?? '',
@@ -96,7 +96,7 @@ class DemandaController extends Controller
         $agora = now();
 
         $query->whereNotNull('prazo_demanda')
-            ->whereNotIn('status_demanda', ['finalizado', 'cancelada']);
+            ->whereNotIn('status_demanda', ['finalizado', 'cancelada', 'recusa']);
 
         return match ($prazo) {
             'vencidas' => $query->where('prazo_demanda', '<', $agora),

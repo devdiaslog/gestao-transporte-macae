@@ -16,10 +16,11 @@ class DemandaItemController extends Controller
         $item->update($request->validated());
 
         // Origem, destino, status e prazo do item alimentam os campos derivados.
-        $this->calculadora->recalcular($item->demanda->load('itens'));
+        $demanda = $item->demanda;
+        $this->calculadora->recalcular($demanda->load('itens'));
 
         return redirect()
-            ->route('demandas.edit', $item->demanda_id)
+            ->route('demandas.edit', $demanda)
             ->with('success', "Item {$item->numero_rt} / {$item->numero_item} atualizado.");
     }
 
@@ -33,7 +34,7 @@ class DemandaItemController extends Controller
         $this->calculadora->recalcular($demanda->load('itens'));
 
         return redirect()
-            ->route('demandas.edit', $demanda->id)
+            ->route('demandas.edit', $demanda)
             ->with('success', "Item {$identificacao} removido.");
     }
 }

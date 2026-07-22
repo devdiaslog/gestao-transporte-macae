@@ -99,7 +99,7 @@ class DashboardController extends Controller
                 'numero_item' => '1',
                 'local_origem' => $origem,
                 'local_destino' => $destino,
-                'status_item' => StatusItemDemanda::Aberto,
+                'status_item' => StatusItemDemanda::Pendente,
             ]);
 
             $this->calculadora->recalcular($demanda->load('itens'));
@@ -324,6 +324,7 @@ class DashboardController extends Controller
         $emAndamento = $demandas->where('status_demanda', StatusDemanda::EmAndamento)->count();
         $finalizadas = $demandas->where('status_demanda', StatusDemanda::Finalizado)->count();
         $canceladas = $demandas->where('status_demanda', StatusDemanda::Cancelada)->count();
+        $recusadas = $demandas->where('status_demanda', StatusDemanda::Recusa)->count();
         $emAberto = $pendentes + $emAndamento;
 
         // ── Vencidas: prazo já passou e ainda em aberto ──────────────────────────
@@ -365,6 +366,7 @@ class DashboardController extends Controller
             ['label' => 'Em Andamento', 'valor' => $emAndamento, 'cor' => '#3b82f6'],
             ['label' => 'Finalizado',   'valor' => $finalizadas, 'cor' => '#10b981'],
             ['label' => 'Cancelada',    'valor' => $canceladas,  'cor' => '#f43f5e'],
+            ['label' => 'Recusa',       'valor' => $recusadas,   'cor' => '#f97316'],
         ];
 
         // ── Distribuição por tipo (barra) ────────────────────────────────────────
@@ -440,6 +442,7 @@ class DashboardController extends Controller
             ['key' => 'em_andamento', 'label' => 'Em Andamento', 'cor' => '#3b82f6'],
             ['key' => 'finalizado',   'label' => 'Finalizado',   'cor' => '#10b981'],
             ['key' => 'cancelada',    'label' => 'Cancelada',    'cor' => '#f43f5e'],
+            ['key' => 'recusa',       'label' => 'Recusa',       'cor' => '#f97316'],
         ];
 
         $porStatusDe = fn ($grupo): array => [
@@ -447,6 +450,7 @@ class DashboardController extends Controller
             'em_andamento' => $grupo->where('status_demanda', StatusDemanda::EmAndamento)->count(),
             'finalizado' => $grupo->where('status_demanda', StatusDemanda::Finalizado)->count(),
             'cancelada' => $grupo->where('status_demanda', StatusDemanda::Cancelada)->count(),
+            'recusa' => $grupo->where('status_demanda', StatusDemanda::Recusa)->count(),
         ];
 
         // ── Top rotas (origens → destinos dos itens), segmentadas por status ─────

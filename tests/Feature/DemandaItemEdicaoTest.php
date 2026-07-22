@@ -66,7 +66,7 @@ class DemandaItemEdicaoTest extends TestCase
         $demanda = $this->demandaCom([
             ['status_item' => StatusItemDemanda::Entregue],
             ['status_item' => StatusItemDemanda::Cancelado],
-            ['status_item' => StatusItemDemanda::Aberto],
+            ['status_item' => StatusItemDemanda::Pendente],
         ]);
 
         $this->assertSame(2, $demanda->itensEncerrados());
@@ -76,7 +76,7 @@ class DemandaItemEdicaoTest extends TestCase
     public function test_editar_item_recalcula_os_campos_derivados_da_demanda(): void
     {
         $demanda = $this->demandaCom([
-            ['local_origem' => 'PACU', 'local_destino' => 'ARM-MACAE', 'status_item' => StatusItemDemanda::Aberto],
+            ['local_origem' => 'PACU', 'local_destino' => 'ARM-MACAE', 'status_item' => StatusItemDemanda::Pendente],
         ]);
         $item = $demanda->itens->first();
 
@@ -92,7 +92,8 @@ class DemandaItemEdicaoTest extends TestCase
                 'status_item' => StatusItemDemanda::Entregue->value,
                 'prazo_item' => now()->addDays(5)->format('Y-m-d\TH:i'),
             ])
-            ->assertRedirect(route('demandas.edit', $demanda->id));
+            ->assertRedirect()
+            ->assertSessionHas('success');
 
         $demanda->refresh()->load('itens');
 
@@ -123,7 +124,7 @@ class DemandaItemEdicaoTest extends TestCase
     {
         $demanda = $this->demandaCom([
             ['local_origem' => 'ARM-MACAE', 'local_destino' => 'ARM-RIO', 'status_item' => StatusItemDemanda::Entregue],
-            ['local_origem' => 'ARM-MACAE', 'local_destino' => 'ARM-RIO', 'status_item' => StatusItemDemanda::Aberto],
+            ['local_origem' => 'ARM-MACAE', 'local_destino' => 'ARM-RIO', 'status_item' => StatusItemDemanda::Pendente],
         ]);
 
         $this->actingAs($this->usuario())
@@ -139,7 +140,7 @@ class DemandaItemEdicaoTest extends TestCase
         $admin->permissions()->create(['permission' => UserPermission::Dashboard]);
 
         $demanda = $this->demandaCom([
-            ['local_origem' => 'BMAC', 'local_destino' => 'X', 'status_item' => StatusItemDemanda::Aberto],
+            ['local_origem' => 'BMAC', 'local_destino' => 'X', 'status_item' => StatusItemDemanda::Pendente],
             ['local_origem' => 'Y', 'local_destino' => 'Z', 'status_item' => StatusItemDemanda::Entregue],
         ]);
         $itemBackload = $demanda->itens->first();
@@ -148,7 +149,7 @@ class DemandaItemEdicaoTest extends TestCase
 
         $this->actingAs($admin)
             ->delete(route('demanda-itens.destroy', $itemBackload))
-            ->assertRedirect(route('demandas.edit', $demanda->id));
+            ->assertRedirect();
 
         $this->assertSame(1, DemandaItem::where('demanda_id', $demanda->id)->count());
 

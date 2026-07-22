@@ -102,7 +102,8 @@ class DemandaCalculadora
     /**
      * Status da demanda derivado dos itens:
      * todos entregues → Finalizado; todos cancelados → Cancelada;
-     * algum encerrado ou demanda já iniciada → Em Andamento; senão Pendente.
+     * todos recusados → Recusa; algum encerrado ou demanda já iniciada →
+     * Em Andamento; senão Pendente.
      *
      * @param  Collection<int, DemandaItem>  $itens
      */
@@ -120,6 +121,7 @@ class DemandaCalculadora
 
         $entregues = $statuses->filter(fn ($s) => $s === StatusItemDemanda::Entregue)->count();
         $cancelados = $statuses->filter(fn ($s) => $s === StatusItemDemanda::Cancelado)->count();
+        $recusados = $statuses->filter(fn ($s) => $s === StatusItemDemanda::Recusado)->count();
         $total = $statuses->count();
 
         if ($entregues === $total) {
@@ -130,8 +132,12 @@ class DemandaCalculadora
             return StatusDemanda::Cancelada;
         }
 
+        if ($recusados === $total) {
+            return StatusDemanda::Recusa;
+        }
+
         // Encerrados parcialmente, ou execução já iniciada, caracterizam andamento.
-        if ($entregues + $cancelados > 0 || $demanda->data_hora_inicio_demanda !== null) {
+        if ($entregues + $cancelados + $recusados > 0 || $demanda->data_hora_inicio_demanda !== null) {
             return StatusDemanda::EmAndamento;
         }
 

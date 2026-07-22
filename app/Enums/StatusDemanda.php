@@ -8,6 +8,7 @@ enum StatusDemanda: string
     case EmAndamento = 'em_andamento';
     case Finalizado = 'finalizado';
     case Cancelada = 'cancelada';
+    case Recusa = 'recusa';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum StatusDemanda: string
             self::EmAndamento => 'Em Andamento',
             self::Finalizado => 'Finalizado',
             self::Cancelada => 'Cancelada',
+            self::Recusa => 'Recusa',
         };
     }
 
@@ -26,6 +28,7 @@ enum StatusDemanda: string
             self::EmAndamento => 'blue',
             self::Finalizado => 'emerald',
             self::Cancelada => 'rose',
+            self::Recusa => 'orange',
         };
     }
 }

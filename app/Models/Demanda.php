@@ -6,6 +6,7 @@ use App\Enums\FonteDemanda;
 use App\Enums\StatusDemanda;
 use App\Enums\TipoCadastro;
 use App\Enums\TipoDemanda;
+use App\Traits\HasEncryptedRouteKey;
 use Database\Factories\DemandaFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,7 +18,7 @@ use Illuminate\Support\Collection;
 class Demanda extends Model
 {
     /** @use HasFactory<DemandaFactory> */
-    use HasFactory, SoftDeletes;
+    use HasEncryptedRouteKey, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'numero_demanda',

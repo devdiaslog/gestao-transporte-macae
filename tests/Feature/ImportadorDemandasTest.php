@@ -61,7 +61,7 @@ class ImportadorDemandasTest extends TestCase
         $this->assertSame('ARM-MACAE', $item->local_destino);
         $this->assertSame('PACU-CAIS 2', $item->descricao_local_retirada);
         $this->assertSame('Carga A', $item->descricao_item);
-        $this->assertSame(StatusItemDemanda::Aberto, $item->status_item);
+        $this->assertSame(StatusItemDemanda::Pendente, $item->status_item);
         $this->assertSame('24/07/2026 10:00', $item->prazo_item->format('d/m/Y H:i'));
     }
 

@@ -97,9 +97,9 @@ class DemandaCalculadoraTest extends TestCase
         $distante = now()->addDays(10);
 
         $demanda = $this->demandaCom([
-            ['prazo_item' => $vencida, 'status_item' => StatusItemDemanda::Aberto],
-            ['prazo_item' => $distante, 'status_item' => StatusItemDemanda::Aberto],
-            ['prazo_item' => $proxima, 'status_item' => StatusItemDemanda::Aberto],
+            ['prazo_item' => $vencida, 'status_item' => StatusItemDemanda::Pendente],
+            ['prazo_item' => $distante, 'status_item' => StatusItemDemanda::Pendente],
+            ['prazo_item' => $proxima, 'status_item' => StatusItemDemanda::Pendente],
         ]);
 
         $this->calculadora()->recalcular($demanda);
@@ -116,8 +116,8 @@ class DemandaCalculadoraTest extends TestCase
         $menosAntiga = now()->subDay();
 
         $demanda = $this->demandaCom([
-            ['prazo_item' => $menosAntiga, 'status_item' => StatusItemDemanda::Aberto],
-            ['prazo_item' => $maisAntiga, 'status_item' => StatusItemDemanda::Aberto],
+            ['prazo_item' => $menosAntiga, 'status_item' => StatusItemDemanda::Pendente],
+            ['prazo_item' => $maisAntiga, 'status_item' => StatusItemDemanda::Pendente],
         ]);
 
         $this->calculadora()->recalcular($demanda);
@@ -151,11 +151,29 @@ class DemandaCalculadoraTest extends TestCase
         $this->assertSame(StatusDemanda::Cancelada, $demanda->fresh()->status_demanda);
     }
 
+    public function test_status_recusa_apenas_quando_todos_os_itens_recusados(): void
+    {
+        $todos = $this->demandaCom([
+            ['status_item' => StatusItemDemanda::Recusado],
+            ['status_item' => StatusItemDemanda::Recusado],
+        ], 509000010);
+        $this->calculadora()->recalcular($todos);
+        $this->assertSame(StatusDemanda::Recusa, $todos->fresh()->status_demanda);
+
+        // Um item ainda pendente impede a Recusa da demanda.
+        $parcial = $this->demandaCom([
+            ['status_item' => StatusItemDemanda::Recusado],
+            ['status_item' => StatusItemDemanda::Pendente],
+        ], 509000011);
+        $this->calculadora()->recalcular($parcial);
+        $this->assertSame(StatusDemanda::EmAndamento, $parcial->fresh()->status_demanda);
+    }
+
     public function test_status_em_andamento_quando_ha_itens_encerrados_e_abertos(): void
     {
         $demanda = $this->demandaCom([
             ['status_item' => StatusItemDemanda::Entregue],
-            ['status_item' => StatusItemDemanda::Aberto],
+            ['status_item' => StatusItemDemanda::Pendente],
         ]);
 
         $this->calculadora()->recalcular($demanda);
@@ -166,8 +184,8 @@ class DemandaCalculadoraTest extends TestCase
     public function test_status_pendente_quando_todos_os_itens_estao_abertos(): void
     {
         $demanda = $this->demandaCom([
-            ['status_item' => StatusItemDemanda::Aberto],
-            ['status_item' => StatusItemDemanda::Aberto],
+            ['status_item' => StatusItemDemanda::Pendente],
+            ['status_item' => StatusItemDemanda::Pendente],
         ]);
 
         $this->calculadora()->recalcular($demanda);

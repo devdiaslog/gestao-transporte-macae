@@ -16,9 +16,10 @@
         && ! in_array($demanda->status_demanda->value, ['finalizado', 'cancelada']);
 
     $statusItemCores = [
-        '04' => ['bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'],
-        '07' => ['bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'],
-        '18' => ['bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400'],
+        '04' => 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
+        '07' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
+        '18' => 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400',
+        'recusado' => 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400',
     ];
 @endphp
 
@@ -108,16 +109,6 @@
                                 </option>
                             @endforeach
                         </select>
-                    </div>
-
-                    <div>
-                        <label for="e-documento" class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                            Documento
-                        </label>
-                        <input type="text" name="documento_demanda" id="e-documento" value="{{ old('documento_demanda', $demanda->documento_demanda) }}"
-                               class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-xs outline-none
-                                      focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                                      dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
@@ -243,7 +234,7 @@
                                         <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
                                             @foreach($itens as $item)
                                                 @php
-                                                    $cor = $statusItemCores[$item->status_item?->value][0]
+                                                    $cor = $statusItemCores[$item->status_item?->value]
                                                         ?? 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400';
                                                     $itemVencido = $item->prazo_item
                                                         && $item->prazo_item->isPast()
@@ -400,7 +391,6 @@
                                     class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-xs outline-none
                                            focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
                                            dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-                                <option value="">Sem status</option>
                                 @foreach(\App\Enums\StatusItemDemanda::cases() as $s)
                                     <option value="{{ $s->value }}">{{ $s->label() }}</option>
                                 @endforeach
