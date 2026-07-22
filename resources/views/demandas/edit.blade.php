@@ -265,7 +265,7 @@
                                     <table class="w-full text-xs">
                                         <thead class="bg-white dark:bg-zinc-900">
                                             <tr class="text-left text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                                                <th class="px-3 py-1.5 font-semibold">RT / Item</th>
+                                                <th class="px-3 py-1.5 font-semibold">Entrega / Item</th>
                                                 <th class="px-3 py-1.5 font-semibold">Descrição</th>
                                                 <th class="px-3 py-1.5 font-semibold">Retirada</th>
                                                 <th class="px-3 py-1.5 font-semibold">Prazo</th>
@@ -367,7 +367,7 @@
                 <div class="max-h-[70vh] space-y-4 overflow-y-auto p-5">
                     <div class="grid grid-cols-3 gap-3">
                         <div>
-                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">RT</label>
+                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Nº Entrega</label>
                             <input type="text" name="numero_rt" id="i-rt" required
                                    class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-xs outline-none
                                           focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200

@@ -10,6 +10,8 @@ use App\Models\Demanda;
 use App\Models\DemandaItem;
 use App\Services\ImportadorDemandas;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Writer\XLSX\Writer;
 use Tests\TestCase;
 
 class ImportadorDemandasTest extends TestCase
@@ -95,6 +97,51 @@ class ImportadorDemandasTest extends TestCase
         $this->assertGreaterThan(0, $resultado['itens_criados']);
 
         @unlink($caminho);
+    }
+
+    public function test_reconhece_cabecalho_generico_e_alias_do_sap(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+
+        // Cabeçalho genérico (novo padrão do modelo).
+        $generico = $this->planilhaComCabecalho([
+            'Numero Demanda Viagem', 'Numero Demanda Entrega', 'Item Demanda Entrega',
+            'Descrição Origem', 'Descrição Destino', 'Status Demanda Entrega',
+        ], ['509111111', '326000001', '1', 'PACU', 'ARM-MACAE', '04']);
+
+        // Mesmos dados com os rótulos antigos do SAP (compatibilidade).
+        $sap = $this->planilhaComCabecalho([
+            'Nota', 'Nº da RT', 'Item da RT', 'Origem', 'Destino', 'Status do',
+        ], ['509222222', '326000002', '1', 'PACU', 'ARM-MACAE', '04']);
+
+        $rGenerico = $importador->importar($generico);
+        $rSap = $importador->importar($sap);
+
+        $this->assertSame([], $rGenerico['erros']);
+        $this->assertSame([], $rSap['erros']);
+        $this->assertSame(1, $rGenerico['itens_criados']);
+        $this->assertSame(1, $rSap['itens_criados']);
+        $this->assertSame('PACU', DemandaItem::where('numero_rt', '326000001')->first()->local_origem);
+        $this->assertSame('PACU', DemandaItem::where('numero_rt', '326000002')->first()->local_origem);
+
+        @unlink($generico);
+        @unlink($sap);
+    }
+
+    /**
+     * @param  array<int, string>  $cabecalho
+     * @param  array<int, string>  $linha
+     */
+    private function planilhaComCabecalho(array $cabecalho, array $linha): string
+    {
+        $caminho = tempnam(sys_get_temp_dir(), 'planilha_').'.xlsx';
+        $writer = new Writer;
+        $writer->openToFile($caminho);
+        $writer->addRow(Row::fromValues($cabecalho));
+        $writer->addRow(Row::fromValues($linha));
+        $writer->close();
+
+        return $caminho;
     }
 
     public function test_prazo_da_demanda_usa_o_menor_item_ainda_exequivel(): void

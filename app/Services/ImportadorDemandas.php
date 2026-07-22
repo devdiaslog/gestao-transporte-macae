@@ -9,6 +9,7 @@ use App\Models\DemandaItem;
 use App\Models\Equipamento;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Reader\XLSX\Reader as XlsxReader;
 use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
@@ -22,22 +23,25 @@ use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
 class ImportadorDemandas
 {
     /**
-     * Cabeçalhos do export do SAP, na ordem em que aparecem. Os nomes vêm
-     * truncados da origem, por isso o mapeamento é posicional por rótulo.
+     * Rótulos aceitos por campo. O primeiro é o nome genérico (usado no modelo);
+     * os demais são aliases mantidos para compatibilidade com o export do SAP.
+     * O cabeçalho é reconhecido por igualdade exata (ignorando caixa e acentos).
+     *
+     * @var array<string, array<int, string>>
      */
     private const COLUNAS = [
-        'nota' => 'Nota',
-        'numero_rt' => 'RT',
-        'numero_item' => 'Item da RT',
-        'subitem' => 'Subitem da',
-        'local_origem' => 'Origem',
-        'local_destino' => 'Destino',
-        'descricao_local_retirada' => 'Local retirada',
-        'descricao_item' => 'Descri',
-        'status_item' => 'Status do',
-        'prazo_data' => 'Data + tar',
-        'prazo_hora' => 'Hora + tar',
-        'equipamento' => 'equipamento',
+        'nota' => ['Numero Demanda Viagem', 'Nota'],
+        'numero_rt' => ['Numero Demanda Entrega', 'Nº da RT'],
+        'numero_item' => ['Item Demanda Entrega', 'Item da RT'],
+        'subitem' => ['Subitem Demanda Entrega', 'Subitem da'],
+        'local_origem' => ['Descrição Origem', 'Origem'],
+        'local_destino' => ['Descrição Destino', 'Destino'],
+        'descricao_local_retirada' => ['Local de Retirada', 'Local retirada'],
+        'descricao_item' => ['Descrição Demanda Entrega', 'Descrição'],
+        'status_item' => ['Status Demanda Entrega', 'Status do'],
+        'prazo_data' => ['Data Prazo', 'Data + tar'],
+        'prazo_hora' => ['Hora Prazo', 'Hora + tar'],
+        'equipamento' => ['Descrição Veiculo', 'Descrição equipamento'],
     ];
 
     /**
@@ -47,18 +51,18 @@ class ImportadorDemandas
      * @var array<int, string>
      */
     private const CABECALHO_MODELO = [
-        'Nota',
-        'Nº da RT',
-        'Item da RT',
-        'Subitem da',
-        'Origem',
-        'Local retirada',
-        'Destino',
-        'Descrição',
-        'Descrição equipamento',
-        'Status do',
-        'Data + tar',
-        'Hora + tar',
+        'Numero Demanda Viagem',
+        'Numero Demanda Entrega',
+        'Item Demanda Entrega',
+        'Subitem Demanda Entrega',
+        'Descrição Origem',
+        'Local de Retirada',
+        'Descrição Destino',
+        'Descrição Demanda Entrega',
+        'Descrição Veiculo',
+        'Status Demanda Entrega',
+        'Data Prazo',
+        'Hora Prazo',
     ];
 
     /**
@@ -227,41 +231,47 @@ class ImportadorDemandas
     }
 
     /**
-     * Casa os rótulos truncados do SAP com as chaves internas.
+     * Casa cada campo interno com a posição da coluna no cabeçalho, por
+     * igualdade exata do rótulo (ignorando caixa e acentos).
      *
      * @param  array<int, mixed>  $cabecalho
      * @return array<string, int>
      */
     private function mapearCabecalho(array $cabecalho): array
     {
-        $normalizado = array_map(
-            fn ($c) => mb_strtolower(trim((string) $c)),
-            $cabecalho
-        );
+        $normalizado = [];
+        foreach ($cabecalho as $posicao => $valor) {
+            $n = $this->normalizar((string) $valor);
+            if ($n !== '') {
+                $normalizado[$posicao] = $n;
+            }
+        }
 
         $mapa = [];
 
-        foreach (self::COLUNAS as $campo => $rotulo) {
-            $alvo = mb_strtolower($rotulo);
+        foreach (self::COLUNAS as $campo => $rotulos) {
+            $aceitos = array_map(fn ($r) => $this->normalizar($r), $rotulos);
 
             foreach ($normalizado as $posicao => $valor) {
-                if ($valor === '' || isset($mapa[$campo])) {
-                    continue;
-                }
-
-                // "Descri" casa com "Descrição" mas não com "Descrição equipamento";
-                // "equipamento" casa apenas com a coluna de descrição do veículo.
-                $casou = $campo === 'descricao_item'
-                    ? str_starts_with($valor, 'descri') && ! str_contains($valor, 'equipa') && ! str_contains($valor, 'destino') && ! str_contains($valor, 'carga')
-                    : str_contains($valor, $alvo);
-
-                if ($casou) {
+                if (in_array($valor, $aceitos, true)) {
                     $mapa[$campo] = $posicao;
+
+                    break;
                 }
             }
         }
 
         return $mapa;
+    }
+
+    /**
+     * Normaliza um rótulo para comparação: sem acentos, minúsculo, sem espaços extras.
+     */
+    private function normalizar(string $texto): string
+    {
+        $texto = mb_strtolower(trim(Str::ascii($texto)));
+
+        return preg_replace('/\s+/', ' ', $texto) ?? $texto;
     }
 
     /**
