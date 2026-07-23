@@ -73,10 +73,21 @@
                 </span>
             @endif
 
-            <span class="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5
-                         text-sm dark:border-zinc-700 dark:bg-zinc-900">
-                <span class="text-zinc-400 dark:text-zinc-500">Itens concluídos</span>
-                <span class="font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $encerrados }}/{{ $totalItens }}</span>
+            @php $pesoTotalDemanda = $demanda->itens->sum(fn ($i) => (float) $i->peso_total); @endphp
+            <span class="ml-auto flex flex-wrap items-center gap-2">
+                @if($pesoTotalDemanda > 0)
+                    <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5
+                                 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                          title="Soma do peso total dos itens, conforme o SAP">
+                        <span class="text-zinc-400 dark:text-zinc-500">Peso</span>
+                        <span class="font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ number_format($pesoTotalDemanda, 0, ',', '.') }} kg</span>
+                    </span>
+                @endif
+                <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5
+                             text-sm dark:border-zinc-700 dark:bg-zinc-900">
+                    <span class="text-zinc-400 dark:text-zinc-500">Itens concluídos</span>
+                    <span class="font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $encerrados }}/{{ $totalItens }}</span>
+                </span>
             </span>
         </div>
 
@@ -394,6 +405,14 @@
                                                         'prazo_item' => $item->prazo_item?->format('Y-m-d\TH:i'),
                                                         'data_hora_entrega' => $item->data_hora_entrega?->format('Y-m-d\TH:i'),
                                                         'observacao' => $item->observacao,
+                                                        'status_sap' => $item->status_sap,
+                                                        'peso_total' => $item->peso_total ? number_format((float) $item->peso_total, 0, ',', '.').' kg' : null,
+                                                        'dimensoes' => ($item->comprimento || $item->largura || $item->altura)
+                                                            ? sprintf('%s × %s × %s m',
+                                                                $item->comprimento ? number_format((float) $item->comprimento, 2, ',', '.') : '?',
+                                                                $item->largura ? number_format((float) $item->largura, 2, ',', '.') : '?',
+                                                                $item->altura ? number_format((float) $item->altura, 2, ',', '.') : '?')
+                                                            : null,
                                                     ];
                                                 @endphp
                                                 <tr class="transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/40">
@@ -580,6 +599,27 @@
                         Status e prazo recalculam o status e o prazo da demanda.
                     </p>
 
+                    {{-- Dados do SAP — somente leitura, sempre sincronizados na importação --}}
+                    <div id="i-sap-bloco" class="hidden rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-900/60">
+                        <p class="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                            Dados do SAP <span class="font-normal normal-case">(sincronizados na importação)</span>
+                        </p>
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <div>
+                                <p class="text-[10px] text-zinc-400 dark:text-zinc-600">Status SAP</p>
+                                <p id="i-sap-status" class="font-mono font-semibold text-zinc-700 dark:text-zinc-300">—</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-zinc-400 dark:text-zinc-600">Peso total</p>
+                                <p id="i-sap-peso" class="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">—</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-zinc-400 dark:text-zinc-600">C × L × A</p>
+                                <p id="i-sap-dimensoes" class="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">—</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div>
                         <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Observações</label>
                         <div id="i-obs-historico"
@@ -664,6 +704,12 @@
         historico.textContent = data.observacao || '';
         historico.classList.toggle('hidden', ! data.observacao);
         document.getElementById('i-obs').value = '';
+
+        var temSap = !! (data.status_sap || data.peso_total || data.dimensoes);
+        document.getElementById('i-sap-bloco').classList.toggle('hidden', ! temSap);
+        document.getElementById('i-sap-status').textContent = data.status_sap || '—';
+        document.getElementById('i-sap-peso').textContent = data.peso_total || '—';
+        document.getElementById('i-sap-dimensoes').textContent = data.dimensoes || '—';
     }
 
     function abrir() {
