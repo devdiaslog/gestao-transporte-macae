@@ -126,6 +126,12 @@
                         @empty
                             <p class="text-xs text-zinc-400 dark:text-zinc-600">Nenhuma finalizada ainda.</p>
                         @endforelse
+                        @if($finalizadasPorTipo->isNotEmpty())
+                            <div class="flex items-center justify-between border-t border-slate-100 pt-1.5 text-xs dark:border-zinc-800">
+                                <span class="font-semibold text-zinc-600 dark:text-zinc-300">Total realizadas</span>
+                                <span class="font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{{ $finalizadasPorTipo->sum() }}</span>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
