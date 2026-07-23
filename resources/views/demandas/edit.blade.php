@@ -102,7 +102,7 @@
         </p>
     </div>
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
 
         {{-- ── Coluna 1: dados da demanda ─────────────────────────────────── --}}
         <div class="lg:col-span-1">
@@ -236,7 +236,7 @@
         </div>
 
         {{-- ── Coluna 2: etapas e itens ───────────────────────────────────── --}}
-        <div class="lg:col-span-2">
+        <div class="lg:col-span-3">
             <div class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                 <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
                     <div>
