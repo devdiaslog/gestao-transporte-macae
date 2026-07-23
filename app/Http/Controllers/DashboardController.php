@@ -382,22 +382,6 @@ class DashboardController extends Controller
             ['label' => 'Vencidas', 'valor' => $foraPrazoQtd, 'cor' => '#f43f5e'],
         ];
 
-        // ── Origem do dado (SAP LT x SAP TM) ─────────────────────────────────────
-        $porFonte = collect(FonteDemanda::cases())
-            ->map(fn (FonteDemanda $f) => [
-                'label' => $f->label(),
-                'valor' => $demandas->where('fonte_demanda', $f)->count(),
-                'cor' => $f === FonteDemanda::SapLt ? '#06b6d4' : '#8b5cf6',
-            ])
-            ->push([
-                'label' => 'Sem fonte',
-                'valor' => $demandas->whereNull('fonte_demanda')->count(),
-                'cor' => '#d4d4d8',
-            ])
-            ->filter(fn ($f) => $f['valor'] > 0)
-            ->values()
-            ->all();
-
         // ── Evolução diária — criadas nos últimos 14 dias ────────────────────────
         $criadasPorDia = $demandas->groupBy(fn (Demanda $d) => $d->created_at->toDateString());
         $finalizadasPorDia = $finalizadasComTempo
@@ -552,7 +536,7 @@ class DashboardController extends Controller
         return view('dashboard.demandas', compact(
             'total', 'emAberto', 'pendentes', 'emAndamento', 'finalizadas', 'canceladas',
             'vencidas', 'venceEm24h', 'naoClassificadas', 'tempoMedioAtendMin',
-            'porStatus', 'porTipo', 'porPrazo', 'pctNoPrazo', 'porFonte', 'evolucao', 'topRotas', 'topVeiculos', 'statusMeta', 'agora',
+            'porStatus', 'porTipo', 'porPrazo', 'pctNoPrazo', 'evolucao', 'topRotas', 'topVeiculos', 'statusMeta', 'agora',
             'emAtendimentoPorTipo', 'venceHoje', 'finalizadasPorTipo', 'veiculoTopDemandas', 'veiculoTopMediaItens',
             'atencao', 'prioridade', 'criadas7d', 'finalizadas7d', 'tendenciaBoa', 'tempoMedioPorTipo'
         ));
