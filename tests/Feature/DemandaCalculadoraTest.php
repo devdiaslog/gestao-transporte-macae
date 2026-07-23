@@ -145,6 +145,51 @@ class DemandaCalculadoraTest extends TestCase
         $this->assertNull($demanda->data_hora_fim_demanda);
     }
 
+    public function test_inicio_igual_ao_fim_sinaliza_ajuste_mesmo_com_horario_do_operador(): void
+    {
+        $mesmoInstante = now()->subDay()->startOfDay();
+
+        // Demanda de 1 item entregue: início (menor entrega) = fim (maior entrega).
+        $demanda = $this->demandaCom([
+            ['status_item' => StatusItemDemanda::Entregue, 'data_hora_entrega' => $mesmoInstante],
+        ]);
+        // Operador já tinha início próprio, mas igual à entrega (hora genérica).
+        $demanda->forceFill([
+            'data_hora_inicio_demanda' => $mesmoInstante,
+            'inicio_automatico' => false,
+        ])->save();
+
+        $this->calculadora()->recalcular($demanda->refresh()->load('itens'));
+        $demanda->refresh();
+
+        $this->assertTrue($mesmoInstante->equalTo($demanda->data_hora_inicio_demanda));
+        $this->assertTrue($mesmoInstante->equalTo($demanda->data_hora_fim_demanda));
+
+        // Duração zero: entra na tag/filtro de ajuste.
+        $this->assertTrue($demanda->inicio_automatico);
+        $this->assertTrue($demanda->fim_automatico);
+    }
+
+    public function test_inicio_diferente_do_fim_nao_forca_a_marcacao_de_ajuste(): void
+    {
+        $demanda = $this->demandaCom([
+            ['status_item' => StatusItemDemanda::Entregue, 'data_hora_entrega' => now()->subHour()],
+        ]);
+        $demanda->forceFill([
+            'data_hora_inicio_demanda' => now()->subHours(4),
+            'inicio_automatico' => false,
+        ])->save();
+
+        // Fim do operador também definido, diferente do início.
+        $demanda->forceFill(['data_hora_fim_demanda' => now()->subHour(), 'fim_automatico' => false])->save();
+
+        $this->calculadora()->recalcular($demanda->refresh()->load('itens'));
+        $demanda->refresh();
+
+        $this->assertFalse($demanda->inicio_automatico);
+        $this->assertFalse($demanda->fim_automatico);
+    }
+
     public function test_inicio_definido_pelo_operador_nao_e_sobrescrito_pelas_entregas(): void
     {
         $inicioOperador = now()->subHours(5)->startOfSecond();

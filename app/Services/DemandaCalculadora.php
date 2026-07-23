@@ -60,6 +60,15 @@ class DemandaCalculadora
             $demanda->fim_automatico = $novoFim !== null;
         }
 
+        // Início igual ao fim (demanda de 1 item, ou todos entregues no mesmo
+        // horário genérico do SAP) é duração zero: sinaliza ajuste sempre.
+        if ($demanda->data_hora_inicio_demanda !== null
+            && $demanda->data_hora_fim_demanda !== null
+            && $demanda->data_hora_inicio_demanda->equalTo($demanda->data_hora_fim_demanda)) {
+            $demanda->inicio_automatico = true;
+            $demanda->fim_automatico = true;
+        }
+
         if ($novoStatus = $this->status($itens, $demanda)) {
             $demanda->status_demanda = $novoStatus;
         }
