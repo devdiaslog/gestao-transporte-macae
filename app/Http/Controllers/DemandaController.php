@@ -63,7 +63,7 @@ class DemandaController extends Controller
 
         $base = $this->queryFiltrada($request, $status);
 
-        $totalItens = DemandaItem::query()
+        $totalItensFiltro = DemandaItem::query()
             ->whereIn('demanda_id', (clone $base)->select('id'))
             ->count();
 
@@ -90,7 +90,7 @@ class DemandaController extends Controller
             ->orderBy('prefixo')
             ->get(['id', 'prefixo', 'placa']);
 
-        return view('demandas.index', compact('demandas', 'equipamentos', 'totalItens', 'search', 'status', 'tipo', 'fonte', 'prefixo', 'dataDE', 'dataAte', 'prazoDE', 'prazoAte', 'ajuste'));
+        return view('demandas.index', compact('demandas', 'equipamentos', 'totalItensFiltro', 'search', 'status', 'tipo', 'fonte', 'prefixo', 'dataDE', 'dataAte', 'prazoDE', 'prazoAte', 'ajuste'));
     }
 
     /**

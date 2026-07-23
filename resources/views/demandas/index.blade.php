@@ -393,7 +393,7 @@
 
             <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-3 dark:border-zinc-800">
                 <span class="text-xs text-zinc-500 dark:text-zinc-400">
-                    {{ $totalItens }} {{ $totalItens === 1 ? 'item de demanda' : 'itens de demanda' }} no filtro atual
+                    {{ $totalItensFiltro }} {{ $totalItensFiltro === 1 ? 'item de demanda' : 'itens de demanda' }} no filtro atual
                 </span>
                 @if($demandas->hasPages())
                     <div>{{ $demandas->links() }}</div>
