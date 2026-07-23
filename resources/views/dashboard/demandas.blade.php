@@ -71,11 +71,10 @@
                 ['label' => 'Vencidas',             'valor' => $vencidas,                 'sub' => 'prazo estourado, em aberto',  'cor' => 'text-rose-600 dark:text-rose-400', 'bar' => 'bg-rose-500', 'info' => 'Demandas em aberto (Pendente ou Em Andamento) cujo prazo de referência já passou. Só conta as que têm prazo definido.'],
                 ['label' => 'Vence em 24h',         'valor' => $venceEm24h,               'sub' => 'requer atenção',              'cor' => 'text-amber-600 dark:text-amber-400', 'bar' => 'bg-amber-500', 'info' => 'Demandas em aberto cujo prazo de referência vence nas próximas 24 horas a partir de agora.'],
                 ['label' => 'Não classificadas',    'valor' => $naoClassificadas,         'sub' => 'sem tipo, em aberto',         'cor' => 'text-zinc-600 dark:text-zinc-300', 'bar' => 'bg-zinc-300 dark:bg-zinc-600', 'info' => 'Demandas em aberto sem tipo definido (Load/Backload/Transferência). Ocorre na integração quando a API não informa origem/destino.'],
-                ['label' => 'Taxa de conclusão',    'valor' => $taxaConclusao.'%',        'sub' => "{$finalizadas} fin. · {$canceladas} canc.", 'cor' => 'text-emerald-600 dark:text-emerald-400', 'bar' => 'bg-emerald-500', 'info' => 'Percentual de demandas encerradas que foram concluídas: Finalizadas ÷ (Finalizadas + Canceladas). Não considera as que estão em aberto.'],
                 ['label' => 'Tempo médio atend.',   'valor' => $tempoMedioAtendMin > 0 ? $fmtMin($tempoMedioAtendMin) : '—', 'sub' => 'fim − início (finalizadas)', 'cor' => 'text-zinc-900 dark:text-zinc-100', 'bar' => 'bg-violet-500', 'info' => 'Média da duração (data/hora de fim − início) das demandas Finalizadas que têm início e fim preenchidos.'],
             ];
         @endphp
-        <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+        <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             @foreach($kpis as $k)
                 <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 {{ ($k['alerta'] ?? false) ? 'ring-1 ring-rose-200 dark:ring-rose-900/40' : '' }}">
                     <div class="h-1 w-full {{ $k['bar'] }}"></div>
@@ -167,6 +166,10 @@
                                  {{ $tendenciaBoa ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400' }}">
                         {{ $tendenciaBoa ? '▲ Boa' : '▼ Ruim' }}
                     </span>
+                    <p class="mt-2 text-[10px] leading-snug text-zinc-400 dark:text-zinc-500">
+                        Regra: <strong>Boa</strong> = finalizadas ≥ criadas nos últimos 7 dias (a fila não cresce);
+                        <strong>Ruim</strong> = criadas &gt; finalizadas (demandas acumulando).
+                    </p>
                     <div class="mt-3 space-y-1.5 text-xs">
                         <div class="flex items-center justify-between">
                             <span class="text-zinc-500 dark:text-zinc-400">Criadas</span>
@@ -239,21 +242,35 @@
 
             <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                 <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
-                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Tempo médio por tipo {!! $info('Média da duração (fim − início) das demandas finalizadas com início e fim preenchidos, separada por tipo de demanda.') !!}</p>
-                    <p class="text-[11px] text-zinc-400 dark:text-zinc-500">fim − início das finalizadas</p>
+                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Tempo médio por tipo {!! $info('Barra: média da duração (fim − início) das demandas finalizadas de cada tipo. Abaixo de cada barra, a média por item (minutos totais do tipo ÷ itens), que normaliza demandas maiores.') !!}</p>
+                    <p class="text-[11px] text-zinc-400 dark:text-zinc-500">fim − início das finalizadas · por demanda e por item</p>
                 </div>
-                <div class="space-y-3 p-4">
-                    @forelse($tempoMedioPorTipo as $tipoLabel => $minutos)
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs text-zinc-500 dark:text-zinc-400">{{ $tipoLabel }}</span>
-                            <span class="text-sm font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $fmtMin($minutos) }}</span>
+                <div class="space-y-4 p-4">
+                    @php
+                        $coresTipo = ['Load' => 'bg-blue-500', 'Backload' => 'bg-amber-500', 'Transferência' => 'bg-violet-500'];
+                        $maxTempoTipo = max(1, collect($tempoMedioPorTipo)->max('media_demanda') ?? 1);
+                    @endphp
+                    @forelse($tempoMedioPorTipo as $tipoLabel => $t)
+                        <div>
+                            <div class="mb-1 flex items-center justify-between text-xs">
+                                <span class="font-medium text-zinc-600 dark:text-zinc-300">{{ $tipoLabel }}</span>
+                                <span class="font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $fmtMin($t['media_demanda']) }}</span>
+                            </div>
+                            <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-zinc-800">
+                                <div class="h-full rounded-full {{ $coresTipo[$tipoLabel] ?? 'bg-zinc-400' }}"
+                                     style="width: {{ max(4, round($t['media_demanda'] / $maxTempoTipo * 100)) }}%"></div>
+                            </div>
+                            <p class="mt-1 text-[10px] text-zinc-400 dark:text-zinc-600">
+                                por item: <span class="font-semibold text-zinc-500 dark:text-zinc-400">{{ $t['media_item'] !== null ? $fmtMin($t['media_item']) : '—' }}</span>
+                                · {{ $t['demandas'] }} demanda(s), {{ $t['itens'] }} item(ns)
+                            </p>
                         </div>
                     @empty
                         <p class="text-xs text-zinc-400 dark:text-zinc-600">Nenhuma finalizada com início e fim.</p>
                     @endforelse
                     @if($tempoMedioAtendMin > 0)
                         <div class="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-zinc-800">
-                            <span class="text-xs font-semibold text-zinc-600 dark:text-zinc-300">Geral</span>
+                            <span class="text-xs font-semibold text-zinc-600 dark:text-zinc-300">Geral (todas)</span>
                             <span class="text-sm font-bold tabular-nums text-violet-600 dark:text-violet-400">{{ $fmtMin($tempoMedioAtendMin) }}</span>
                         </div>
                     @endif

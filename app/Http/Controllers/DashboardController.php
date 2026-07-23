@@ -333,10 +333,6 @@ class DashboardController extends Controller
                 && in_array($d->status_demanda, [StatusDemanda::Pendente, StatusDemanda::EmAndamento]))
             ->count();
 
-        // ── Taxa de conclusão ────────────────────────────────────────────────────
-        $encerradas = $finalizadas + $canceladas;
-        $taxaConclusao = $encerradas > 0 ? round($finalizadas / $encerradas * 100, 1) : 0;
-
         // ── Tempo médio de atendimento (fim − início) das finalizadas ────────────
         $finalizadasComTempo = $demandas
             ->filter(fn (Demanda $d) => $d->status_demanda === StatusDemanda::Finalizado
@@ -534,15 +530,28 @@ class DashboardController extends Controller
             ->count();
         $tendenciaBoa = $finalizadas7d >= $criadas7d;
 
-        // 8. Tempo médio de atendimento por tipo (finalizadas com início e fim).
+        // 8. Tempo médio de atendimento por tipo (finalizadas com início e fim),
+        // considerando também os itens: minutos totais ÷ itens entregues no grupo.
+        $duracaoMin = fn (Demanda $d): int => (int) abs($d->data_hora_inicio_demanda->diffInMinutes($d->data_hora_fim_demanda));
+
         $tempoMedioPorTipo = $finalizadasComTempo
             ->groupBy(fn (Demanda $d) => $rotuloTipo($d->tipo_demanda))
-            ->map(fn ($grupo) => (int) round($grupo->avg(fn (Demanda $d) => abs($d->data_hora_inicio_demanda->diffInMinutes($d->data_hora_fim_demanda)))))
-            ->sortDesc();
+            ->map(function ($grupo) use ($duracaoMin) {
+                $totalMin = $grupo->sum($duracaoMin);
+                $totalItens = $grupo->sum(fn (Demanda $d) => $d->itens->count());
+
+                return [
+                    'demandas' => $grupo->count(),
+                    'itens' => $totalItens,
+                    'media_demanda' => (int) round($totalMin / $grupo->count()),
+                    'media_item' => $totalItens > 0 ? (int) round($totalMin / $totalItens) : null,
+                ];
+            })
+            ->sortByDesc('media_demanda');
 
         return view('dashboard.demandas', compact(
             'total', 'emAberto', 'pendentes', 'emAndamento', 'finalizadas', 'canceladas',
-            'vencidas', 'venceEm24h', 'naoClassificadas', 'taxaConclusao', 'tempoMedioAtendMin',
+            'vencidas', 'venceEm24h', 'naoClassificadas', 'tempoMedioAtendMin',
             'porStatus', 'porTipo', 'porPrazo', 'pctNoPrazo', 'porFonte', 'evolucao', 'topRotas', 'topVeiculos', 'statusMeta', 'agora',
             'emAtendimentoPorTipo', 'venceHoje', 'finalizadasPorTipo', 'veiculoTopDemandas', 'veiculoTopMediaItens',
             'atencao', 'prioridade', 'criadas7d', 'finalizadas7d', 'tendenciaBoa', 'tempoMedioPorTipo'
