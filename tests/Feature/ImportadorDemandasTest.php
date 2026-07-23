@@ -331,6 +331,26 @@ class ImportadorDemandasTest extends TestCase
         $this->assertSame('07', $item->status_sap);
     }
 
+    public function test_grava_peso_e_dimensoes_aceitando_cabecalhos_truncados_do_sap(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+        // Cabeçalhos como o SAP exporta: truncados e com Data/Hora secos de criação.
+        $cabecalho = ['Nota', 'Data', 'Hora', 'Nº da RT', 'Item da RT', 'Peso total', 'Altura RT(', 'Largura RT', 'Compriment'];
+
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800080', '22.07.2026', '07:45:00', '326000700', '1', '2.500,50', '2,60', '2,40', '12,00'],
+        ]));
+
+        $demanda = Demanda::where('numero_demanda', 509800080)->firstOrFail();
+        $item = $demanda->itens()->first();
+
+        $this->assertSame('22/07/2026 07:45', $demanda->data_hora_criacao_sap->format('d/m/Y H:i'));
+        $this->assertSame(2500.5, (float) $item->peso_total);
+        $this->assertSame(2.6, (float) $item->altura);
+        $this->assertSame(2.4, (float) $item->largura);
+        $this->assertSame(12.0, (float) $item->comprimento);
+    }
+
     public function test_observacao_acumula_no_item_sem_duplicar_em_reimportacoes(): void
     {
         $importador = app(ImportadorDemandas::class);

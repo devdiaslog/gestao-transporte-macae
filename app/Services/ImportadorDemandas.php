@@ -33,8 +33,8 @@ class ImportadorDemandas
      */
     private const COLUNAS = [
         'nota' => ['Numero Demanda Viagem', 'Nota'],
-        'criacao_data' => ['Data Criação', 'Data de Criação', 'Dt criação'],
-        'criacao_hora' => ['Hora Criação', 'Hora de Criação', 'Hr criação'],
+        'criacao_data' => ['Data Criação', 'Data de Criação', 'Dt criação', 'Data'],
+        'criacao_hora' => ['Hora Criação', 'Hora de Criação', 'Hr criação', 'Hora'],
         'tipo_demanda' => ['Tipo Demanda'],
         'numero_rt' => ['Numero Demanda Entrega', 'Nº da RT'],
         'numero_item' => ['Item Demanda Entrega', 'Item da RT'],
@@ -43,6 +43,10 @@ class ImportadorDemandas
         'local_destino' => ['Descrição Destino', 'Destino'],
         'descricao_local_retirada' => ['Local de Retirada', 'Local retirada'],
         'descricao_item' => ['Descrição da Carga', 'Descrição Demanda Entrega', 'Descrição'],
+        'peso_total' => ['Peso Total', 'Peso total'],
+        'altura' => ['Altura', 'Altura RT(', 'Altura RT'],
+        'largura' => ['Largura', 'Largura RT'],
+        'comprimento' => ['Comprimento', 'Compriment', 'Comprimento RT'],
         'status_item' => ['Status Demanda Entrega', 'Status do'],
         'prazo_data' => ['Data Prazo', 'Data + tar'],
         'prazo_hora' => ['Hora Prazo', 'Hora + tar'],
@@ -70,6 +74,10 @@ class ImportadorDemandas
         'Local de Retirada',
         'Descrição Destino',
         'Descrição da Carga',
+        'Peso Total',
+        'Altura',
+        'Largura',
+        'Comprimento',
         'Descrição Veiculo',
         'Status Demanda Entrega',
         'Data Prazo',
@@ -85,8 +93,8 @@ class ImportadorDemandas
      * @var array<int, array<int, string>>
      */
     private const EXEMPLOS_MODELO = [
-        ['509538496', '23.07.2026', '08:00:00', 'Backload', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Tubos de perfuração', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00', '', '', ''],
-        ['619012345', '24.07.2026', '09:15:00', '', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00', '25.07.2026', '13:45:00', 'Insight da análise'],
+        ['509538496', '23.07.2026', '08:00:00', 'Backload', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Tubos de perfuração', '2.500,50', '2,60', '2,40', '12,00', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00', '', '', ''],
+        ['619012345', '24.07.2026', '09:15:00', '', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', '800', '1,20', '1,00', '2,40', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00', '25.07.2026', '13:45:00', 'Insight da análise'],
     ];
 
     public function __construct(private DemandaCalculadora $calculadora) {}
@@ -241,6 +249,14 @@ class ImportadorDemandas
                 if ((array_key_exists('prazo_data', $linha) || array_key_exists('prazo_hora', $linha))
                     && ! $item->campoEditadoPeloOperador('prazo_item')) {
                     $item->prazo_item = $this->montarDataHora($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null);
+                }
+
+                // Peso e dimensões da carga: dados do SAP, re-sincronizam quando a
+                // coluna existe na planilha.
+                foreach (['peso_total', 'altura', 'largura', 'comprimento'] as $campoMedida) {
+                    if (array_key_exists($campoMedida, $linha)) {
+                        $item->{$campoMedida} = $this->numero($linha[$campoMedida]);
+                    }
                 }
 
                 // Código bruto do status no SAP: sempre re-sincroniza — mesmo com o
@@ -491,6 +507,26 @@ class ImportadorDemandas
         }
 
         return null;
+    }
+
+    /**
+     * Converte números no formato do SAP ("2.500,50" ou "2500.5") para float.
+     */
+    private function numero(?string $valor): ?float
+    {
+        $valor = $this->limpar($valor);
+
+        if ($valor === null) {
+            return null;
+        }
+
+        // Formato brasileiro: remove separador de milhar e troca a vírgula decimal.
+        if (str_contains($valor, ',')) {
+            $valor = str_replace('.', '', $valor);
+            $valor = str_replace(',', '.', $valor);
+        }
+
+        return is_numeric($valor) ? (float) $valor : null;
     }
 
     private function limpar(?string $valor): ?string

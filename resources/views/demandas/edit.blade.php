@@ -400,9 +400,19 @@
                                                     <td class="whitespace-nowrap px-3 py-2 font-mono text-[11px] text-zinc-700 dark:text-zinc-300">
                                                         {{ $item->numero_rt }} / {{ $item->numero_item }}@if($item->subitem).{{ $item->subitem }}@endif
                                                     </td>
-                                                    <td class="max-w-[220px] truncate px-3 py-2 text-zinc-600 dark:text-zinc-400"
-                                                        title="{{ $item->descricao_item }}">
-                                                        {{ $item->descricao_item ?: '—' }}
+                                                    <td class="max-w-[220px] px-3 py-2 text-zinc-600 dark:text-zinc-400">
+                                                        <div class="truncate" title="{{ $item->descricao_item }}">{{ $item->descricao_item ?: '—' }}</div>
+                                                        @if($item->peso_total || $item->comprimento || $item->largura || $item->altura)
+                                                            <div class="mt-0.5 truncate text-[10px] text-zinc-400 dark:text-zinc-600"
+                                                                 title="Peso total e dimensões (C × L × A) vindos do SAP">
+                                                                @if($item->peso_total)
+                                                                    {{ number_format((float) $item->peso_total, 0, ',', '.') }} kg
+                                                                @endif
+                                                                @if($item->comprimento || $item->largura || $item->altura)
+                                                                    · {{ $item->comprimento ? number_format((float) $item->comprimento, 1, ',', '.') : '?' }}×{{ $item->largura ? number_format((float) $item->largura, 1, ',', '.') : '?' }}×{{ $item->altura ? number_format((float) $item->altura, 1, ',', '.') : '?' }} m
+                                                                @endif
+                                                            </div>
+                                                        @endif
                                                     </td>
                                                     <td class="max-w-[140px] truncate px-3 py-2 text-zinc-500 dark:text-zinc-500"
                                                         title="{{ $item->descricao_local_retirada }}">
