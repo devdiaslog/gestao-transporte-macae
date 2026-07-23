@@ -400,11 +400,14 @@ class ImportadorDemandas
 
         $mapa = [];
 
+        // A prioridade é a ordem dos aliases (o mais específico primeiro), não a
+        // ordem das colunas: o export do SAP tem "Descrição" (agendamento) antes
+        // de "Descrição da carga", e a carga é quem deve vencer.
         foreach (self::COLUNAS as $campo => $rotulos) {
-            $aceitos = array_map(fn ($r) => $this->normalizar($r), $rotulos);
+            foreach ($rotulos as $rotulo) {
+                $posicao = array_search($this->normalizar($rotulo), $normalizado, true);
 
-            foreach ($normalizado as $posicao => $valor) {
-                if (in_array($valor, $aceitos, true)) {
+                if ($posicao !== false) {
                     $mapa[$campo] = $posicao;
 
                     break;

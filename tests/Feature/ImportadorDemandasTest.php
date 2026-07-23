@@ -331,6 +331,22 @@ class ImportadorDemandasTest extends TestCase
         $this->assertSame('07', $item->status_sap);
     }
 
+    public function test_descricao_da_carga_vence_a_coluna_descricao_generica_do_export(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+        // Como no export real: "Descrição" (agendamento) vem ANTES de "Descrição da carga".
+        $cabecalho = ['Nota', 'Nº da RT', 'Item da RT', 'Descrição', 'Descrição da carga'];
+
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800090', '326000800', '1', 'AGC_17/07/2026_14:00_CARROSSEL', 'CISA4580034'],
+        ]));
+
+        $this->assertSame(
+            'CISA4580034',
+            DemandaItem::where('numero_rt', '326000800')->first()->descricao_item,
+        );
+    }
+
     public function test_grava_peso_e_dimensoes_aceitando_cabecalhos_truncados_do_sap(): void
     {
         $importador = app(ImportadorDemandas::class);
