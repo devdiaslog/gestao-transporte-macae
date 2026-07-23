@@ -74,13 +74,13 @@
                 ['label' => 'Tempo médio atend.',   'valor' => $tempoMedioAtendMin > 0 ? $fmtMin($tempoMedioAtendMin) : '—', 'sub' => 'fim − início (finalizadas)', 'cor' => 'text-zinc-900 dark:text-zinc-100', 'bar' => 'bg-violet-500', 'info' => 'Média da duração (data/hora de fim − início) das demandas Finalizadas que têm início e fim preenchidos.'],
             ];
         @endphp
-        <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        <div class="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
             @foreach($kpis as $k)
                 <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 {{ ($k['alerta'] ?? false) ? 'ring-1 ring-rose-200 dark:ring-rose-900/40' : '' }}">
                     <div class="h-1 w-full {{ $k['bar'] }}"></div>
-                    <div class="p-3">
-                        <p class="flex items-center text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500"><span class="truncate" title="{{ $k['label'] }}">{{ $k['label'] }}</span>{!! $info($k['info']) !!}</p>
-                        <p class="mt-1 text-2xl font-extrabold tabular-nums leading-none {{ $k['cor'] }}">{{ $k['valor'] }}</p>
+                    <div class="p-2.5">
+                        <p class="flex items-center text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500"><span class="truncate" title="{{ $k['label'] }}">{{ $k['label'] }}</span>{!! $info($k['info']) !!}</p>
+                        <p class="mt-1 text-xl font-extrabold tabular-nums leading-none {{ $k['cor'] }}">{{ $k['valor'] }}</p>
                         <p class="mt-1 truncate text-[10px] text-zinc-400 dark:text-zinc-600" title="{{ $k['sub'] }}">{{ $k['sub'] }}</p>
                     </div>
                 </div>
