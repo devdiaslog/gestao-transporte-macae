@@ -16,11 +16,11 @@ class ExampleTest extends TestCase
         $this->get('/')->assertRedirect(route('login'));
     }
 
-    /** Rota raiz redireciona usuário autenticado para a torre de controle. */
-    public function test_root_redirects_authenticated_user_to_control_tower(): void
+    /** Rota raiz redireciona usuário autenticado para a gestão de demandas. */
+    public function test_root_redirects_authenticated_user_to_demandas(): void
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->get('/')->assertRedirect(route('control-tower.index'));
+        $this->actingAs($user)->get('/')->assertRedirect(route('demandas.index'));
     }
 }

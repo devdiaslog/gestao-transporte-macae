@@ -34,7 +34,13 @@ Route::get('/', function () {
         return redirect()->route('login');
     }
 
-    return redirect()->route($user->role === UserRole::Visualizador ? 'mapa-geral.index' : 'control-tower.index');
+    if ($user->role === UserRole::Visualizador) {
+        return redirect()->route('mapa-geral.index');
+    }
+
+    // Foco do sistema: gestão de demandas. Quem tem acesso ao dashboard
+    // entra pela visão gerencial; os demais, pela listagem operacional.
+    return redirect()->route($user->can('access-dashboard') ? 'dashboard.demandas' : 'demandas.index');
 });
 
 // Sincronização de posições — protegida por chave secreta
@@ -89,15 +95,6 @@ Route::middleware('auth')->group(function () {
 
 // Protected routes — todo o restante do sistema, indisponivel ao perfil Visualizador
 Route::middleware(['auth', 'can:access-app'])->group(function () {
-    // Torre de Controle — acessível a todos os perfis (exceto Visualizador)
-    Route::get('torre-de-controle', [ControlTowerController::class, 'index'])->name('control-tower.index');
-    Route::get('torre-de-controle/painel', [ControlTowerController::class, 'painel'])->name('control-tower.painel');
-    Route::get('torre-de-controle-export', [ControlTowerController::class, 'export'])->name('control-tower.export');
-    Route::get('torre-de-controle/posicao/{plate}', [ControlTowerController::class, 'posicao'])->name('control-tower.posicao');
-    Route::patch('torre-de-controle/{equipamento}/implemento', [ControlTowerController::class, 'updateImplemento'])->name('control-tower.implemento');
-    Route::get('torre-de-controle/{equipamento}/historico', [ControlTowerController::class, 'historico'])->name('control-tower.historico');
-    Route::post('torre-de-controle/{equipamento}/status', [ControlTowerController::class, 'editarStatus'])->name('control-tower.editar-status');
-
     // Dashboard de Transporte — acesso por permissão individual
     Route::middleware('can:access-dashboard')->group(function () {
         Route::get('dashboard', [DashboardController::class, 'status'])->name('dashboard.status');

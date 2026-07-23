@@ -19,7 +19,7 @@ class ReporteController extends Controller
 {
     public function index(): RedirectResponse
     {
-        return redirect()->route('control-tower.index');
+        return redirect()->route('mapa-geral.index');
     }
 
     public function create(): View
@@ -77,7 +77,7 @@ class ReporteController extends Controller
             ? 'Rascunho salvo com sucesso.'
             : 'Reporte publicado com sucesso.';
 
-        return redirect()->route('control-tower.index')->with('success', $msg);
+        return redirect()->route('mapa-geral.index')->with('success', $msg);
     }
 
     public function show(Reporte $reporte): View
@@ -194,14 +194,14 @@ class ReporteController extends Controller
             ? 'Rascunho atualizado com sucesso.'
             : 'Reporte atualizado com sucesso.';
 
-        return redirect()->route('control-tower.index')->with('success', $msg);
+        return redirect()->route('mapa-geral.index')->with('success', $msg);
     }
 
     public function destroy(Reporte $reporte): RedirectResponse
     {
         $reporte->delete();
 
-        return redirect()->route('control-tower.index')->with('success', 'Reporte excluído com sucesso.');
+        return redirect()->route('mapa-geral.index')->with('success', 'Reporte excluído com sucesso.');
     }
 
     private function export(Collection $itens): never

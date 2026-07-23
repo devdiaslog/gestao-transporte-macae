@@ -2,14 +2,14 @@
 
     {{-- ─── Header ──────────────────────────────────────────────────────────── --}}
     <div class="mt-4 flex flex-wrap items-center gap-3">
-        <a href="{{ route('control-tower.index') }}"
+        <a href="{{ route('mapa-geral.index') }}"
            class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors
                   border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50
                   dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
             </svg>
-            Torre de Controle
+            Mapa Geral
         </a>
     </div>
 

@@ -25,7 +25,7 @@ class OcorrenciaController extends Controller
 {
     public function index(): RedirectResponse
     {
-        return redirect()->route('control-tower.index');
+        return redirect()->route('demandas.index');
     }
 
     public function create(): View

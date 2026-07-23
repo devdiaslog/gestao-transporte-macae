@@ -88,6 +88,179 @@
             @endforeach
         </div>
 
+        {{-- Visão operacional — as perguntas da gestão de demandas --}}
+        <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {{-- Em atendimento agora, por tipo --}}
+            <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
+                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Em atendimento agora {!! $info('Demandas com status Em Andamento neste momento, separadas por tipo.') !!}</p>
+                </div>
+                <div class="p-4">
+                    <p class="text-3xl font-extrabold tabular-nums text-blue-600 dark:text-blue-400">{{ $emAndamento }}</p>
+                    <div class="mt-3 space-y-1.5">
+                        @forelse($emAtendimentoPorTipo as $tipoLabel => $qtd)
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-zinc-500 dark:text-zinc-400">{{ $tipoLabel }}</span>
+                                <span class="font-semibold tabular-nums text-zinc-800 dark:text-zinc-200">{{ $qtd }}</span>
+                            </div>
+                        @empty
+                            <p class="text-xs text-zinc-400 dark:text-zinc-600">Nenhuma em atendimento.</p>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
+            {{-- Vencem hoje + realizadas por tipo --}}
+            <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
+                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Vencem hoje · Realizadas {!! $info('Vencem hoje: demandas em aberto com prazo para o dia de hoje. Realizadas: total de finalizadas por tipo, desde o início.') !!}</p>
+                </div>
+                <div class="p-4">
+                    <p class="text-3xl font-extrabold tabular-nums {{ $venceHoje > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-900 dark:text-zinc-100' }}">{{ $venceHoje }}</p>
+                    <p class="text-[10px] text-zinc-400 dark:text-zinc-600">vencem hoje</p>
+                    <div class="mt-3 space-y-1.5">
+                        @forelse($finalizadasPorTipo as $tipoLabel => $qtd)
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-zinc-500 dark:text-zinc-400">{{ $tipoLabel }} realizadas</span>
+                                <span class="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{{ $qtd }}</span>
+                            </div>
+                        @empty
+                            <p class="text-xs text-zinc-400 dark:text-zinc-600">Nenhuma finalizada ainda.</p>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
+            {{-- Veículo destaque --}}
+            <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
+                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Veículo destaque {!! $info('Veículo com maior número de demandas e veículo com maior média de itens por demanda (itens ÷ demandas do veículo).') !!}</p>
+                </div>
+                <div class="space-y-3 p-4">
+                    @if($veiculoTopDemandas)
+                        <div>
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Mais demandas</p>
+                            <p class="text-lg font-extrabold text-zinc-900 dark:text-zinc-100">{{ $veiculoTopDemandas['prefixo'] }}
+                                <span class="text-sm font-semibold text-zinc-500 dark:text-zinc-400">· {{ $veiculoTopDemandas['demandas'] }} demanda(s)</span></p>
+                        </div>
+                    @endif
+                    @if($veiculoTopMediaItens)
+                        <div>
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Maior média de itens</p>
+                            <p class="text-lg font-extrabold text-zinc-900 dark:text-zinc-100">{{ $veiculoTopMediaItens['prefixo'] }}
+                                <span class="text-sm font-semibold text-zinc-500 dark:text-zinc-400">· {{ $veiculoTopMediaItens['media_itens'] }} itens/demanda</span></p>
+                        </div>
+                    @endif
+                    @unless($veiculoTopDemandas)
+                        <p class="text-xs text-zinc-400 dark:text-zinc-600">Nenhuma demanda com veículo vinculado.</p>
+                    @endunless
+                </div>
+            </div>
+
+            {{-- Tendência 7 dias --}}
+            <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
+                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Tendência (7 dias) {!! $info('Criadas vs finalizadas nos últimos 7 dias. Boa: finalizando no mesmo ritmo (ou mais rápido) do que cria — a fila não cresce. Ruim: criando mais do que finaliza — acúmulo de demandas.') !!}</p>
+                </div>
+                <div class="p-4">
+                    <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold
+                                 {{ $tendenciaBoa ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400' }}">
+                        {{ $tendenciaBoa ? '▲ Boa' : '▼ Ruim' }}
+                    </span>
+                    <div class="mt-3 space-y-1.5 text-xs">
+                        <div class="flex items-center justify-between">
+                            <span class="text-zinc-500 dark:text-zinc-400">Criadas</span>
+                            <span class="font-semibold tabular-nums text-zinc-800 dark:text-zinc-200">{{ $criadas7d }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-zinc-500 dark:text-zinc-400">Finalizadas</span>
+                            <span class="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{{ $finalizadas7d }}</span>
+                        </div>
+                        <div class="flex items-center justify-between border-t border-slate-100 pt-1.5 dark:border-zinc-800">
+                            <span class="text-zinc-500 dark:text-zinc-400">Saldo da fila</span>
+                            <span class="font-semibold tabular-nums {{ $criadas7d - $finalizadas7d > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400' }}">
+                                {{ $criadas7d - $finalizadas7d > 0 ? '+' : '' }}{{ $criadas7d - $finalizadas7d }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Prioridade + Atenção + Tempo médio por tipo --}}
+        <div class="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
+            <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 xl:col-span-2">
+                <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
+                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Merecem atenção agora {!! $info('Demandas em aberto ordenadas pelo vencimento (vencidas primeiro, depois prazo mais próximo); empate decidido pelo maior número de itens. A primeira da lista é a prioridade nº 1.') !!}</p>
+                    <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Vencimento + nº de itens por viagem — a 1ª é a prioridade</p>
+                </div>
+                @if($atencao->isEmpty())
+                    <p class="px-5 py-10 text-center text-sm text-zinc-400 dark:text-zinc-600">Nenhuma demanda em aberto. 🎉</p>
+                @else
+                    <table class="w-full text-left text-xs">
+                        <thead class="border-b border-slate-100 text-[10px] uppercase tracking-wider text-zinc-400 dark:border-zinc-800 dark:text-zinc-500">
+                            <tr>
+                                <th class="px-4 py-2"></th>
+                                <th class="px-2 py-2">Demanda</th>
+                                <th class="px-2 py-2">Veículo</th>
+                                <th class="px-2 py-2">Tipo</th>
+                                <th class="px-2 py-2">Vencimento</th>
+                                <th class="px-2 py-2 text-right">Itens</th>
+                                <th class="px-4 py-2">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50 dark:divide-zinc-800/60">
+                            @foreach($atencao as $i => $d)
+                                @php $vencida = $d->prazo_demanda?->isPast() === true; @endphp
+                                <tr class="{{ $i === 0 ? 'bg-rose-50/60 dark:bg-rose-950/20' : '' }}">
+                                    <td class="px-4 py-2">
+                                        @if($i === 0)
+                                            <span class="inline-flex items-center rounded-full bg-rose-600 px-2 py-0.5 text-[10px] font-bold text-white">PRIORIDADE</span>
+                                        @else
+                                            <span class="tabular-nums text-zinc-400 dark:text-zinc-600">{{ $i + 1 }}º</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-2 py-2">
+                                        <a href="{{ route('demandas.edit', $d) }}" class="font-mono font-semibold text-blue-600 hover:underline dark:text-blue-400">{{ $d->numero_demanda }}</a>
+                                    </td>
+                                    <td class="px-2 py-2 text-zinc-600 dark:text-zinc-400">{{ $d->equipamento?->prefixo ?? '—' }}</td>
+                                    <td class="px-2 py-2 text-zinc-600 dark:text-zinc-400">{{ $d->tipo_demanda?->label() ?? '—' }}</td>
+                                    <td class="px-2 py-2 {{ $vencida ? 'font-semibold text-rose-600 dark:text-rose-400' : 'text-zinc-600 dark:text-zinc-400' }}">
+                                        {{ $d->prazo_demanda?->format('d/m/Y H:i') ?? 'sem prazo' }}{{ $vencida ? ' ⚠' : '' }}
+                                    </td>
+                                    <td class="px-2 py-2 text-right font-semibold tabular-nums text-zinc-800 dark:text-zinc-200">{{ $d->itensEncerrados() }}/{{ $d->itens->count() }}</td>
+                                    <td class="px-4 py-2 text-zinc-500 dark:text-zinc-400">{{ $d->status_demanda->label() }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </div>
+
+            <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
+                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Tempo médio por tipo {!! $info('Média da duração (fim − início) das demandas finalizadas com início e fim preenchidos, separada por tipo de demanda.') !!}</p>
+                    <p class="text-[11px] text-zinc-400 dark:text-zinc-500">fim − início das finalizadas</p>
+                </div>
+                <div class="space-y-3 p-4">
+                    @forelse($tempoMedioPorTipo as $tipoLabel => $minutos)
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-zinc-500 dark:text-zinc-400">{{ $tipoLabel }}</span>
+                            <span class="text-sm font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $fmtMin($minutos) }}</span>
+                        </div>
+                    @empty
+                        <p class="text-xs text-zinc-400 dark:text-zinc-600">Nenhuma finalizada com início e fim.</p>
+                    @endforelse
+                    @if($tempoMedioAtendMin > 0)
+                        <div class="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-zinc-800">
+                            <span class="text-xs font-semibold text-zinc-600 dark:text-zinc-300">Geral</span>
+                            <span class="text-sm font-bold tabular-nums text-violet-600 dark:text-violet-400">{{ $fmtMin($tempoMedioAtendMin) }}</span>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
         {{-- Linha 1: Status · Tipo · Prazo · Fonte --}}
         <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-4">
             <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">

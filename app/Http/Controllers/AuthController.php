@@ -47,6 +47,10 @@ class AuthController extends Controller
 
     private function homeRouteFor(mixed $user): string
     {
-        return $user->role === UserRole::Visualizador ? 'mapa-geral.index' : 'control-tower.index';
+        if ($user->role === UserRole::Visualizador) {
+            return 'mapa-geral.index';
+        }
+
+        return $user->can('access-dashboard') ? 'dashboard.demandas' : 'demandas.index';
     }
 }

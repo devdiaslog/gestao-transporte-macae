@@ -476,10 +476,76 @@ class DashboardController extends Controller
             ->values()
             ->all();
 
+        // ── Visão operacional ────────────────────────────────────────────────────
+        $abertas = $demandas->filter(fn (Demanda $d) => in_array($d->status_demanda, [StatusDemanda::Pendente, StatusDemanda::EmAndamento]));
+
+        $rotuloTipo = fn (?TipoDemanda $t): string => $t?->label() ?? 'Não classificada';
+
+        // 1. Em atendimento agora, por tipo.
+        $emAtendimentoPorTipo = $demandas
+            ->where('status_demanda', StatusDemanda::EmAndamento)
+            ->groupBy(fn (Demanda $d) => $rotuloTipo($d->tipo_demanda))
+            ->map->count()
+            ->sortDesc();
+
+        // 2. Vencem hoje (em aberto).
+        $venceHoje = $abertas
+            ->filter(fn (Demanda $d) => $d->prazo_demanda?->isSameDay($agora) === true)
+            ->count();
+
+        // 3. Realizadas (finalizadas), por tipo.
+        $finalizadasPorTipo = $demandas
+            ->where('status_demanda', StatusDemanda::Finalizado)
+            ->groupBy(fn (Demanda $d) => $rotuloTipo($d->tipo_demanda))
+            ->map->count()
+            ->sortDesc();
+
+        // 4. Veículo destaque: maior nº de demandas e maior média de itens/demanda.
+        $porVeiculo = $demandas
+            ->filter(fn (Demanda $d) => $d->equipamento !== null)
+            ->groupBy(fn (Demanda $d) => $d->equipamento->prefixo)
+            ->map(fn ($grupo, $prefixo) => [
+                'prefixo' => $prefixo,
+                'demandas' => $grupo->count(),
+                'media_itens' => round($grupo->avg(fn (Demanda $d) => $d->itens->count()), 1),
+            ]);
+
+        $veiculoTopDemandas = $porVeiculo->sortByDesc('demandas')->first();
+        $veiculoTopMediaItens = $porVeiculo->sortByDesc('media_itens')->first();
+
+        // 5 e 7. Atenção/prioridade: abertas ordenadas por vencimento (vencidas
+        // primeiro, prazo mais próximo em seguida); empate decide pelo nº de itens.
+        $atencao = $abertas
+            ->sortBy([
+                fn (Demanda $a, Demanda $b) => ($a->prazo_demanda?->getTimestamp() ?? PHP_INT_MAX) <=> ($b->prazo_demanda?->getTimestamp() ?? PHP_INT_MAX),
+                fn (Demanda $a, Demanda $b) => $b->itens->count() <=> $a->itens->count(),
+            ])
+            ->take(8)
+            ->values();
+
+        $prioridade = $atencao->first();
+
+        // 6. Tendência (últimos 7 dias): finalizar no ritmo em que se cria.
+        $criadas7d = $demandas->filter(fn (Demanda $d) => $d->created_at->greaterThanOrEqualTo($agora->copy()->subDays(7)))->count();
+        $finalizadas7d = $demandas
+            ->filter(fn (Demanda $d) => $d->status_demanda === StatusDemanda::Finalizado
+                && $d->data_hora_fim_demanda !== null
+                && $d->data_hora_fim_demanda->greaterThanOrEqualTo($agora->copy()->subDays(7)))
+            ->count();
+        $tendenciaBoa = $finalizadas7d >= $criadas7d;
+
+        // 8. Tempo médio de atendimento por tipo (finalizadas com início e fim).
+        $tempoMedioPorTipo = $finalizadasComTempo
+            ->groupBy(fn (Demanda $d) => $rotuloTipo($d->tipo_demanda))
+            ->map(fn ($grupo) => (int) round($grupo->avg(fn (Demanda $d) => abs($d->data_hora_inicio_demanda->diffInMinutes($d->data_hora_fim_demanda)))))
+            ->sortDesc();
+
         return view('dashboard.demandas', compact(
             'total', 'emAberto', 'pendentes', 'emAndamento', 'finalizadas', 'canceladas',
             'vencidas', 'venceEm24h', 'naoClassificadas', 'taxaConclusao', 'tempoMedioAtendMin',
-            'porStatus', 'porTipo', 'porPrazo', 'pctNoPrazo', 'porFonte', 'evolucao', 'topRotas', 'topVeiculos', 'statusMeta', 'agora'
+            'porStatus', 'porTipo', 'porPrazo', 'pctNoPrazo', 'porFonte', 'evolucao', 'topRotas', 'topVeiculos', 'statusMeta', 'agora',
+            'emAtendimentoPorTipo', 'venceHoje', 'finalizadasPorTipo', 'veiculoTopDemandas', 'veiculoTopMediaItens',
+            'atencao', 'prioridade', 'criadas7d', 'finalizadas7d', 'tendenciaBoa', 'tempoMedioPorTipo'
         ));
     }
 
