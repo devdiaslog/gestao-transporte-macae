@@ -23,6 +23,8 @@ class ImportarDemandasApiRequest extends FormRequest
         return [
             'itens' => ['required', 'array', 'min:1', 'max:1000'],
             'itens.*.nota' => ['required'],
+            'itens.*.criacao_data' => ['nullable', 'string'],
+            'itens.*.criacao_hora' => ['nullable', 'string'],
             'itens.*.numero_rt' => ['required'],
             'itens.*.numero_item' => ['nullable'],
             'itens.*.subitem' => ['nullable'],

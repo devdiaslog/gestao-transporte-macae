@@ -33,6 +33,8 @@ class ImportadorDemandas
      */
     private const COLUNAS = [
         'nota' => ['Numero Demanda Viagem', 'Nota'],
+        'criacao_data' => ['Data Criação', 'Data de Criação', 'Dt criação'],
+        'criacao_hora' => ['Hora Criação', 'Hora de Criação', 'Hr criação'],
         'tipo_demanda' => ['Tipo Demanda'],
         'numero_rt' => ['Numero Demanda Entrega', 'Nº da RT'],
         'numero_item' => ['Item Demanda Entrega', 'Item da RT'],
@@ -40,7 +42,7 @@ class ImportadorDemandas
         'local_origem' => ['Descrição Origem', 'Origem'],
         'local_destino' => ['Descrição Destino', 'Destino'],
         'descricao_local_retirada' => ['Local de Retirada', 'Local retirada'],
-        'descricao_item' => ['Descrição Demanda Entrega', 'Descrição'],
+        'descricao_item' => ['Descrição da Carga', 'Descrição Demanda Entrega', 'Descrição'],
         'status_item' => ['Status Demanda Entrega', 'Status do'],
         'prazo_data' => ['Data Prazo', 'Data + tar'],
         'prazo_hora' => ['Hora Prazo', 'Hora + tar'],
@@ -58,6 +60,8 @@ class ImportadorDemandas
      */
     private const CABECALHO_MODELO = [
         'Numero Demanda Viagem',
+        'Data Criação',
+        'Hora Criação',
         'Tipo Demanda',
         'Numero Demanda Entrega',
         'Item Demanda Entrega',
@@ -65,7 +69,7 @@ class ImportadorDemandas
         'Descrição Origem',
         'Local de Retirada',
         'Descrição Destino',
-        'Descrição Demanda Entrega',
+        'Descrição da Carga',
         'Descrição Veiculo',
         'Status Demanda Entrega',
         'Data Prazo',
@@ -81,8 +85,8 @@ class ImportadorDemandas
      * @var array<int, array<int, string>>
      */
     private const EXEMPLOS_MODELO = [
-        ['509538496', 'Backload', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Descrição da carga', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00', '', '', ''],
-        ['619012345', '', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00', '25.07.2026', '13:45:00', 'Insight da análise'],
+        ['509538496', '23.07.2026', '08:00:00', 'Backload', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Tubos de perfuração', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00', '', '', ''],
+        ['619012345', '24.07.2026', '09:15:00', '', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00', '25.07.2026', '13:45:00', 'Insight da análise'],
     ];
 
     public function __construct(private DemandaCalculadora $calculadora) {}
@@ -198,6 +202,12 @@ class ImportadorDemandas
                     }
                 }
 
+                // Criação no SAP: dado do SAP, sempre re-sincroniza quando presente.
+                if ($criacao = $this->montarDataHora($linha['criacao_data'] ?? null, $linha['criacao_hora'] ?? null)) {
+                    $demanda->data_hora_criacao_sap = $criacao;
+                    $demanda->save();
+                }
+
                 // Tipo informado pelo usuário na planilha fixa o tipo manualmente;
                 // coluna vazia mantém a classificação automática pelos itens.
                 if ($tipoInformado = $this->tipoDemandaDe($linha['tipo_demanda'] ?? null)) {
@@ -231,6 +241,13 @@ class ImportadorDemandas
                 if ((array_key_exists('prazo_data', $linha) || array_key_exists('prazo_hora', $linha))
                     && ! $item->campoEditadoPeloOperador('prazo_item')) {
                     $item->prazo_item = $this->montarDataHora($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null);
+                }
+
+                // Código bruto do status no SAP: sempre re-sincroniza — mesmo com o
+                // status do sistema assumido pelo operador, ele enxerga o estado real
+                // do SAP ao finalizar o item.
+                if (array_key_exists('status_item', $linha) && ($codigoSap = $this->limpar($linha['status_item'])) !== null) {
+                    $item->status_sap = str_pad($codigoSap, 2, '0', STR_PAD_LEFT);
                 }
 
                 // Status e entrega: o SAP atualiza livremente (itens podem ser

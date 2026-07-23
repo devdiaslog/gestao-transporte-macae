@@ -24,6 +24,7 @@ class Demanda extends Model
         'numero_demanda',
         'tipo_cadastro',
         'fonte_demanda',
+        'data_hora_criacao_sap',
         'tipo_demanda',
         'tipo_demanda_manual',
         'equipamento_id',
@@ -44,6 +45,7 @@ class Demanda extends Model
         return [
             'tipo_cadastro' => TipoCadastro::class,
             'fonte_demanda' => FonteDemanda::class,
+            'data_hora_criacao_sap' => 'datetime',
             'tipo_demanda' => TipoDemanda::class,
             'tipo_demanda_manual' => 'boolean',
             'status_demanda' => StatusDemanda::class,

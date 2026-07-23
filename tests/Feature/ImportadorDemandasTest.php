@@ -302,6 +302,35 @@ class ImportadorDemandasTest extends TestCase
         $this->assertSame('DESTINO NOVO', $item->local_destino);
     }
 
+    public function test_grava_criacao_sap_na_demanda_e_status_bruto_no_item(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+        $cabecalho = ['Numero Demanda Viagem', 'Data Criação', 'Hora Criação', 'Numero Demanda Entrega', 'Item Demanda Entrega', 'Status Demanda Entrega'];
+
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800070', '22.07.2026', '08:30:00', '326000600', '1', '04'],
+        ]));
+
+        $demanda = Demanda::where('numero_demanda', 509800070)->firstOrFail();
+        $item = $demanda->itens()->first();
+
+        $this->assertSame('22/07/2026 08:30', $demanda->data_hora_criacao_sap->format('d/m/Y H:i'));
+        $this->assertSame('04', $item->status_sap);
+
+        // Operador assume o status no sistema; o código bruto do SAP continua
+        // sincronizando nas reimportações (é a referência ao finalizar o item).
+        $item->update(['status_item' => StatusItemDemanda::Recusado, 'campos_editados' => ['status_item']]);
+
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800070', '22.07.2026', '08:30:00', '326000600', '1', '07'],
+        ]));
+
+        $item->refresh();
+
+        $this->assertSame(StatusItemDemanda::Recusado, $item->status_item);
+        $this->assertSame('07', $item->status_sap);
+    }
+
     public function test_observacao_acumula_no_item_sem_duplicar_em_reimportacoes(): void
     {
         $importador = app(ImportadorDemandas::class);

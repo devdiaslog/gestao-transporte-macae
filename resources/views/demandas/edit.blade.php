@@ -206,6 +206,10 @@
                             <dt class="text-zinc-400 dark:text-zinc-500">Cadastrado em</dt>
                             <dd class="text-zinc-600 dark:text-zinc-400">{{ $demanda->created_at->format('d/m/Y H:i') }}</dd>
                         </div>
+                        <div class="flex justify-between">
+                            <dt class="text-zinc-400 dark:text-zinc-500">Criada no SAP</dt>
+                            <dd class="text-zinc-600 dark:text-zinc-400">{{ $demanda->data_hora_criacao_sap?->format('d/m/Y H:i') ?? '—' }}</dd>
+                        </div>
                     </dl>
                 </div>
 
@@ -361,7 +365,7 @@
                                         <thead class="bg-white dark:bg-zinc-900">
                                             <tr class="text-left text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                                                 <th class="px-3 py-1.5 font-semibold">Nº Entrega / Item</th>
-                                                <th class="px-3 py-1.5 font-semibold">Descrição</th>
+                                                <th class="px-3 py-1.5 font-semibold">Descrição da Carga</th>
                                                 <th class="px-3 py-1.5 font-semibold">Retirada</th>
                                                 <th class="px-3 py-1.5 font-semibold">Prazo</th>
                                                 <th class="px-3 py-1.5 font-semibold">Entregue em</th>
@@ -414,6 +418,12 @@
                                                         <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium {{ $cor }}">
                                                             {{ $item->status_item?->label() ?? '—' }}
                                                         </span>
+                                                        @if($item->status_sap)
+                                                            <div class="mt-0.5 text-[10px] text-zinc-400 dark:text-zinc-600"
+                                                                 title="Código bruto do status no SAP, sempre atualizado pela importação — confira antes de finalizar o item.">
+                                                                SAP: {{ $item->status_sap }}
+                                                            </div>
+                                                        @endif
                                                     </td>
                                                     <td class="px-3 py-2 text-right">
                                                         <button type="button" @disabled($edicaoBloqueada)
@@ -511,7 +521,7 @@
                     </p>
 
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Descrição do Item</label>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Descrição da Carga</label>
                         <input type="text" name="descricao_item" id="i-descricao"
                                class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-xs outline-none
                                       focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200

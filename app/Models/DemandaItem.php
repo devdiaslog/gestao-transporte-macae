@@ -20,6 +20,7 @@ class DemandaItem extends Model
         'descricao_local_retirada',
         'descricao_item',
         'status_item',
+        'status_sap',
         'prazo_item',
         'data_hora_entrega',
         'observacao',
