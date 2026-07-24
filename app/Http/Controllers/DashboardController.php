@@ -9,6 +9,7 @@ use App\Enums\TipoDemanda;
 use App\Models\CercaEvento;
 use App\Models\DashboardSnapshot;
 use App\Models\Demanda;
+use App\Models\DemandaCapturaElog;
 use App\Models\Equipamento;
 use App\Models\StatusEvento;
 use App\Models\TipoEquipamento;
@@ -16,11 +17,96 @@ use App\Services\BigcoreService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    /**
+     * Números de demanda (documentCode) ativos no E-log agora: veículos da
+     * divisão Poli Macaé (114) com documento numérico de 9-10 dígitos.
+     *
+     * @param  array<int, array<string, mixed>>  $veiculos
+     * @return Collection<int, int>
+     */
+    private function documentosElogAtivos(array $veiculos): Collection
+    {
+        return collect(array_filter($veiculos, fn ($v) => ($v['divisionId'] ?? null) === 114))
+            ->map(fn ($v) => $v['document']['documentCode'] ?? $v['loadScheduleCurrent']['documentCode'] ?? null)
+            ->filter(fn ($d) => $d !== null && ctype_digit((string) $d) && strlen((string) $d) >= 9 && strlen((string) $d) <= 10)
+            ->map(fn ($d) => (int) $d)
+            ->unique()
+            ->values();
+    }
+
+    /**
+     * Rastreia o atendimento no E-log a cada captura:
+     * - marca o início na primeira vez que a demanda aparece;
+     * - registra a presença (primeira/última captura) na tabela de captura;
+     * - marca o fim quando uma demanda que estava sendo acompanhada deixa de
+     *   aparecer — sinal de que foi concluída no TMS por qualquer operador;
+     * - limpa o fim se a demanda reaparecer numa captura seguinte.
+     *
+     * @param  array<int, array<string, mixed>>  $veiculos
+     * @return array{elog_iniciadas: int, elog_finalizadas: int}
+     */
+    private function rastrearElog(array $veiculos, Carbon $agora): array
+    {
+        $ativos = $this->documentosElogAtivos($veiculos);
+
+        $demandasAtivas = Demanda::whereIn('numero_demanda', $ativos)->get();
+        $idsAtivos = $demandasAtivas->pluck('id');
+
+        $iniciadas = 0;
+
+        foreach ($demandasAtivas as $demanda) {
+            $captura = DemandaCapturaElog::firstOrNew(['demanda_id' => $demanda->id]);
+
+            if (! $captura->exists) {
+                $captura->primeira_captura = $agora;
+            }
+            $captura->ultima_captura = $agora;
+            $captura->save();
+
+            $alterou = false;
+
+            if ($demanda->data_hora_inicio_elog === null) {
+                $demanda->data_hora_inicio_elog = $captura->primeira_captura;
+                $iniciadas++;
+                $alterou = true;
+            }
+
+            // Reapareceu após ter sido dado como concluído: o atendimento voltou.
+            if ($demanda->data_hora_fim_elog !== null) {
+                $demanda->data_hora_fim_elog = null;
+                $alterou = true;
+            }
+
+            if ($alterou) {
+                $demanda->save();
+            }
+        }
+
+        // Concluídas no TMS: acompanhadas (com início), sem fim ainda e que não
+        // estão mais na captura atual. O fim é a última presença confirmada.
+        $finalizadas = 0;
+
+        $capturas = DemandaCapturaElog::with('demanda')
+            ->when($idsAtivos->isNotEmpty(), fn ($q) => $q->whereNotIn('demanda_id', $idsAtivos))
+            ->whereHas('demanda', fn ($q) => $q
+                ->whereNotNull('data_hora_inicio_elog')
+                ->whereNull('data_hora_fim_elog'))
+            ->get();
+
+        foreach ($capturas as $captura) {
+            $captura->demanda->update(['data_hora_fim_elog' => $captura->ultima_captura]);
+            $finalizadas++;
+        }
+
+        return ['elog_iniciadas' => $iniciadas, 'elog_finalizadas' => $finalizadas];
+    }
+
     /**
      * Registra demandas novas detectadas na resposta da API do E-log.
      * Ignora documentos já cadastrados e valores que não sejam numéricos de 9-10 dígitos.
@@ -29,20 +115,14 @@ class DashboardController extends Controller
      */
     private function registrarDemandasNovas(array $veiculos): int
     {
-        // Apenas veículos da divisão Poli Macaé (divisionId 114)
-        $veiculos = array_filter($veiculos, fn ($v) => ($v['divisionId'] ?? null) === 114);
-
-        // Coleta todos os documentCodes válidos vindos da API
-        $documentos = collect($veiculos)
-            ->map(fn ($v) => $v['document']['documentCode'] ?? $v['loadScheduleCurrent']['documentCode'] ?? null)
-            ->filter(fn ($d) => $d !== null && ctype_digit((string) $d) && strlen((string) $d) >= 9 && strlen((string) $d) <= 10)
-            ->map(fn ($d) => (int) $d)
-            ->unique()
-            ->values();
+        $documentos = $this->documentosElogAtivos($veiculos);
 
         if ($documentos->isEmpty()) {
             return 0;
         }
+
+        // Apenas veículos da divisão Poli Macaé (divisionId 114)
+        $veiculos = array_filter($veiculos, fn ($v) => ($v['divisionId'] ?? null) === 114);
 
         // Quais já estão cadastrados
         $existentes = Demanda::withTrashed()
@@ -667,12 +747,15 @@ class DashboardController extends Controller
         ]);
 
         $novasDemandas = $this->registrarDemandasNovas($veiculos);
+        $elog = $this->rastrearElog($veiculos, $agora);
 
         return response()->json([
             'ok' => true,
             'capturado' => $agora->toDateTimeString(),
             'total_status' => count($agrupado),
             'demandas_registradas' => $novasDemandas,
+            'elog_iniciadas' => $elog['elog_iniciadas'],
+            'elog_finalizadas' => $elog['elog_finalizadas'],
         ]);
     }
 }

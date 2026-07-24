@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 
@@ -34,6 +35,8 @@ class Demanda extends Model
         'inicio_automatico',
         'data_hora_fim_demanda',
         'fim_automatico',
+        'data_hora_inicio_elog',
+        'data_hora_fim_elog',
         'status_demanda',
         'status_auditoria',
         'observacao',
@@ -54,6 +57,8 @@ class Demanda extends Model
             'inicio_automatico' => 'boolean',
             'data_hora_fim_demanda' => 'datetime',
             'fim_automatico' => 'boolean',
+            'data_hora_inicio_elog' => 'datetime',
+            'data_hora_fim_elog' => 'datetime',
             'status_auditoria' => 'boolean',
         ];
     }
@@ -79,6 +84,11 @@ class Demanda extends Model
     public function equipamento(): BelongsTo
     {
         return $this->belongsTo(Equipamento::class);
+    }
+
+    public function capturaElog(): HasOne
+    {
+        return $this->hasOne(DemandaCapturaElog::class);
     }
 
     /**

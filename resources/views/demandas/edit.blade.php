@@ -73,6 +73,17 @@
                 </span>
             @endif
 
+            @if($demanda->data_hora_fim_elog)
+                <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700
+                             dark:bg-emerald-950/40 dark:text-emerald-400"
+                      title="O atendimento deixou de aparecer no E-log em {{ $demanda->data_hora_fim_elog->format('d/m/Y H:i') }} — concluído no TMS.">
+                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+                    </svg>
+                    Concluído no TMS
+                </span>
+            @endif
+
             @php $pesoTotalDemanda = $demanda->itens->sum(fn ($i) => (float) $i->peso_total); @endphp
             <span class="ml-auto flex flex-wrap items-center gap-2">
                 @if($pesoTotalDemanda > 0)
@@ -220,6 +231,16 @@
                         <div class="flex justify-between">
                             <dt class="text-zinc-400 dark:text-zinc-500">Criada no SAP</dt>
                             <dd class="text-zinc-600 dark:text-zinc-400">{{ $demanda->data_hora_criacao_sap?->format('d/m/Y H:i') ?? '—' }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-zinc-400 dark:text-zinc-500">Início no E-log</dt>
+                            <dd class="text-zinc-600 dark:text-zinc-400">{{ $demanda->data_hora_inicio_elog?->format('d/m/Y H:i') ?? '—' }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-zinc-400 dark:text-zinc-500">Fim no E-log (TMS)</dt>
+                            <dd class="{{ $demanda->data_hora_fim_elog ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'text-zinc-600 dark:text-zinc-400' }}">
+                                {{ $demanda->data_hora_fim_elog?->format('d/m/Y H:i') ?? '— em andamento' }}
+                            </dd>
                         </div>
                     </dl>
                 </div>
