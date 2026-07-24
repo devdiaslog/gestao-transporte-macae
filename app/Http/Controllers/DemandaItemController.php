@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\StatusItemDemanda;
 use App\Http\Requests\AtualizarEntregaEtapaRequest;
+use App\Http\Requests\AtualizarPrazoEtapaRequest;
 use App\Http\Requests\AtualizarStatusEtapaRequest;
 use App\Http\Requests\ImportarDemandasRequest;
 use App\Http\Requests\StoreDemandaItemRequest;
@@ -142,6 +143,32 @@ class DemandaItemController extends Controller
         return redirect()
             ->route('demandas.edit', $demanda)
             ->with('success', "Data de entrega aplicada a {$afetados} item(ns) da etapa.");
+    }
+
+    /**
+     * Aplica o mesmo prazo a todos os itens da etapa (rota). O prazo vem do SAP,
+     * mas ao ser ajustado aqui passa a ser do operador e deixa de re-sincronizar.
+     */
+    public function atualizarPrazoEtapa(AtualizarPrazoEtapaRequest $request, Demanda $demanda): RedirectResponse
+    {
+        if ($bloqueio = $this->bloqueio($demanda)) {
+            return $bloqueio;
+        }
+
+        $afetados = 0;
+        foreach ($demanda->itens()->whereIn('id', $request->input('itens'))->get() as $itemEtapa) {
+            $itemEtapa->prazo_item = $request->date('prazo_item');
+            $this->marcarCamposEditados($itemEtapa, ['prazo_item']);
+            $itemEtapa->save();
+            $afetados++;
+        }
+
+        // O prazo da demanda deriva dos itens.
+        $this->calculadora->recalcular($demanda->load('itens'));
+
+        return redirect()
+            ->route('demandas.edit', $demanda)
+            ->with('success', "Prazo aplicado a {$afetados} item(ns) da etapa.");
     }
 
     public function update(UpdateDemandaItemRequest $request, DemandaItem $item): RedirectResponse

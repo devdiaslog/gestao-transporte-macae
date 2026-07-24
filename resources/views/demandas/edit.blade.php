@@ -367,6 +367,27 @@
                                                 Aplicar
                                             </button>
                                         </form>
+
+                                        {{-- Prazo --}}
+                                        <form method="POST" action="{{ route('demandas.prazo-etapa', $demanda) }}"
+                                              class="flex shrink-0 items-center gap-1.5">
+                                            @csrf
+                                            @method('PUT')
+                                            @foreach($itens as $item)
+                                                <input type="hidden" name="itens[]" value="{{ $item->id }}">
+                                            @endforeach
+                                            <span class="text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Prazo:</span>
+                                            <input type="datetime-local" name="prazo_item" required @disabled($edicaoBloqueada)
+                                                   class="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-zinc-900 shadow-xs outline-none
+                                                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:opacity-50
+                                                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
+                                            <button type="submit" @disabled($edicaoBloqueada)
+                                                    class="h-8 shrink-0 rounded-lg bg-zinc-900 px-3 text-xs font-semibold text-white
+                                                           transition-colors hover:bg-zinc-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-zinc-900
+                                                           dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 dark:disabled:hover:bg-white">
+                                                Aplicar
+                                            </button>
+                                        </form>
                                     </div>
                                 </header>
 

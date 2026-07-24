@@ -172,6 +172,39 @@ class DemandaItemEdicaoTest extends TestCase
         $this->assertNull($demanda->refresh()->data_hora_fim_demanda);
     }
 
+    public function test_prazo_em_lote_aplica_a_etapa_e_assume_o_campo_para_o_operador(): void
+    {
+        $demanda = $this->demandaCom([
+            ['local_origem' => 'A', 'local_destino' => 'B', 'prazo_item' => now()->addDay()],
+            ['local_origem' => 'A', 'local_destino' => 'B', 'prazo_item' => now()->addDays(2)],
+            ['local_origem' => 'A', 'local_destino' => 'C', 'prazo_item' => now()->addDays(3)],
+        ]);
+        $demanda->update(['data_hora_inicio_demanda' => now()->subDay()]);
+
+        $etapa = $demanda->itens->where('local_destino', 'B');
+        $novoPrazo = now()->addDays(5)->startOfMinute();
+
+        $this->actingAs($this->usuario())
+            ->put(route('demandas.prazo-etapa', $demanda), [
+                'itens' => $etapa->pluck('id')->all(),
+                'prazo_item' => $novoPrazo->format('Y-m-d\TH:i'),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $demanda->refresh()->load('itens');
+
+        foreach ($demanda->itens->where('local_destino', 'B') as $item) {
+            $this->assertTrue($novoPrazo->equalTo($item->prazo_item));
+            // Prazo assumido pelo operador não re-sincroniza do SAP.
+            $this->assertTrue($item->campoEditadoPeloOperador('prazo_item'));
+        }
+
+        // Item de outra etapa permanece intocado.
+        $outro = $demanda->itens->firstWhere('local_destino', 'C');
+        $this->assertFalse($novoPrazo->equalTo($outro->prazo_item));
+    }
+
     public function test_observacao_do_modal_acrescenta_ao_historico_sem_apagar(): void
     {
         $demanda = $this->demandaCom([
