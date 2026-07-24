@@ -123,6 +123,52 @@ class DemandaRelatoriosTest extends TestCase
         $this->assertStringNotContainsString('326900003', $this->baixar('todos_itens', ['destino' => 'INEXISTENTE']));
     }
 
+    public function test_relatorio_concluido_no_tms_lista_itens_pendentes_da_demanda_finalizada_no_elog(): void
+    {
+        $this->travelTo(now()->startOfDay()->addHours(8));
+
+        // Concluída no TMS (fim_elog), mas com item ainda pendente no sistema.
+        $concluida = Demanda::factory()->create([
+            'numero_demanda' => 509610001,
+            'data_hora_inicio_elog' => now()->subHours(5),
+            'data_hora_fim_elog' => now()->subHour(),
+        ]);
+        $concluida->itens()->create(['numero_rt' => '326910001', 'numero_item' => '1', 'status_item' => StatusItemDemanda::Pendente]);
+        $concluida->itens()->create(['numero_rt' => '326910002', 'numero_item' => '1', 'status_item' => StatusItemDemanda::Entregue]);
+
+        // Ativa no TMS (sem fim) — não deve aparecer.
+        $ativa = Demanda::factory()->create(['numero_demanda' => 509610002, 'data_hora_inicio_elog' => now()->subHour()]);
+        $ativa->itens()->create(['numero_rt' => '326910003', 'numero_item' => '1', 'status_item' => StatusItemDemanda::Pendente]);
+
+        $csv = $this->baixar('tms_concluido_aberto');
+
+        $this->assertStringContainsString('326910001', $csv);   // pendente na concluída
+        $this->assertStringNotContainsString('326910002', $csv); // já entregue
+        $this->assertStringNotContainsString('326910003', $csv); // demanda ainda ativa no TMS
+    }
+
+    public function test_relatorio_em_atendimento_no_tms_sem_inicio_no_sistema(): void
+    {
+        $comInicio = Demanda::factory()->create([
+            'numero_demanda' => 509620001,
+            'data_hora_inicio_elog' => now()->subHours(2),
+            'data_hora_inicio_demanda' => now()->subHours(2),
+        ]);
+        $comInicio->itens()->create(['numero_rt' => '326920001', 'numero_item' => '1']);
+
+        $semInicio = Demanda::factory()->create([
+            'numero_demanda' => 509620002,
+            'data_hora_inicio_elog' => now()->subHour(),
+            'data_hora_inicio_demanda' => null,
+        ]);
+        $semInicio->itens()->create(['numero_rt' => '326920002', 'numero_item' => '1']);
+
+        $csv = $this->baixar('tms_sem_inicio');
+
+        $this->assertStringContainsString('326920002', $csv);    // ativo no TMS, sem início no sistema
+        $this->assertStringNotContainsString('326920001', $csv); // já tem início no sistema
+    }
+
     public function test_relatorio_desconhecido_retorna_404(): void
     {
         $this->actingAs(User::factory()->create())

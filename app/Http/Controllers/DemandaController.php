@@ -47,6 +47,14 @@ class DemandaController extends Controller
             'label' => 'Divergência: entregue no SAP, aberto aqui',
             'descricao' => 'Itens entregues no SAP (status 07) ainda pendentes no sistema',
         ],
+        'tms_concluido_aberto' => [
+            'label' => 'Concluído no TMS, aberto no sistema',
+            'descricao' => 'Itens ainda pendentes de demandas já concluídas no E-log (TMS) — precisam ser encerrados',
+        ],
+        'tms_sem_inicio' => [
+            'label' => 'Em atendimento no TMS sem início no sistema',
+            'descricao' => 'Itens de demandas ativas no E-log que ainda não têm início registrado no sistema',
+        ],
         'ajuste_pendente' => [
             'label' => 'Demandas com início/fim automáticos',
             'descricao' => 'Itens de demandas cujo horário veio do SAP e precisa de conferência',
@@ -302,6 +310,13 @@ class DemandaController extends Controller
             ->when($chave === 'divergencia_sistema', fn ($q) => $q
                 ->where('status_sap', '07')
                 ->where(fn ($s) => $s->whereNull('status_item')->orWhere('status_item', StatusItemDemanda::Pendente)))
+            ->when($chave === 'tms_concluido_aberto', fn ($q) => $q
+                ->where(fn ($s) => $s->whereNull('status_item')->orWhere('status_item', StatusItemDemanda::Pendente))
+                ->whereHas('demanda', fn ($d) => $d->whereNotNull('data_hora_fim_elog')))
+            ->when($chave === 'tms_sem_inicio', fn ($q) => $q
+                ->whereHas('demanda', fn ($d) => $d
+                    ->whereNotNull('data_hora_inicio_elog')
+                    ->whereNull('data_hora_inicio_demanda')))
             ->when($chave === 'ajuste_pendente', fn ($q) => $q
                 ->whereHas('demanda', fn ($d) => $d->where(fn ($s) => $s
                     ->where('inicio_automatico', true)->orWhere('fim_automatico', true))))
@@ -316,6 +331,7 @@ class DemandaController extends Controller
 
         $headers = [
             'Demanda', 'Status Demanda', 'Tipo', 'Veículo', 'Criada no SAP',
+            'Início E-log', 'Fim E-log (TMS)',
             'RT', 'Item', 'Subitem', 'Origem', 'Retirada', 'Destino', 'Descrição da Carga',
             'Peso (kg)', 'Comprimento', 'Largura', 'Altura',
             'Prazo', 'Entregue em', 'Status Item', 'Status SAP', 'Observação',
@@ -327,6 +343,8 @@ class DemandaController extends Controller
             $i->demanda->tipo_demanda?->label() ?? '',
             $i->demanda->equipamento?->prefixo ?? '',
             $fmt($i->demanda->data_hora_criacao_sap),
+            $fmt($i->demanda->data_hora_inicio_elog),
+            $fmt($i->demanda->data_hora_fim_elog),
             $i->numero_rt,
             $i->numero_item,
             $i->subitem ?? '',
