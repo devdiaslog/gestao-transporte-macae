@@ -51,104 +51,65 @@
         </button>
     </div>
 
-    {{-- Filtros --}}
+    {{-- Filtros — busca inline; demais critérios no modal --}}
+    @php
+        $inputCls = 'h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-zinc-900 placeholder-zinc-400 shadow-xs outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-600 dark:focus:border-zinc-500 dark:focus:ring-zinc-800';
+        $dateCls = $inputCls.' dark:[color-scheme:dark]';
+        $labelCls = 'mb-1 block text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400';
+
+        // Conta os critérios ativos além da busca (status em_andamento é o padrão).
+        $filtrosAtivos = collect([
+            $status !== 'em_andamento' ? $status : null,
+            $tipo, $fonte, $prefixo, $origem, $destino,
+            $dataDE, $dataAte, $prazoDE, $prazoAte, $ajuste,
+        ])->filter(fn ($v) => $v !== null && $v !== '')->count();
+    @endphp
+
     <form id="form-filtros-demandas" method="GET" action="{{ route('demandas.index') }}"
           class="mb-5 flex flex-wrap items-center gap-3">
         <input type="text" name="q" value="{{ $search }}" placeholder="Número ou documento…"
-               class="h-9 w-44 rounded-lg border border-slate-200 bg-white px-3 text-sm
+               class="h-9 w-56 rounded-lg border border-slate-200 bg-white px-3 text-sm
                       text-zinc-900 placeholder-zinc-400 shadow-xs outline-none
                       focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
                       dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
                       dark:placeholder-zinc-600 dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-        <input type="text" name="prefixo" value="{{ $prefixo }}" placeholder="Prefixo do veículo…"
-               class="h-9 w-40 rounded-lg border border-slate-200 bg-white px-3 text-sm
-                      text-zinc-900 placeholder-zinc-400 shadow-xs outline-none
-                      focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                      dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                      dark:placeholder-zinc-600 dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-        <select name="status"
-                class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
-                       text-zinc-900 shadow-xs outline-none
-                       focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                       dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                       dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-            <option value="">Todos os status</option>
-            <option value="active" @selected($status === 'active')>Pendente + Em Andamento</option>
-            @foreach(\App\Enums\StatusDemanda::cases() as $s)
-                <option value="{{ $s->value }}" @selected($status === $s->value)>{{ $s->label() }}</option>
-            @endforeach
-        </select>
-        <select name="tipo"
-                class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
-                       text-zinc-900 shadow-xs outline-none
-                       focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                       dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                       dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-            <option value="">Todos os tipos</option>
-            @foreach(\App\Enums\TipoDemanda::cases() as $t)
-                <option value="{{ $t->value }}" @selected($tipo === $t->value)>{{ $t->label() }}</option>
-            @endforeach
-        </select>
-        <select name="fonte"
-                class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
-                       text-zinc-900 shadow-xs outline-none
-                       focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                       dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                       dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-            <option value="">Todas as fontes</option>
-            @foreach(\App\Enums\FonteDemanda::cases() as $f)
-                <option value="{{ $f->value }}" @selected($fonte === $f->value)>{{ $f->label() }}</option>
-            @endforeach
-        </select>
-        <select name="ajuste"
-                class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
-                       text-zinc-900 shadow-xs outline-none
-                       focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                       dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                       dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
-            <option value="">Ajuste — todas</option>
-            <option value="pendente" @selected($ajuste === 'pendente')>⚙ Ajustar início/fim</option>
-        </select>
-        <div class="flex items-center gap-1.5">
-            <span class="text-xs text-zinc-400 dark:text-zinc-600">Vencimento:</span>
-            <input type="datetime-local" name="prazo_de" value="{{ $prazoDE }}"
-                   class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
-                          text-zinc-900 shadow-xs outline-none
-                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                          dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
-            <span class="text-xs text-zinc-400 dark:text-zinc-600">até</span>
-            <input type="datetime-local" name="prazo_ate" value="{{ $prazoAte }}"
-                   class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
-                          text-zinc-900 shadow-xs outline-none
-                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                          dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
-        </div>
-        <div class="flex items-center gap-1.5">
-            <span class="text-xs text-zinc-400 dark:text-zinc-600">Cadastro:</span>
-            <input type="date" name="data_de" value="{{ $dataDE }}"
-                   class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
-                          text-zinc-900 shadow-xs outline-none
-                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                          dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
-            <span class="text-xs text-zinc-400 dark:text-zinc-600">até</span>
-            <input type="date" name="data_ate" value="{{ $dataAte }}"
-                   class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
-                          text-zinc-900 shadow-xs outline-none
-                          focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
-                          dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-                          dark:focus:border-zinc-500 dark:focus:ring-zinc-800 dark:[color-scheme:dark]">
-        </div>
+
+        <button type="button" onclick="abrirFiltros()"
+                class="h-9 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-sm font-medium
+                       text-zinc-700 shadow-xs transition-colors hover:bg-slate-50
+                       dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
+            <svg class="h-4 w-4 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z"/>
+            </svg>
+            Filtros
+            @if($filtrosAtivos > 0)
+                <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-zinc-900 px-1.5 text-[10px] font-bold text-white dark:bg-white dark:text-zinc-900">{{ $filtrosAtivos }}</span>
+            @endif
+        </button>
+
         <button type="submit"
                 class="h-9 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium
                        text-zinc-700 shadow-xs transition-colors hover:bg-zinc-50
                        dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
-            Filtrar
+            Buscar
         </button>
+
+        {{-- Relatórios — abre o CSV do cenário escolhido com os filtros atuais --}}
+        <select id="select-relatorio" onchange="gerarRelatorio(this)"
+                title="Gera um relatório em CSV, no nível do item, respeitando os filtros aplicados"
+                class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm
+                       text-zinc-700 shadow-xs outline-none
+                       focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                       dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300
+                       dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+            <option value="">📊 Relatórios…</option>
+            @foreach(App\Http\Controllers\DemandaController::RELATORIOS as $chave => $rel)
+                <option value="{{ $chave }}">{{ $rel['label'] }}</option>
+            @endforeach
+        </select>
+
         <a id="btn-export-demandas" href="{{ route('demandas.export') }}"
-           title="Exportar para CSV/Excel"
+           title="Exportar as demandas filtradas para CSV/Excel"
            class="h-9 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-sm font-medium
                   text-zinc-700 shadow-xs transition-colors hover:bg-slate-50
                   dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
@@ -157,7 +118,8 @@
             </svg>
             Exportar
         </a>
-        @if($search || $status !== 'em_andamento' || $tipo || $fonte || $prefixo || $dataDE || $dataAte || $prazoDE || $prazoAte || $ajuste)
+
+        @if($search || $filtrosAtivos > 0)
             <a href="{{ route('demandas.index', ['reset' => '1']) }}"
                class="h-9 inline-flex items-center gap-1 rounded-lg px-3 text-sm text-zinc-400 hover:text-zinc-700
                       dark:hover:text-zinc-200">
@@ -167,6 +129,133 @@
                 Limpar
             </a>
         @endif
+
+        {{-- ── Modal de filtros ─────────────────────────────────────────────── --}}
+        <div id="modal-filtros" class="fixed inset-0 z-50 hidden">
+            <div id="modal-filtros-overlay" onclick="fecharFiltros()"
+                 class="absolute inset-0 bg-zinc-900/40 opacity-0 backdrop-blur-[2px] transition-opacity duration-200 dark:bg-black/60"></div>
+
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div id="modal-filtros-panel"
+                     class="relative w-full max-w-2xl scale-95 overflow-hidden rounded-2xl border border-slate-200 bg-white opacity-0 shadow-2xl
+                            transition-all duration-200 dark:border-zinc-800 dark:bg-zinc-900">
+                    <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
+                        <div>
+                            <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Filtros</p>
+                            <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Aplicados também ao export e aos relatórios</p>
+                        </div>
+                        <button type="button" onclick="fecharFiltros()"
+                                class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-slate-100 hover:text-zinc-700
+                                       dark:hover:bg-zinc-800 dark:hover:text-zinc-200">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="max-h-[70vh] space-y-4 overflow-y-auto p-5">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            <div>
+                                <label class="{{ $labelCls }}">Status</label>
+                                <select name="status" class="{{ $inputCls }}">
+                                    <option value="">Todos os status</option>
+                                    <option value="active" @selected($status === 'active')>Pendente + Em Andamento</option>
+                                    @foreach(\App\Enums\StatusDemanda::cases() as $s)
+                                        <option value="{{ $s->value }}" @selected($status === $s->value)>{{ $s->label() }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="{{ $labelCls }}">Tipo</label>
+                                <select name="tipo" class="{{ $inputCls }}">
+                                    <option value="">Todos os tipos</option>
+                                    @foreach(\App\Enums\TipoDemanda::cases() as $t)
+                                        <option value="{{ $t->value }}" @selected($tipo === $t->value)>{{ $t->label() }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="{{ $labelCls }}">Fonte</label>
+                                <select name="fonte" class="{{ $inputCls }}">
+                                    <option value="">Todas as fontes</option>
+                                    @foreach(\App\Enums\FonteDemanda::cases() as $f)
+                                        <option value="{{ $f->value }}" @selected($fonte === $f->value)>{{ $f->label() }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            <div>
+                                <label class="{{ $labelCls }}">Origem</label>
+                                <input type="text" name="origem" value="{{ $origem }}" list="lista-locais" placeholder="Ex.: PACU"
+                                       class="{{ $inputCls }}">
+                            </div>
+                            <div>
+                                <label class="{{ $labelCls }}">Destino</label>
+                                <input type="text" name="destino" value="{{ $destino }}" list="lista-locais" placeholder="Ex.: ARM-MACAE"
+                                       class="{{ $inputCls }}">
+                            </div>
+                            <div>
+                                <label class="{{ $labelCls }}">Veículo (prefixo)</label>
+                                <input type="text" name="prefixo" value="{{ $prefixo }}" placeholder="Ex.: 1993" class="{{ $inputCls }}">
+                            </div>
+                        </div>
+                        <datalist id="lista-locais">
+                            @foreach($locais as $loc)
+                                <option value="{{ $loc }}"></option>
+                            @endforeach
+                        </datalist>
+
+                        <div>
+                            <label class="{{ $labelCls }}">Ajuste de início/fim</label>
+                            <select name="ajuste" class="{{ $inputCls }} sm:w-64">
+                                <option value="">Todas as demandas</option>
+                                <option value="pendente" @selected($ajuste === 'pendente')>⚙ Precisam de ajuste</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <label class="{{ $labelCls }}">Vencimento (prazo)</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="datetime-local" name="prazo_de" value="{{ $prazoDE }}" class="{{ $dateCls }}">
+                                    <span class="shrink-0 text-xs text-zinc-400 dark:text-zinc-600">até</span>
+                                    <input type="datetime-local" name="prazo_ate" value="{{ $prazoAte }}" class="{{ $dateCls }}">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="{{ $labelCls }}">Cadastro no sistema</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="date" name="data_de" value="{{ $dataDE }}" class="{{ $dateCls }}">
+                                    <span class="shrink-0 text-xs text-zinc-400 dark:text-zinc-600">até</span>
+                                    <input type="date" name="data_ate" value="{{ $dataAte }}" class="{{ $dateCls }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between border-t border-slate-100 px-5 py-3 dark:border-zinc-800">
+                        <a href="{{ route('demandas.index', ['reset' => '1']) }}"
+                           class="text-sm text-zinc-400 transition-colors hover:text-zinc-700 dark:hover:text-zinc-200">
+                            Limpar filtros
+                        </a>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="fecharFiltros()"
+                                    class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-zinc-600
+                                           transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800">
+                                Cancelar
+                            </button>
+                            <button type="submit"
+                                    class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-all
+                                           hover:bg-zinc-700 active:scale-[0.98] dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
+                                Aplicar filtros
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </form>
 
     {{-- Tabela --}}
@@ -799,19 +888,66 @@
         grupo.style.display = 'block';
     }
 
-    // Exportar — mantém filtros no href
+    // Modal de filtros
+    (function () {
+        var modal   = document.getElementById('modal-filtros');
+        var overlay = document.getElementById('modal-filtros-overlay');
+        var panel   = document.getElementById('modal-filtros-panel');
+        if (! modal) { return; }
+
+        window.abrirFiltros = function () {
+            modal.classList.remove('hidden');
+            requestAnimationFrame(function () {
+                overlay.classList.add('opacity-100');
+                panel.classList.remove('scale-95', 'opacity-0');
+                panel.classList.add('scale-100', 'opacity-100');
+            });
+        };
+
+        window.fecharFiltros = function () {
+            overlay.classList.remove('opacity-100');
+            panel.classList.add('scale-95', 'opacity-0');
+            panel.classList.remove('scale-100', 'opacity-100');
+            setTimeout(function () { modal.classList.add('hidden'); }, 180);
+        };
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && ! modal.classList.contains('hidden')) { window.fecharFiltros(); }
+        });
+    })();
+
+    // Exportar e relatórios — mantêm os filtros atuais na URL
     (function () {
         var exportBtn  = document.getElementById('btn-export-demandas');
+        var relSelect  = document.getElementById('select-relatorio');
         var filterForm = document.getElementById('form-filtros-demandas');
         var baseUrl    = '{{ route('demandas.export') }}';
-        if (! exportBtn || ! filterForm) { return; }
-        function syncExportUrl() {
+        var relUrl     = '{{ route('demandas.relatorio') }}';
+        if (! filterForm) { return; }
+
+        function filtrosAtuais() {
             var params = new URLSearchParams(new FormData(filterForm));
             var clean  = new URLSearchParams();
             params.forEach(function (v, k) { if (v.trim() !== '') { clean.set(k, v); } });
-            exportBtn.href = baseUrl + (clean.toString() ? '?' + clean.toString() : '');
+            return clean;
         }
+
+        function syncExportUrl() {
+            if (! exportBtn) { return; }
+            var qs = filtrosAtuais().toString();
+            exportBtn.href = baseUrl + (qs ? '?' + qs : '');
+        }
+
+        window.gerarRelatorio = function (select) {
+            if (! select.value) { return; }
+            var params = filtrosAtuais();
+            params.set('relatorio', select.value);
+            window.location.href = relUrl + '?' + params.toString();
+            select.value = '';
+        };
+
         filterForm.querySelectorAll('input, select').forEach(function (el) {
+            if (el.id === 'select-relatorio') { return; }
             el.addEventListener('change', syncExportUrl);
             el.addEventListener('input',  syncExportUrl);
         });

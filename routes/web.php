@@ -107,6 +107,7 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
     // Demandas de transporte
     Route::get('demandas', [DemandaController::class, 'index'])->name('demandas.index');
     Route::get('demandas-export', [DemandaController::class, 'export'])->name('demandas.export');
+    Route::get('demandas-relatorio', [DemandaController::class, 'relatorio'])->name('demandas.relatorio');
     Route::get('demandas-modelo', [DemandaController::class, 'modeloImportacao'])->name('demandas.modelo');
     Route::post('demandas-importar', [DemandaController::class, 'importar'])->name('demandas.importar');
     Route::get('demandas/{demanda}/editar', [DemandaController::class, 'edit'])->name('demandas.edit');

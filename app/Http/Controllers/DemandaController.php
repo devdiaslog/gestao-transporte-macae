@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\StatusDemanda;
+use App\Enums\StatusItemDemanda;
 use App\Enums\TipoCadastro;
 use App\Http\Requests\ImportarDemandasRequest;
 use App\Http\Requests\StoreDemandaRequest;
@@ -23,9 +24,46 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class DemandaController extends Controller
 {
+    /**
+     * Relatórios disponíveis no select da listagem. Todos saem em CSV no nível
+     * do item e respeitam os filtros aplicados na tela.
+     *
+     * @var array<string, array{label: string, descricao: string}>
+     */
+    public const RELATORIOS = [
+        'vencem_hoje' => [
+            'label' => 'Itens que vencem hoje',
+            'descricao' => 'Itens em aberto com prazo para hoje',
+        ],
+        'vencidos' => [
+            'label' => 'Itens vencidos',
+            'descricao' => 'Itens em aberto com prazo já ultrapassado',
+        ],
+        'divergencia_sap' => [
+            'label' => 'Divergência: encerrado aqui, aberto no SAP',
+            'descricao' => 'Itens encerrados pela torre que seguem pendentes no SAP (status 04)',
+        ],
+        'divergencia_sistema' => [
+            'label' => 'Divergência: entregue no SAP, aberto aqui',
+            'descricao' => 'Itens entregues no SAP (status 07) ainda pendentes no sistema',
+        ],
+        'ajuste_pendente' => [
+            'label' => 'Demandas com início/fim automáticos',
+            'descricao' => 'Itens de demandas cujo horário veio do SAP e precisa de conferência',
+        ],
+        'sem_entrega' => [
+            'label' => 'Itens encerrados sem data de entrega',
+            'descricao' => 'Itens já encerrados que ficaram sem data/hora de entrega',
+        ],
+        'todos_itens' => [
+            'label' => 'Todos os itens do filtro',
+            'descricao' => 'Base completa de itens das demandas filtradas',
+        ],
+    ];
+
     public function index(Request $request): View|RedirectResponse
     {
-        $filtroKeys = ['q', 'status', 'tipo', 'fonte', 'prefixo', 'data_de', 'data_ate', 'prazo_de', 'prazo_ate', 'ajuste'];
+        $filtroKeys = ['q', 'status', 'tipo', 'fonte', 'prefixo', 'data_de', 'data_ate', 'prazo_de', 'prazo_ate', 'ajuste', 'origem', 'destino'];
 
         if ($request->boolean('reset')) {
             session()->forget('demandas.filtros');
@@ -60,6 +98,8 @@ class DemandaController extends Controller
         $prazoDE = $request->input('prazo_de');
         $prazoAte = $request->input('prazo_ate');
         $ajuste = $request->input('ajuste');
+        $origem = $request->input('origem');
+        $destino = $request->input('destino');
 
         $base = $this->queryFiltrada($request, $status);
 
@@ -82,7 +122,18 @@ class DemandaController extends Controller
                 'prazo_de' => $prazoDE ?? '',
                 'prazo_ate' => $prazoAte ?? '',
                 'ajuste' => $ajuste ?? '',
+                'origem' => $origem ?? '',
+                'destino' => $destino ?? '',
             ]);
+
+        // Sugestões do datalist de origem/destino no modal de filtros.
+        $locais = DemandaItem::query()
+            ->selectRaw('local_origem as local')->whereNotNull('local_origem')
+            ->union(DemandaItem::query()->selectRaw('local_destino as local')->whereNotNull('local_destino'))
+            ->pluck('local')
+            ->unique()
+            ->sort()
+            ->values();
 
         $equipamentos = Equipamento::query()
             ->whereHas('tipo', fn ($q) => $q->where('nome', 'Motorizado'))
@@ -90,7 +141,7 @@ class DemandaController extends Controller
             ->orderBy('prefixo')
             ->get(['id', 'prefixo', 'placa']);
 
-        return view('demandas.index', compact('demandas', 'equipamentos', 'totalItensFiltro', 'search', 'status', 'tipo', 'fonte', 'prefixo', 'dataDE', 'dataAte', 'prazoDE', 'prazoAte', 'ajuste'));
+        return view('demandas.index', compact('demandas', 'equipamentos', 'totalItensFiltro', 'locais', 'search', 'status', 'tipo', 'fonte', 'prefixo', 'dataDE', 'dataAte', 'prazoDE', 'prazoAte', 'ajuste', 'origem', 'destino'));
     }
 
     /**
@@ -112,7 +163,10 @@ class DemandaController extends Controller
             ->when($request->input('prazo_de'), fn ($q, $v) => $q->whereNotNull('prazo_demanda')->where('prazo_demanda', '>=', Carbon::parse($v)))
             ->when($request->input('prazo_ate'), fn ($q, $v) => $q->whereNotNull('prazo_demanda')->where('prazo_demanda', '<=', Carbon::parse($v)))
             ->when($request->input('ajuste') === 'pendente', fn ($q) => $q->where(fn ($sub) => $sub
-                ->where('inicio_automatico', true)->orWhere('fim_automatico', true)));
+                ->where('inicio_automatico', true)->orWhere('fim_automatico', true)))
+            // Origem/destino vivem nos itens: basta um item da demanda casar.
+            ->when($request->input('origem'), fn ($q, $v) => $q->whereHas('itens', fn ($i) => $i->where('local_origem', 'like', "%{$v}%")))
+            ->when($request->input('destino'), fn ($q, $v) => $q->whereHas('itens', fn ($i) => $i->where('local_destino', 'like', "%{$v}%")));
     }
 
     public function edit(Demanda $demanda): View
@@ -209,6 +263,92 @@ class DemandaController extends Controller
             ->implode("\n");
 
         $filename = 'demandas_'.now()->format('Y-m-d_H-i').'.csv';
+
+        return response("\xEF\xBB\xBF".$csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Pragma' => 'no-cache',
+        ]);
+    }
+
+    /**
+     * Relatórios de itens: aplica o cenário escolhido sobre as demandas já
+     * filtradas na tela e devolve um CSV no nível do item.
+     */
+    public function relatorio(Request $request): Response
+    {
+        $chave = (string) $request->input('relatorio');
+
+        abort_unless(array_key_exists($chave, self::RELATORIOS), 404, 'Relatório desconhecido.');
+
+        $demandaIds = $this->queryFiltrada($request, $request->input('status'))->select('id');
+
+        $itens = DemandaItem::query()
+            ->with(['demanda.equipamento'])
+            ->whereIn('demanda_id', $demandaIds)
+            ->when($chave === 'vencem_hoje', fn ($q) => $q
+                ->whereDate('prazo_item', now()->toDateString())
+                ->where(fn ($s) => $s->whereNull('status_item')->orWhere('status_item', StatusItemDemanda::Pendente)))
+            ->when($chave === 'vencidos', fn ($q) => $q
+                ->whereNotNull('prazo_item')
+                ->where('prazo_item', '<', now())
+                ->where(fn ($s) => $s->whereNull('status_item')->orWhere('status_item', StatusItemDemanda::Pendente)))
+            ->when($chave === 'divergencia_sap', fn ($q) => $q
+                ->where('status_sap', '04')
+                ->whereNotNull('status_item')
+                ->where('status_item', '!=', StatusItemDemanda::Pendente))
+            ->when($chave === 'divergencia_sistema', fn ($q) => $q
+                ->where('status_sap', '07')
+                ->where(fn ($s) => $s->whereNull('status_item')->orWhere('status_item', StatusItemDemanda::Pendente)))
+            ->when($chave === 'ajuste_pendente', fn ($q) => $q
+                ->whereHas('demanda', fn ($d) => $d->where(fn ($s) => $s
+                    ->where('inicio_automatico', true)->orWhere('fim_automatico', true))))
+            ->when($chave === 'sem_entrega', fn ($q) => $q
+                ->whereNull('data_hora_entrega')
+                ->whereNotNull('status_item')
+                ->where('status_item', '!=', StatusItemDemanda::Pendente))
+            ->orderBy('prazo_item')
+            ->get();
+
+        $fmt = fn ($dt) => $dt?->format('d/m/Y H:i') ?? '';
+
+        $headers = [
+            'Demanda', 'Status Demanda', 'Tipo', 'Veículo', 'Criada no SAP',
+            'RT', 'Item', 'Subitem', 'Origem', 'Retirada', 'Destino', 'Descrição da Carga',
+            'Peso (kg)', 'Comprimento', 'Largura', 'Altura',
+            'Prazo', 'Entregue em', 'Status Item', 'Status SAP', 'Observação',
+        ];
+
+        $rows = $itens->map(fn (DemandaItem $i) => [
+            $i->demanda->numero_demanda,
+            $i->demanda->status_demanda->label(),
+            $i->demanda->tipo_demanda?->label() ?? '',
+            $i->demanda->equipamento?->prefixo ?? '',
+            $fmt($i->demanda->data_hora_criacao_sap),
+            $i->numero_rt,
+            $i->numero_item,
+            $i->subitem ?? '',
+            $i->local_origem ?? '',
+            $i->descricao_local_retirada ?? '',
+            $i->local_destino ?? '',
+            $i->descricao_item ?? '',
+            $i->peso_total ?? '',
+            $i->comprimento ?? '',
+            $i->largura ?? '',
+            $i->altura ?? '',
+            $fmt($i->prazo_item),
+            $fmt($i->data_hora_entrega),
+            $i->status_item?->label() ?? '',
+            $i->status_sap ?? '',
+            str_replace(["\r", "\n"], ' | ', (string) $i->observacao),
+        ]);
+
+        $csv = collect([$headers])
+            ->concat($rows)
+            ->map(fn (array $row) => implode(';', array_map(fn ($cell) => '"'.str_replace('"', '""', (string) $cell).'"', $row)))
+            ->implode("\n");
+
+        $filename = 'relatorio_'.$chave.'_'.now()->format('Y-m-d_H-i').'.csv';
 
         return response("\xEF\xBB\xBF".$csv, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
