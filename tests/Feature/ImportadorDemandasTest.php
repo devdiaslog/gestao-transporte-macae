@@ -331,6 +331,24 @@ class ImportadorDemandasTest extends TestCase
         $this->assertSame('07', $item->status_sap);
     }
 
+    public function test_destino_usa_o_codigo_do_local_e_nao_a_descricao_formatada(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+        // Como no export real: "Destino" (código) e "Descrição destino" (cidade formatada).
+        $cabecalho = ['Nota', 'Nº da RT', 'Item da RT', 'Origem', 'Destino', 'Descrição destino'];
+
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800100', '326000900', '1', 'PACU', 'SEROPEDICA', 'Seropédica'],
+        ]));
+
+        $item = DemandaItem::where('numero_rt', '326000900')->firstOrFail();
+
+        $this->assertSame('PACU', $item->local_origem);
+        $this->assertSame('SEROPEDICA', $item->local_destino);
+        // Origem em ponto-chave classifica como Backload — depende do código.
+        $this->assertSame(TipoDemanda::Backload, $item->demanda->tipo_demanda);
+    }
+
     public function test_descricao_da_carga_vence_a_coluna_descricao_generica_do_export(): void
     {
         $importador = app(ImportadorDemandas::class);
