@@ -10,6 +10,7 @@ use App\Models\CercaEvento;
 use App\Models\DashboardSnapshot;
 use App\Models\Demanda;
 use App\Models\DemandaCapturaElog;
+use App\Models\DemandaItem;
 use App\Models\Equipamento;
 use App\Models\StatusEvento;
 use App\Models\TipoEquipamento;
@@ -573,14 +574,27 @@ class DashboardController extends Controller
         $veiculoTopDemandas = $porVeiculo->sortByDesc('demandas')->first();
         $veiculoTopMediaItens = $porVeiculo->sortByDesc('media_itens')->first();
 
-        // 5 e 7. Atenção/prioridade: abertas ordenadas por vencimento (vencidas
-        // primeiro, prazo mais próximo em seguida); empate decide pelo nº de itens.
+        // 5 e 7. Atenção/prioridade: demandas em aberto com itens vencendo nas
+        // próximas 24h. Ordena pela quantidade de itens que vencem nesse período
+        // (mais itens = prioridade); empate decide pelo prazo mais próximo.
+        $limite24h = $agora->copy()->addDay();
+
         $atencao = $abertas
+            ->map(function (Demanda $d) use ($agora, $limite24h) {
+                $vencendo = $d->itens->filter(fn (DemandaItem $i) => $i->status_item?->encerrado() !== true
+                    && $i->prazo_item !== null
+                    && $i->prazo_item->between($agora, $limite24h));
+
+                $d->setAttribute('itens_vencendo_24h', $vencendo->count());
+                $d->setAttribute('proximo_vencimento_24h', $vencendo->min('prazo_item'));
+
+                return $d;
+            })
+            ->filter(fn (Demanda $d) => $d->itens_vencendo_24h > 0)
             ->sortBy([
-                fn (Demanda $a, Demanda $b) => ($a->prazo_demanda?->getTimestamp() ?? PHP_INT_MAX) <=> ($b->prazo_demanda?->getTimestamp() ?? PHP_INT_MAX),
-                fn (Demanda $a, Demanda $b) => $b->itens->count() <=> $a->itens->count(),
+                fn (Demanda $a, Demanda $b) => $b->itens_vencendo_24h <=> $a->itens_vencendo_24h,
+                fn (Demanda $a, Demanda $b) => $a->proximo_vencimento_24h <=> $b->proximo_vencimento_24h,
             ])
-            ->take(8)
             ->values();
 
         $prioridade = $atencao->first();

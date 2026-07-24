@@ -277,6 +277,7 @@
                             <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Veículo</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Rota</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Prazo</th>
+                            <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400" title="Tempo do início até o fim; se ainda em aberto, conta até agora">Tempo atend.</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Status</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Auditoria</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Criado por</th>
@@ -298,6 +299,19 @@
                                 $totalItens = $demanda->itens->count();
                                 $encerrados = $demanda->itensEncerrados();
                                 $tudoFeito = $totalItens > 0 && $encerrados === $totalItens;
+
+                                // Tempo de atendimento: início → fim; sem fim, conta até agora.
+                                $atendMin = null;
+                                $atendAberto = false;
+                                if ($demanda->data_hora_inicio_demanda) {
+                                    $fimRef = $demanda->data_hora_fim_demanda ?? now();
+                                    $atendAberto = $demanda->data_hora_fim_demanda === null;
+                                    $atendMin = (int) abs($demanda->data_hora_inicio_demanda->diffInMinutes($fimRef));
+                                }
+                                $fmtDuracao = function (int $min): string {
+                                    $d = intdiv($min, 1440); $h = intdiv($min % 1440, 60); $m = $min % 60;
+                                    return $d > 0 ? "{$d}d {$h}h" : ($h > 0 ? "{$h}h {$m}m" : "{$m}m");
+                                };
                             @endphp
                             <tr class="group transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/30">
                                 {{-- Número --}}
@@ -373,6 +387,20 @@
                                         <span class="{{ $prazoVencido ? 'font-semibold text-rose-600 dark:text-rose-400' : 'text-zinc-600 dark:text-zinc-400' }}">
                                             {{ $demanda->prazo_demanda->format('d/m/Y H:i') }}
                                         </span>
+                                    @else
+                                        <span class="text-zinc-400 dark:text-zinc-600">—</span>
+                                    @endif
+                                </td>
+                                {{-- Tempo de atendimento --}}
+                                <td class="whitespace-nowrap px-4 py-3 text-xs">
+                                    @if($atendMin !== null)
+                                        <span class="font-semibold tabular-nums {{ $atendAberto && $atendMin >= 2880 ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-700 dark:text-zinc-300' }}"
+                                              title="{{ $atendAberto ? 'Em atendimento (contando até agora)' : 'Início → fim' }}">
+                                            {{ $fmtDuracao($atendMin) }}
+                                        </span>
+                                        @if($atendAberto)
+                                            <span class="ml-0.5 inline-block h-1.5 w-1.5 rounded-full bg-blue-500 align-middle" title="Ainda em atendimento"></span>
+                                        @endif
                                     @else
                                         <span class="text-zinc-400 dark:text-zinc-600">—</span>
                                     @endif

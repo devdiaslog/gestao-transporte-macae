@@ -200,49 +200,54 @@
         <div class="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
             <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 xl:col-span-2">
                 <div class="border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
-                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Merecem atenção agora {!! $info('Demandas em aberto ordenadas pelo vencimento (vencidas primeiro, depois prazo mais próximo); empate decidido pelo maior número de itens. A primeira da lista é a prioridade nº 1.') !!}</p>
-                    <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Vencimento + nº de itens por viagem — a 1ª é a prioridade</p>
+                    <p class="flex items-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">Vencem nas próximas 24h {!! $info('Demandas em aberto com itens cujo prazo vence dentro das próximas 24 horas a partir de agora. Ordenadas pela quantidade de itens vencendo nesse período — quanto mais itens, maior a prioridade. A primeira da lista é a prioridade nº 1.') !!}</p>
+                    <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Nº de itens vencendo em 24h define a prioridade — a 1ª é a prioridade</p>
                 </div>
                 @if($atencao->isEmpty())
-                    <p class="px-5 py-10 text-center text-sm text-zinc-400 dark:text-zinc-600">Nenhuma demanda em aberto. 🎉</p>
+                    <p class="px-5 py-10 text-center text-sm text-zinc-400 dark:text-zinc-600">Nenhum item vence nas próximas 24h. 🎉</p>
                 @else
-                    <table class="w-full text-left text-xs">
-                        <thead class="border-b border-slate-100 text-[10px] uppercase tracking-wider text-zinc-400 dark:border-zinc-800 dark:text-zinc-500">
-                            <tr>
-                                <th class="px-4 py-2"></th>
-                                <th class="px-2 py-2">Demanda</th>
-                                <th class="px-2 py-2">Veículo</th>
-                                <th class="px-2 py-2">Tipo</th>
-                                <th class="px-2 py-2">Vencimento</th>
-                                <th class="px-2 py-2 text-right">Itens</th>
-                                <th class="px-4 py-2">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-50 dark:divide-zinc-800/60">
-                            @foreach($atencao as $i => $d)
-                                @php $vencida = $d->prazo_demanda?->isPast() === true; @endphp
-                                <tr class="{{ $i === 0 ? 'bg-rose-50/60 dark:bg-rose-950/20' : '' }}">
-                                    <td class="px-4 py-2">
-                                        @if($i === 0)
-                                            <span class="inline-flex items-center rounded-full bg-rose-600 px-2 py-0.5 text-[10px] font-bold text-white">PRIORIDADE</span>
-                                        @else
-                                            <span class="tabular-nums text-zinc-400 dark:text-zinc-600">{{ $i + 1 }}º</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-2 py-2">
-                                        <a href="{{ route('demandas.edit', $d) }}" class="font-mono font-semibold text-blue-600 hover:underline dark:text-blue-400">{{ $d->numero_demanda }}</a>
-                                    </td>
-                                    <td class="px-2 py-2 text-zinc-600 dark:text-zinc-400">{{ $d->equipamento?->prefixo ?? '—' }}</td>
-                                    <td class="px-2 py-2 text-zinc-600 dark:text-zinc-400">{{ $d->tipo_demanda?->label() ?? '—' }}</td>
-                                    <td class="px-2 py-2 {{ $vencida ? 'font-semibold text-rose-600 dark:text-rose-400' : 'text-zinc-600 dark:text-zinc-400' }}">
-                                        {{ $d->prazo_demanda?->format('d/m/Y H:i') ?? 'sem prazo' }}{{ $vencida ? ' ⚠' : '' }}
-                                    </td>
-                                    <td class="px-2 py-2 text-right font-semibold tabular-nums text-zinc-800 dark:text-zinc-200">{{ $d->itensEncerrados() }}/{{ $d->itens->count() }}</td>
-                                    <td class="px-4 py-2 text-zinc-500 dark:text-zinc-400">{{ $d->status_demanda->label() }}</td>
+                    <div class="max-h-[420px] overflow-y-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="sticky top-0 z-10 border-b border-slate-100 bg-white text-[10px] uppercase tracking-wider text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-500">
+                                <tr>
+                                    <th class="px-4 py-2"></th>
+                                    <th class="px-2 py-2">Demanda</th>
+                                    <th class="px-2 py-2">Veículo</th>
+                                    <th class="px-2 py-2">Tipo</th>
+                                    <th class="px-2 py-2 text-right">Vencem 24h</th>
+                                    <th class="px-2 py-2">Próximo vencimento</th>
+                                    <th class="px-4 py-2 text-right">Concluídos</th>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody class="divide-y divide-slate-50 dark:divide-zinc-800/60">
+                                @foreach($atencao as $i => $d)
+                                    <tr class="{{ $i === 0 ? 'bg-rose-50/60 dark:bg-rose-950/20' : '' }}">
+                                        <td class="px-4 py-2">
+                                            @if($i === 0)
+                                                <span class="inline-flex items-center rounded-full bg-rose-600 px-2 py-0.5 text-[10px] font-bold text-white">PRIORIDADE</span>
+                                            @else
+                                                <span class="tabular-nums text-zinc-400 dark:text-zinc-600">{{ $i + 1 }}º</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-2 py-2">
+                                            <a href="{{ route('demandas.edit', $d) }}" class="font-mono font-semibold text-blue-600 hover:underline dark:text-blue-400">{{ $d->numero_demanda }}</a>
+                                        </td>
+                                        <td class="px-2 py-2 text-zinc-600 dark:text-zinc-400">{{ $d->equipamento?->prefixo ?? '—' }}</td>
+                                        <td class="px-2 py-2 text-zinc-600 dark:text-zinc-400">{{ $d->tipo_demanda?->label() ?? '—' }}</td>
+                                        <td class="px-2 py-2 text-right">
+                                            <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold tabular-nums text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+                                                {{ $d->itens_vencendo_24h }}
+                                            </span>
+                                        </td>
+                                        <td class="px-2 py-2 tabular-nums {{ $d->proximo_vencimento_24h?->isPast() ? 'font-semibold text-rose-600 dark:text-rose-400' : 'text-zinc-600 dark:text-zinc-400' }}">
+                                            {{ $d->proximo_vencimento_24h?->format('d/m H:i') ?? '—' }}
+                                        </td>
+                                        <td class="px-4 py-2 text-right font-semibold tabular-nums text-zinc-800 dark:text-zinc-200">{{ $d->itensEncerrados() }}/{{ $d->itens->count() }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 @endif
             </div>
 
