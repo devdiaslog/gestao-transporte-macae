@@ -57,9 +57,9 @@
         $dateCls = $inputCls.' dark:[color-scheme:dark]';
         $labelCls = 'mb-1 block text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400';
 
-        // Conta os critérios ativos além da busca (status em_andamento é o padrão).
+        // Conta os critérios ativos além da busca.
         $filtrosAtivos = collect([
-            $status !== 'em_andamento' ? $status : null,
+            $status,
             $tipo, $fonte, $prefixo, $origem, $destino,
             $dataDE, $dataAte, $prazoDE, $prazoAte, $ajuste,
         ])->filter(fn ($v) => $v !== null && $v !== '')->count();

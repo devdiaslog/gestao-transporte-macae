@@ -89,7 +89,9 @@ class DemandaController extends Controller
 
         $search = $request->input('q');
         // Padrão da tela: atendimentos em andamento.
-        $status = $request->input('status', StatusDemanda::EmAndamento->value);
+        // Sem filtro padrão: a tela abre com tudo. Os filtros escolhidos pelo
+        // usuário ficam preservados na sessão.
+        $status = $request->input('status');
         $tipo = $request->input('tipo');
         $fonte = $request->input('fonte');
         $prefixo = $request->input('prefixo');
