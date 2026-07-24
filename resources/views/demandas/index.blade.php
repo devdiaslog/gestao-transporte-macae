@@ -215,22 +215,21 @@
                             </select>
                         </div>
 
-                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div>
-                                <label class="{{ $labelCls }}">Vencimento (prazo)</label>
-                                <div class="flex items-center gap-2">
-                                    <input type="datetime-local" name="prazo_de" value="{{ $prazoDE }}" class="{{ $dateCls }}">
-                                    <span class="shrink-0 text-xs text-zinc-400 dark:text-zinc-600">até</span>
-                                    <input type="datetime-local" name="prazo_ate" value="{{ $prazoAte }}" class="{{ $dateCls }}">
-                                </div>
+                        <div>
+                            <label class="{{ $labelCls }}">Vencimento (prazo)</label>
+                            <div class="flex items-center gap-2">
+                                <input type="datetime-local" name="prazo_de" value="{{ $prazoDE }}" class="{{ $dateCls }}">
+                                <span class="shrink-0 text-xs text-zinc-400 dark:text-zinc-600">até</span>
+                                <input type="datetime-local" name="prazo_ate" value="{{ $prazoAte }}" class="{{ $dateCls }}">
                             </div>
-                            <div>
-                                <label class="{{ $labelCls }}">Cadastro no sistema</label>
-                                <div class="flex items-center gap-2">
-                                    <input type="date" name="data_de" value="{{ $dataDE }}" class="{{ $dateCls }}">
-                                    <span class="shrink-0 text-xs text-zinc-400 dark:text-zinc-600">até</span>
-                                    <input type="date" name="data_ate" value="{{ $dataAte }}" class="{{ $dateCls }}">
-                                </div>
+                        </div>
+
+                        <div>
+                            <label class="{{ $labelCls }}">Cadastro no sistema</label>
+                            <div class="flex items-center gap-2">
+                                <input type="date" name="data_de" value="{{ $dataDE }}" class="{{ $dateCls }}">
+                                <span class="shrink-0 text-xs text-zinc-400 dark:text-zinc-600">até</span>
+                                <input type="date" name="data_ate" value="{{ $dataAte }}" class="{{ $dateCls }}">
                             </div>
                         </div>
                     </div>
