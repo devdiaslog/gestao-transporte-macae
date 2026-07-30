@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Equipamento extends Model
 {
@@ -32,6 +33,19 @@ class Equipamento extends Model
         'observacao_operacional',
         'origem',
         'destino',
+        'grupo_demanda',
+    ];
+
+    /**
+     * Rótulos dos grupos efetivos, na ordem de exibição.
+     *
+     * @var array<string, string>
+     */
+    public const GRUPOS = [
+        'load' => 'Load',
+        'backload' => 'Backload',
+        'transferencia' => 'Transferência',
+        'sem_grupo' => 'Sem grupo',
     ];
 
     protected function casts(): array
@@ -39,6 +53,36 @@ class Equipamento extends Model
         return [
             'status' => 'boolean',
         ];
+    }
+
+    /**
+     * Grupo efetivo do veículo: o tipo da última demanda em andamento
+     * (grupo_demanda) ou, na falta, o grupo derivado da subdivisão.
+     * Retorna a chave canônica: load | backload | transferencia | sem_grupo.
+     */
+    public function grupoEfetivo(): string
+    {
+        if ($this->grupo_demanda !== null && $this->grupo_demanda !== '') {
+            return $this->grupo_demanda;
+        }
+
+        return self::grupoDaSubdivisao($this->subDivisao?->nome);
+    }
+
+    /**
+     * Mapeia o nome da subdivisão para um grupo, por prioridade:
+     * transferência → load → backload → sem grupo.
+     */
+    public static function grupoDaSubdivisao(?string $nome): string
+    {
+        $n = mb_strtolower(Str::ascii((string) $nome));
+
+        return match (true) {
+            str_contains($n, 'transferencia') => 'transferencia',
+            str_contains($n, 'load') => 'load',
+            str_contains($n, 'backload') => 'backload',
+            default => 'sem_grupo',
+        };
     }
 
     public function tipo(): BelongsTo

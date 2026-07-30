@@ -12,6 +12,7 @@ use App\Http\Controllers\DemandaItemController;
 use App\Http\Controllers\DivisaoController;
 use App\Http\Controllers\EquipamentoController;
 use App\Http\Controllers\JustificativaController;
+use App\Http\Controllers\MedicaoController;
 use App\Http\Controllers\MetricasController;
 use App\Http\Controllers\ModeloEquipamentoController;
 use App\Http\Controllers\MotoristaController;
@@ -172,6 +173,7 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
         Route::get('equipamentos-export', [EquipamentoController::class, 'export'])->name('equipamentos.export');
         Route::patch('equipamentos/{equipamento}/operacional', [EquipamentoController::class, 'updateOperacional'])->name('equipamentos.operacional');
         Route::resource('motoristas', MotoristaController::class)->except(['show']);
+        Route::resource('medicoes', MedicaoController::class)->except(['show'])->parameters(['medicoes' => 'medicao']);
     });
 
     // Tabelas de apoio de ocorrências — Administrador e Supervisor

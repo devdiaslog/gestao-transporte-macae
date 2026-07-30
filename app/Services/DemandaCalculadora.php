@@ -9,6 +9,7 @@ use App\Enums\TipoDemanda;
 use App\Models\Alerta;
 use App\Models\Demanda;
 use App\Models\DemandaItem;
+use App\Models\Equipamento;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -82,7 +83,35 @@ class DemandaCalculadora
             $this->alertarFinalizacao($demanda, $origem);
         }
 
+        // Grupo efetivo do veículo = tipo da demanda em andamento mais recente.
+        if ($demanda->equipamento_id !== null) {
+            $this->sincronizarGrupoVeiculo($demanda->equipamento_id);
+        }
+
         return $demanda;
+    }
+
+    /**
+     * Persiste no veículo o grupo (tipo) da sua demanda em andamento de início
+     * mais recente. Sem demanda em andamento, limpa (cai na subdivisão).
+     */
+    private function sincronizarGrupoVeiculo(int $equipamentoId): void
+    {
+        $tipo = Demanda::query()
+            ->where('equipamento_id', $equipamentoId)
+            ->where('status_demanda', StatusDemanda::EmAndamento)
+            ->whereNotNull('data_hora_inicio_demanda')
+            ->whereNotNull('tipo_demanda')
+            ->orderByDesc('data_hora_inicio_demanda')
+            ->value('tipo_demanda');
+
+        $novo = $tipo instanceof TipoDemanda ? $tipo->value : $tipo;
+
+        $equipamento = Equipamento::find($equipamentoId);
+
+        if ($equipamento !== null && $equipamento->grupo_demanda !== $novo) {
+            $equipamento->update(['grupo_demanda' => $novo]);
+        }
     }
 
     /**

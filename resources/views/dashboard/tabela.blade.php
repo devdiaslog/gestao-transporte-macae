@@ -39,6 +39,13 @@
     {{-- Sub-menu superior --}}
     <nav class="shrink-0 border-b border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
         <div class="flex items-center gap-1 px-4 sm:px-6 lg:px-8">
+            <button id="sidebar-toggle" type="button" title="Abrir/fechar menu"
+                    class="-ml-1 mr-1 rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/70">
+                <span class="sr-only">Abrir menu</span>
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
+                </svg>
+            </button>
             <p class="mr-3 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600">Dashboard</p>
             <a href="{{ route('dashboard.status') }}"
                class="flex items-center gap-2 px-3 py-3 text-sm font-medium transition-colors {{ request()->routeIs('dashboard.status') ? $navActive : $navInactive }}">
@@ -69,7 +76,20 @@
             <span class="text-sm font-bold text-zinc-800 dark:text-zinc-200">{{ $veiculos->count() }} veículos</span>
             <span class="text-xs text-zinc-400 dark:text-zinc-600">Não inclui status: Em Operação Interna · Frota Reserva · Manutenção</span>
         </div>
-        <span class="text-xs text-zinc-400 dark:text-zinc-600">Atualizado: {{ $agora->format('H:i:s') }}</span>
+        <div class="flex items-center gap-3">
+            <form method="GET" action="{{ route('dashboard.tabela') }}">
+                <select name="grupo" onchange="this.form.submit()"
+                        class="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-zinc-700 shadow-xs outline-none
+                               focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                               dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+                    <option value="">Todos os grupos</option>
+                    @foreach($grupos as $chave => $label)
+                        <option value="{{ $chave }}" @selected($grupo === $chave)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </form>
+            <span class="text-xs text-zinc-400 dark:text-zinc-600">Atualizado: {{ $agora->format('H:i:s') }}</span>
+        </div>
     </div>
 
     {{-- Cards com rolagem vertical --}}

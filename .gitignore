@@ -21,3 +21,9 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Dump de produção e CSVs de dados reais — nunca commitar
+vixpla20_transporte.sql
+*.sql
+/storage/dados/
+vixpla20_transporte.csv

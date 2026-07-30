@@ -12,6 +12,7 @@ use App\Models\Demanda;
 use App\Models\DemandaCapturaElog;
 use App\Models\DemandaItem;
 use App\Models\Equipamento;
+use App\Models\Medicao;
 use App\Models\StatusEvento;
 use App\Models\TipoEquipamento;
 use App\Services\BigcoreService;
@@ -176,16 +177,18 @@ class DashboardController extends Controller
         return $criados;
     }
 
-    public function tabela(): View
+    public function tabela(Request $request): View
     {
         $agora = now();
+        $grupo = $request->input('grupo');
+        $grupos = Equipamento::GRUPOS;
         $tipoMotorizado = TipoEquipamento::where('nome', 'Motorizado')->first();
 
         $equipamentos = Equipamento::query()
             ->where('status', true)
             ->when($tipoMotorizado, fn ($q) => $q->where('tipo_id', $tipoMotorizado->id))
             ->whereNotNull('prefixo')
-            ->with('posicao')
+            ->with(['posicao', 'subDivisao'])
             ->orderBy('prefixo')
             ->get();
 
@@ -262,6 +265,7 @@ class DashboardController extends Controller
                     'prefixo' => $e->prefixo,
                     'placa' => $e->placa ?? '—',
                     'status' => $status,
+                    'grupo' => $e->grupoEfetivo(),
                     'documento' => $documento ?? '',
                     'cerca_nome' => $cercaNome,
                     'cerca_minutos' => $cercaMinutos,
@@ -271,6 +275,7 @@ class DashboardController extends Controller
                     'status_minutos' => $statusMinutos,
                 ];
             })
+            ->when($grupo !== null && $grupo !== '', fn ($c) => $c->filter(fn ($v) => $v['grupo'] === $grupo))
             ->filter(fn ($v) => ! empty($v['status']) && ! in_array($v['status'], ['Em Operação Interna', 'Frota Reserva', 'Manutenção']))
             ->sort(function ($a, $b) {
                 $order = fn ($v) => $v['tracker_estado'] === 0 ? 0 : ($v['tracker_estado'] === 1 ? 1 : 2);
@@ -287,19 +292,57 @@ class DashboardController extends Controller
             })
             ->values();
 
-        return view('dashboard.tabela', compact('veiculos', 'agora'));
+        return view('dashboard.tabela', compact('veiculos', 'agora', 'grupo', 'grupos'));
     }
 
-    public function indicadores(): View
+    /**
+     * Segmenta os dados do snapshot por grupo efetivo do veículo: usa a
+     * contagem por_grupo (exata) e filtra as listas de veículos guardadas.
+     * Grupo vazio devolve os dados inalterados.
+     *
+     * @param  array<int, array<string, mixed>>  $dados
+     * @return array<int, array<string, mixed>>
+     */
+    private function filtrarDadosPorGrupo(array $dados, ?string $grupo): array
     {
+        if ($grupo === null || $grupo === '') {
+            return $dados;
+        }
+
+        return collect($dados)
+            ->map(function ($g) use ($grupo) {
+                $veiculos = collect($g['veiculos'] ?? [])
+                    ->filter(fn ($v) => ($v['grupo'] ?? 'sem_grupo') === $grupo)
+                    ->values();
+
+                $g['quantidade'] = isset($g['por_grupo'][$grupo]) ? (int) $g['por_grupo'][$grupo] : $veiculos->count();
+                $g['veiculos'] = $veiculos->all();
+                $g['top5'] = collect($g['top5'] ?? [])
+                    ->filter(fn ($t) => $veiculos->contains('placa', $t['placa'] ?? null))
+                    ->values()->all();
+                $g['top1'] = $g['top5'][0] ?? null;
+                $g['media_minutos'] = $veiculos->isNotEmpty() ? (int) round($veiculos->avg('minutos')) : 0;
+                $g['media_horas'] = round($g['media_minutos'] / 60, 1);
+
+                return $g;
+            })
+            ->filter(fn ($g) => ($g['quantidade'] ?? 0) > 0)
+            ->values()
+            ->all();
+    }
+
+    public function indicadores(Request $request): View
+    {
+        $grupo = $request->input('grupo');
+        $grupos = Equipamento::GRUPOS;
         $snapshot = DashboardSnapshot::latest('capturado_em')->first();
 
         if (! $snapshot) {
-            return view('dashboard.indicadores', ['snapshot' => null]);
+            return view('dashboard.indicadores', ['snapshot' => null, 'grupo' => $grupo, 'grupos' => $grupos]);
         }
 
         $statusExcluidos = ['Manutenção', 'Frota Reserva', 'Reserva'];
-        $dados = collect($snapshot->dados);
+        $dados = collect($this->filtrarDadosPorGrupo($snapshot->dados, $grupo));
 
         // ── Manutenção ───────────────────────────────────────────────────────────
         $totalFrota = $dados->sum('quantidade');
@@ -352,19 +395,27 @@ class DashboardController extends Controller
         return view('dashboard.indicadores', compact(
             'snapshot', 'totalFrota', 'emManutencao', 'pctManutencao', 'veiculosManutencao',
             'semSinalVeiculos', 'parados', 'mediaParadosMin', 'mediaParadosHHMM',
-            'faixas', 'statusExcluidos'
+            'faixas', 'statusExcluidos', 'grupo', 'grupos'
         ));
     }
 
-    public function graficos(): View
+    public function graficos(Request $request): View
     {
+        $grupo = $request->input('grupo');
+        $grupos = Equipamento::GRUPOS;
         $snapshot = DashboardSnapshot::latest('capturado_em')->first();
 
-        return view('dashboard.graficos', compact('snapshot'));
+        if ($snapshot && $grupo) {
+            $snapshot->dados = $this->filtrarDadosPorGrupo($snapshot->dados, $grupo);
+        }
+
+        return view('dashboard.graficos', compact('snapshot', 'grupo', 'grupos'));
     }
 
-    public function status(): View
+    public function status(Request $request): View
     {
+        $grupo = $request->input('grupo');
+        $grupos = Equipamento::GRUPOS;
         $snapshot = DashboardSnapshot::latest('capturado_em')->first();
 
         $anterior = $snapshot
@@ -374,14 +425,42 @@ class DashboardController extends Controller
                 ->first()
             : null;
 
-        return view('dashboard.status', compact('snapshot', 'anterior'));
+        if ($snapshot && $grupo) {
+            $snapshot->dados = $this->filtrarDadosPorGrupo($snapshot->dados, $grupo);
+            if ($anterior) {
+                $anterior->dados = $this->filtrarDadosPorGrupo($anterior->dados, $grupo);
+            }
+        }
+
+        return view('dashboard.status', compact('snapshot', 'anterior', 'grupo', 'grupos'));
     }
 
-    public function demandas(): View
+    public function demandas(Request $request): View
     {
         $agora = now();
 
-        $demandas = Demanda::query()->with(['equipamento:id,prefixo', 'itens'])->get();
+        // ── Filtro por medição (período) ─────────────────────────────────────────
+        $medicoes = Medicao::orderByDesc('data_inicio')->get();
+        $medicaoId = $request->input('medicao', $medicoes->first()?->id);
+        $medicao = $medicoes->firstWhere('id', (int) $medicaoId);
+
+        // ── Filtro por grupo efetivo do veículo ──────────────────────────────────
+        $grupo = $request->input('grupo');
+        $grupos = Equipamento::GRUPOS;
+
+        $demandas = Demanda::query()
+            ->with(['equipamento.subDivisao', 'itens'])
+            ->when($medicao, fn ($q) => $q->whereRaw(
+                'COALESCE(data_hora_criacao_sap, created_at) BETWEEN ? AND ?',
+                [$medicao->data_inicio->startOfDay(), $medicao->data_fim->endOfDay()]
+            ))
+            ->get();
+
+        if ($grupo !== null && $grupo !== '') {
+            $demandas = $demandas
+                ->filter(fn (Demanda $d) => ($d->equipamento?->grupoEfetivo() ?? 'sem_grupo') === $grupo)
+                ->values();
+        }
 
         $total = $demandas->count();
 
@@ -632,7 +711,8 @@ class DashboardController extends Controller
             'vencidas', 'venceEm24h', 'naoClassificadas', 'tempoMedioAtendMin',
             'porStatus', 'porTipo', 'porPrazo', 'pctNoPrazo', 'evolucao', 'topRotas', 'topVeiculos', 'statusMeta', 'agora',
             'emAtendimentoPorTipo', 'venceHoje', 'finalizadasPorTipo', 'veiculoTopDemandas', 'veiculoTopMediaItens',
-            'atencao', 'prioridade', 'criadas7d', 'finalizadas7d', 'tendenciaBoa', 'tempoMedioPorTipo'
+            'atencao', 'prioridade', 'criadas7d', 'finalizadas7d', 'tendenciaBoa', 'tempoMedioPorTipo',
+            'medicoes', 'medicaoId', 'medicao', 'grupo', 'grupos'
         ));
     }
 
@@ -669,12 +749,17 @@ class DashboardController extends Controller
             }
         }
 
-        $ignorar = ['Em Trânsito', 'Em Operação Interna'];
+        // Grupo efetivo (Load/Backload/Transferência) por placa, para segmentar
+        // cada status por grupo no snapshot (o gerente filtra por grupo depois).
+        $grupoPorPlaca = Equipamento::query()
+            ->whereNotNull('placa')
+            ->with('subDivisao')
+            ->get()
+            ->mapWithKeys(fn (Equipamento $e) => [strtoupper($e->placa) => $e->grupoEfetivo()]);
 
         $agrupado = collect($veiculos)
             ->filter(fn ($v) => ($v['divisionId'] ?? null) === 114
-                && ! empty($v['observationOne'])
-                && ! in_array($v['observationOne'], $ignorar))
+                && ! empty($v['observationOne']))
             ->groupBy(fn ($v) => $v['observationOne'] === 'Início de Carga' ? 'Ag-Carregamento' : $v['observationOne'])
             ->map(function ($grupo, $status) use ($agora, $posicoes, $anteriorPorCm) {
                 $itens = $grupo->map(function ($v) use ($agora, $posicoes, $anteriorPorCm, $status) {
@@ -724,6 +809,7 @@ class DashboardController extends Controller
                     return [
                         'cm' => $cm,
                         'placa' => $placa,
+                        'grupo' => $grupoPorPlaca[strtoupper($placa)] ?? 'sem_grupo',
                         'minutos' => $minutos,
                         'status_desde' => $statusDesde,
                         'document_code' => $documentCode,
@@ -742,11 +828,19 @@ class DashboardController extends Controller
                     'pct' => $totalMinutos > 0 ? round(($v['minutos'] / $totalMinutos) * 100, 1) : 0,
                 ])->values()->all();
 
+                // Contagem por grupo (sobre todos os veículos do status), para o
+                // filtro por grupo nas telas de snapshot.
+                $porGrupo = $itens->groupBy('grupo')->map->count();
+                $porGrupo = collect(array_keys(Equipamento::GRUPOS))
+                    ->mapWithKeys(fn ($g) => [$g => (int) ($porGrupo[$g] ?? 0)])
+                    ->all();
+
                 return [
                     'status' => $status,
                     'quantidade' => $itens->count(),
                     'media_minutos' => $mediaMinutos,
                     'media_horas' => round($mediaMinutos / 60, 1),
+                    'por_grupo' => $porGrupo,
                     'top1' => $top5[0] ?? null,
                     'top5' => $top5,
                     'veiculos' => $itens->take(15)->toArray(),

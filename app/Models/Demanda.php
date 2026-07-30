@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 class Demanda extends Model
@@ -174,5 +175,15 @@ class Demanda extends Model
     public function criador(): BelongsTo
     {
         return $this->belongsTo(User::class, 'criado_por');
+    }
+
+    /**
+     * Data de referência para medições/relatórios: a data de criação no SAP
+     * quando existe (protege contra falhas de importação), senão o cadastro
+     * no sistema.
+     */
+    public function dataReferencia(): Carbon
+    {
+        return $this->data_hora_criacao_sap ?? $this->created_at;
     }
 }

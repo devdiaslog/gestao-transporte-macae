@@ -20,6 +20,13 @@
     {{-- Sub-menu superior --}}
     <nav class="shrink-0 border-b border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
         <div class="flex items-center gap-1 px-4 sm:px-6 lg:px-8">
+            <button id="sidebar-toggle" type="button" title="Abrir/fechar menu"
+                    class="-ml-1 mr-1 rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/70">
+                <span class="sr-only">Abrir menu</span>
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
+                </svg>
+            </button>
             <p class="mr-3 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600">Dashboard</p>
             <a href="{{ route('dashboard.status') }}"
                class="flex items-center gap-2 px-3 py-3 text-sm font-medium transition-colors {{ request()->routeIs('dashboard.status') ? $navActive : $navInactive }}">
@@ -53,9 +60,33 @@
                 <h1 class="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Demandas — Poli Macaé</h1>
                 <p class="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">Indicadores e distribuição das demandas de transporte</p>
             </div>
-            <div class="text-right">
-                <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">Atualizado</p>
-                <p class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{{ $agora->format('d/m/Y H:i:s') }}</p>
+            <div class="flex items-center gap-4">
+                <form method="GET" action="{{ route('dashboard.demandas') }}" class="flex flex-wrap items-center gap-2">
+                    <select name="medicao" onchange="this.form.submit()"
+                            class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-zinc-700 shadow-xs outline-none
+                                   focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                                   dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+                        <option value="">Todo o período</option>
+                        @foreach($medicoes as $m)
+                            <option value="{{ $m->id }}" @selected((int) $medicaoId === $m->id)>
+                                {{ $m->nome_medicao }} ({{ $m->data_inicio->format('d/m') }}–{{ $m->data_fim->format('d/m') }})
+                            </option>
+                        @endforeach
+                    </select>
+                    <select name="grupo" onchange="this.form.submit()"
+                            class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-zinc-700 shadow-xs outline-none
+                                   focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
+                                   dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
+                        <option value="">Todos os grupos</option>
+                        @foreach($grupos as $chave => $label)
+                            <option value="{{ $chave }}" @selected($grupo === $chave)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </form>
+                <div class="text-right">
+                    <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">Atualizado</p>
+                    <p class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{{ $agora->format('d/m/Y H:i:s') }}</p>
+                </div>
             </div>
         </div>
 
