@@ -303,16 +303,19 @@ class DashboardController extends Controller
      * @param  array<int, array<string, mixed>>  $dados
      * @return array<int, array<string, mixed>>
      */
-    private function filtrarDadosPorGrupo(array $dados, ?string $grupo): array
+    private function filtrarDadosPorGrupo(array $dados, ?string $grupo, array $grupoPorPlaca = []): array
     {
         if ($grupo === null || $grupo === '') {
             return $dados;
         }
 
+        $grupoDe = fn (array $v): string => $v['grupo']
+            ?? ($grupoPorPlaca[strtoupper((string) ($v['placa'] ?? ''))] ?? 'sem_grupo');
+
         return collect($dados)
-            ->map(function ($g) use ($grupo) {
+            ->map(function ($g) use ($grupo, $grupoDe) {
                 $veiculos = collect($g['veiculos'] ?? [])
-                    ->filter(fn ($v) => ($v['grupo'] ?? 'sem_grupo') === $grupo)
+                    ->filter(fn ($v) => $grupoDe($v) === $grupo)
                     ->values();
 
                 $g['quantidade'] = isset($g['por_grupo'][$grupo]) ? (int) $g['por_grupo'][$grupo] : $veiculos->count();
@@ -331,6 +334,22 @@ class DashboardController extends Controller
             ->all();
     }
 
+    /**
+     * Mapa placa → grupo efetivo (ao vivo), usado para segmentar snapshots que
+     * não têm o grupo gravado (capturas anteriores à mudança).
+     *
+     * @return array<string, string>
+     */
+    private function grupoPorPlaca(): array
+    {
+        return Equipamento::query()
+            ->whereNotNull('placa')
+            ->with('subDivisao')
+            ->get()
+            ->mapWithKeys(fn (Equipamento $e) => [strtoupper($e->placa) => $e->grupoEfetivo()])
+            ->all();
+    }
+
     public function indicadores(Request $request): View
     {
         $grupo = $request->input('grupo');
@@ -342,7 +361,7 @@ class DashboardController extends Controller
         }
 
         $statusExcluidos = ['Manutenção', 'Frota Reserva', 'Reserva'];
-        $dados = collect($this->filtrarDadosPorGrupo($snapshot->dados, $grupo));
+        $dados = collect($this->filtrarDadosPorGrupo($snapshot->dados, $grupo, $this->grupoPorPlaca()));
 
         // ── Manutenção ───────────────────────────────────────────────────────────
         $totalFrota = $dados->sum('quantidade');
@@ -406,7 +425,7 @@ class DashboardController extends Controller
         $snapshot = DashboardSnapshot::latest('capturado_em')->first();
 
         if ($snapshot && $grupo) {
-            $snapshot->dados = $this->filtrarDadosPorGrupo($snapshot->dados, $grupo);
+            $snapshot->dados = $this->filtrarDadosPorGrupo($snapshot->dados, $grupo, $this->grupoPorPlaca());
         }
 
         return view('dashboard.graficos', compact('snapshot', 'grupo', 'grupos'));
@@ -426,9 +445,10 @@ class DashboardController extends Controller
             : null;
 
         if ($snapshot && $grupo) {
-            $snapshot->dados = $this->filtrarDadosPorGrupo($snapshot->dados, $grupo);
+            $mapa = $this->grupoPorPlaca();
+            $snapshot->dados = $this->filtrarDadosPorGrupo($snapshot->dados, $grupo, $mapa);
             if ($anterior) {
-                $anterior->dados = $this->filtrarDadosPorGrupo($anterior->dados, $grupo);
+                $anterior->dados = $this->filtrarDadosPorGrupo($anterior->dados, $grupo, $mapa);
             }
         }
 
