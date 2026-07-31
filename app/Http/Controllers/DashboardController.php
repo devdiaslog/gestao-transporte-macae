@@ -825,6 +825,8 @@ class DashboardController extends Controller
      */
     public function atualizarManual(BigcoreService $bigcore, VfleetsService $vfleets): RedirectResponse
     {
+        abort_unless(auth()->user()?->role->value === 'administrador', 403, 'Apenas administradores podem atualizar manualmente.');
+
         $r = $this->atualizarDados($bigcore, $vfleets);
 
         if (! ($r['ok'] ?? false)) {

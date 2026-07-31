@@ -1,3 +1,4 @@
+@if(auth()->user()?->role?->value === 'administrador')
 <form method="POST" action="{{ route('dashboard.atualizar') }}" class="flex items-center">
     @csrf
     <button type="submit" title="Sincronizar rastreador e capturar o status agora"
@@ -10,3 +11,4 @@
         Atualizar
     </button>
 </form>
+@endif
