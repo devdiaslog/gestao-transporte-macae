@@ -389,12 +389,20 @@ class DashboardController extends Controller
                 // Conta exata quando a captura gravou por_grupo; senão, do filtrado.
                 $exato = array_key_exists('load_backload', $g['por_grupo'] ?? []);
                 $g['quantidade'] = $exato ? (int) ($g['por_grupo'][$grupo] ?? 0) : $veiculos->count();
-                $g['veiculos'] = $veiculos->all();
-                $g['top5'] = collect($g['top5'] ?? [])
-                    ->filter(fn ($t) => $veiculos->contains('placa', $t['placa'] ?? null))
-                    ->values()->all();
+
+                // Top 5 recomputado a partir dos veículos do grupo (não do top5
+                // do status inteiro), ordenados pelo tempo no status.
+                $ordenados = $veiculos->sortByDesc('minutos')->values();
+                $totalMin = $ordenados->sum('minutos');
+                $g['veiculos'] = $ordenados->all();
+                $g['top5'] = $ordenados->take(5)->map(fn ($v) => [
+                    'cm' => $v['cm'] ?? '',
+                    'placa' => $v['placa'] ?? '',
+                    'minutos' => $v['minutos'] ?? 0,
+                    'pct' => $totalMin > 0 ? round(($v['minutos'] ?? 0) / $totalMin * 100, 1) : 0,
+                ])->values()->all();
                 $g['top1'] = $g['top5'][0] ?? null;
-                $g['media_minutos'] = $veiculos->isNotEmpty() ? (int) round($veiculos->avg('minutos')) : 0;
+                $g['media_minutos'] = $ordenados->isNotEmpty() ? (int) round($ordenados->avg('minutos')) : 0;
                 $g['media_horas'] = round($g['media_minutos'] / 60, 1);
 
                 return $g;
