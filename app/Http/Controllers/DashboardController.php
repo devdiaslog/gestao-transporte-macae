@@ -380,11 +380,13 @@ class DashboardController extends Controller
 
         return collect($dados)
             ->map(function ($g) use ($grupo, $bucketDe) {
+                // Prioriza o grupo gravado na captura (consistente com por_grupo);
+                // recomputa ao vivo só em snapshots antigos sem esse dado.
                 $veiculos = collect($g['veiculos'] ?? [])
-                    ->filter(fn ($v) => $bucketDe($v) === $grupo)
+                    ->filter(fn ($v) => ($v['grupo'] ?? $bucketDe($v)) === $grupo)
                     ->values();
 
-                // Conta exata só quando a captura já gravou por_grupo por demanda.
+                // Conta exata quando a captura gravou por_grupo; senão, do filtrado.
                 $exato = array_key_exists('load_backload', $g['por_grupo'] ?? []);
                 $g['quantidade'] = $exato ? (int) ($g['por_grupo'][$grupo] ?? 0) : $veiculos->count();
                 $g['veiculos'] = $veiculos->all();
