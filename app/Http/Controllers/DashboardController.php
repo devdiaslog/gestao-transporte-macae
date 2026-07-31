@@ -216,8 +216,13 @@ class DashboardController extends Controller
             ->get()
             ->keyBy(fn ($r) => $r->equipamento_id.'_'.$r->documento);
 
+        // Grupo do veículo ao vivo: a demanda que está atendendo no E-log
+        // (documento_demanda → tipo); se não está em demanda, o grupo dele
+        // (subdivisão). Mesmo sinal usado nas telas de snapshot.
+        $porDoc = $this->bucketDemandaPorDoc();
+
         $veiculos = $equipamentos
-            ->map(function (Equipamento $e) use ($agora, $statusAbertos, $cercasAbertas, $minutosAtendimento) {
+            ->map(function (Equipamento $e) use ($agora, $statusAbertos, $cercasAbertas, $minutosAtendimento, $porDoc) {
                 $posicao = $e->posicao;
                 $statusEvento = $statusAbertos->get($e->id);
                 $cercaEvento = $cercasAbertas->get($e->id);
@@ -265,7 +270,8 @@ class DashboardController extends Controller
                     'prefixo' => $e->prefixo,
                     'placa' => $e->placa ?? '—',
                     'status' => $status,
-                    'grupo' => $this->bucketDeTipo($e->grupoEfetivo()),
+                    'grupo' => $porDoc[(string) $e->documento_demanda]
+                        ?? $this->bucketDeTipo(Equipamento::grupoDaSubdivisao($e->subDivisao?->nome)),
                     'documento' => $documento ?? '',
                     'cerca_nome' => $cercaNome,
                     'cerca_minutos' => $cercaMinutos,
