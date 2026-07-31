@@ -181,7 +181,7 @@ class DashboardController extends Controller
     {
         $agora = now();
         $grupo = $request->input('grupo');
-        $grupos = Equipamento::GRUPOS;
+        $grupos = self::GRUPOS_DEMANDA;
         $tipoMotorizado = TipoEquipamento::where('nome', 'Motorizado')->first();
 
         $equipamentos = Equipamento::query()
@@ -265,7 +265,7 @@ class DashboardController extends Controller
                     'prefixo' => $e->prefixo,
                     'placa' => $e->placa ?? '—',
                     'status' => $status,
-                    'grupo' => $e->grupoEfetivo(),
+                    'grupo' => $this->bucketDeTipo($e->grupoEfetivo()),
                     'documento' => $documento ?? '',
                     'cerca_nome' => $cercaNome,
                     'cerca_minutos' => $cercaMinutos,
@@ -296,9 +296,8 @@ class DashboardController extends Controller
     }
 
     /**
-     * Grupos das telas de snapshot — definidos pelo TIPO da demanda atual do
-     * veículo (não pela subdivisão): Load e Backload juntos, Transferência à
-     * parte, e Sem grupo para o veículo sem demanda.
+     * Grupos usados nas telas do dashboard: Load e Backload juntos,
+     * Transferência à parte, e Sem grupo.
      */
     public const GRUPOS_DEMANDA = [
         'load_backload' => 'Load/Backload',
@@ -307,10 +306,11 @@ class DashboardController extends Controller
     ];
 
     /**
-     * Converte o tipo da demanda (load/backload/transferencia) no bucket usado
-     * nas telas de snapshot.
+     * Converte um tipo/grupo (load/backload/transferencia) no bucket do
+     * dashboard. Serve tanto para o tipo da demanda quanto para o grupo
+     * derivado da subdivisão.
      */
-    private function bucketDemanda(?string $tipo): string
+    private function bucketDeTipo(?string $tipo): string
     {
         return match ($tipo) {
             'load', 'backload' => 'load_backload',
@@ -320,37 +320,63 @@ class DashboardController extends Controller
     }
 
     /**
-     * Mapa número da demanda → bucket (Load/Backload | Transferência),
-     * para classificar o veículo pela demanda que ele está atendendo.
+     * Mapa número da demanda → bucket, apenas para demandas classificadas
+     * (o veículo é olhado pela demanda que está atendendo).
      *
      * @return array<string, string>
      */
-    private function bucketPorDocumento(): array
+    private function bucketDemandaPorDoc(): array
     {
         return Demanda::query()
             ->whereNotNull('tipo_demanda')
             ->get(['numero_demanda', 'tipo_demanda'])
-            ->mapWithKeys(fn (Demanda $d) => [(string) $d->numero_demanda => $this->bucketDemanda($d->tipo_demanda?->value)])
+            ->mapWithKeys(fn (Demanda $d) => [(string) $d->numero_demanda => $this->bucketDeTipo($d->tipo_demanda?->value)])
             ->all();
     }
 
     /**
-     * Segmenta os dados do snapshot pelo grupo da DEMANDA atual de cada veículo
-     * (documento → tipo). Usa a contagem por_grupo quando a captura já a gravou
-     * por demanda; senão recomputa dos veículos guardados. Grupo vazio devolve
-     * os dados inalterados.
+     * Mapa placa → bucket da subdivisão do veículo (o grupo que ele "é",
+     * usado quando o veículo não está atendendo demanda).
+     *
+     * @return array<string, string>
+     */
+    private function bucketSubdivisaoPorPlaca(): array
+    {
+        return Equipamento::query()
+            ->whereNotNull('placa')
+            ->with('subDivisao')
+            ->get()
+            ->mapWithKeys(fn (Equipamento $e) => [strtoupper($e->placa) => $this->bucketDeTipo(Equipamento::grupoDaSubdivisao($e->subDivisao?->nome))])
+            ->all();
+    }
+
+    /**
+     * Resolve o bucket do veículo no snapshot: a demanda que está atendendo
+     * (documento); se não está em demanda, o grupo dele (subdivisão).
+     *
+     * @param  array<string, string>  $porDoc
+     * @param  array<string, string>  $porPlaca
+     */
+    private function resolvedorSnapshot(array $porDoc, array $porPlaca): \Closure
+    {
+        return fn (array $v): string => $porDoc[(string) ($v['document_code'] ?? '')]
+            ?? $porPlaca[strtoupper((string) ($v['placa'] ?? ''))]
+            ?? 'sem_grupo';
+    }
+
+    /**
+     * Segmenta os dados do snapshot pelo grupo de cada veículo, resolvido pelo
+     * $bucketDe (demanda atual, senão subdivisão). Usa a contagem por_grupo
+     * quando a captura já a gravou; senão recomputa dos veículos guardados.
      *
      * @param  array<int, array<string, mixed>>  $dados
-     * @param  array<string, string>  $bucketPorDoc
      * @return array<int, array<string, mixed>>
      */
-    private function filtrarDadosPorGrupo(array $dados, ?string $grupo, array $bucketPorDoc): array
+    private function filtrarDadosPorGrupo(array $dados, ?string $grupo, \Closure $bucketDe): array
     {
         if ($grupo === null || $grupo === '') {
             return $dados;
         }
-
-        $bucketDe = fn (array $v): string => $bucketPorDoc[(string) ($v['document_code'] ?? '')] ?? 'sem_grupo';
 
         return collect($dados)
             ->map(function ($g) use ($grupo, $bucketDe) {
@@ -387,7 +413,8 @@ class DashboardController extends Controller
         }
 
         $statusExcluidos = ['Manutenção', 'Frota Reserva', 'Reserva'];
-        $dados = collect($this->filtrarDadosPorGrupo($snapshot->dados, $grupo, $this->bucketPorDocumento()));
+        $resolver = $this->resolvedorSnapshot($this->bucketDemandaPorDoc(), $this->bucketSubdivisaoPorPlaca());
+        $dados = collect($this->filtrarDadosPorGrupo($snapshot->dados, $grupo, $resolver));
 
         // ── Manutenção ───────────────────────────────────────────────────────────
         $totalFrota = $dados->sum('quantidade');
@@ -451,7 +478,8 @@ class DashboardController extends Controller
         $snapshot = DashboardSnapshot::latest('capturado_em')->first();
 
         if ($snapshot && $grupo) {
-            $snapshot->dados = $this->filtrarDadosPorGrupo($snapshot->dados, $grupo, $this->bucketPorDocumento());
+            $resolver = $this->resolvedorSnapshot($this->bucketDemandaPorDoc(), $this->bucketSubdivisaoPorPlaca());
+            $snapshot->dados = $this->filtrarDadosPorGrupo($snapshot->dados, $grupo, $resolver);
         }
 
         return view('dashboard.graficos', compact('snapshot', 'grupo', 'grupos'));
@@ -471,10 +499,10 @@ class DashboardController extends Controller
             : null;
 
         if ($snapshot && $grupo) {
-            $mapa = $this->bucketPorDocumento();
-            $snapshot->dados = $this->filtrarDadosPorGrupo($snapshot->dados, $grupo, $mapa);
+            $resolver = $this->resolvedorSnapshot($this->bucketDemandaPorDoc(), $this->bucketSubdivisaoPorPlaca());
+            $snapshot->dados = $this->filtrarDadosPorGrupo($snapshot->dados, $grupo, $resolver);
             if ($anterior) {
-                $anterior->dados = $this->filtrarDadosPorGrupo($anterior->dados, $grupo, $mapa);
+                $anterior->dados = $this->filtrarDadosPorGrupo($anterior->dados, $grupo, $resolver);
             }
         }
 
@@ -490,12 +518,12 @@ class DashboardController extends Controller
         $medicaoId = $request->input('medicao', $medicoes->first()?->id);
         $medicao = $medicoes->firstWhere('id', (int) $medicaoId);
 
-        // ── Filtro por grupo efetivo do veículo ──────────────────────────────────
+        // ── Filtro por grupo da própria demanda (não do veículo) ─────────────────
         $grupo = $request->input('grupo');
-        $grupos = Equipamento::GRUPOS;
+        $grupos = self::GRUPOS_DEMANDA;
 
         $demandas = Demanda::query()
-            ->with(['equipamento.subDivisao', 'itens'])
+            ->with(['equipamento', 'itens'])
             ->when($medicao, fn ($q) => $q->whereRaw(
                 'COALESCE(data_hora_criacao_sap, created_at) BETWEEN ? AND ?',
                 [$medicao->data_inicio->startOfDay(), $medicao->data_fim->endOfDay()]
@@ -504,7 +532,7 @@ class DashboardController extends Controller
 
         if ($grupo !== null && $grupo !== '') {
             $demandas = $demandas
-                ->filter(fn (Demanda $d) => ($d->equipamento?->grupoEfetivo() ?? 'sem_grupo') === $grupo)
+                ->filter(fn (Demanda $d) => $this->bucketDeTipo($d->tipo_demanda?->value) === $grupo)
                 ->values();
         }
 
@@ -795,16 +823,16 @@ class DashboardController extends Controller
             }
         }
 
-        // Grupo pela demanda atual do veículo (documento → Load/Backload |
-        // Transferência), para segmentar cada status por grupo no snapshot.
-        $bucketPorDoc = $this->bucketPorDocumento();
+        // Grupo do veículo no snapshot: a demanda que está atendendo (documento);
+        // se não está em demanda, o grupo dele (subdivisão).
+        $resolverGrupo = $this->resolvedorSnapshot($this->bucketDemandaPorDoc(), $this->bucketSubdivisaoPorPlaca());
 
         $agrupado = collect($veiculos)
             ->filter(fn ($v) => ($v['divisionId'] ?? null) === 114
                 && ! empty($v['observationOne']))
             ->groupBy(fn ($v) => $v['observationOne'] === 'Início de Carga' ? 'Ag-Carregamento' : $v['observationOne'])
-            ->map(function ($grupo, $status) use ($agora, $posicoes, $anteriorPorCm, $bucketPorDoc) {
-                $itens = $grupo->map(function ($v) use ($agora, $posicoes, $anteriorPorCm, $status, $bucketPorDoc) {
+            ->map(function ($grupo, $status) use ($agora, $posicoes, $anteriorPorCm, $resolverGrupo) {
+                $itens = $grupo->map(function ($v) use ($agora, $posicoes, $anteriorPorCm, $status, $resolverGrupo) {
                     $cm = $v['fleetCode'] ?? '';
                     $placa = $v['licensePlate'] ?? '';
 
@@ -851,7 +879,7 @@ class DashboardController extends Controller
                     return [
                         'cm' => $cm,
                         'placa' => $placa,
-                        'grupo' => $bucketPorDoc[(string) $documentCode] ?? 'sem_grupo',
+                        'grupo' => $resolverGrupo(['document_code' => $documentCode, 'placa' => $placa]),
                         'minutos' => $minutos,
                         'status_desde' => $statusDesde,
                         'document_code' => $documentCode,
