@@ -38,7 +38,9 @@
                       {{ request()->routeIs('dashboard.demandas') ? 'border-zinc-900 text-zinc-900 dark:border-white dark:text-white' : 'border-transparent text-zinc-500 hover:border-zinc-300 hover:text-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200' }}">
                 Demandas
             </a>
-            <form method="GET" class="ml-auto flex items-center py-1.5 pr-1">
+            <div class="ml-auto flex items-center gap-2 py-1.5 pr-1">
+                @include('dashboard._atualizar')
+                <form method="GET" class="flex items-center">
                 <select name="grupo" onchange="this.form.submit()"
                         class="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-zinc-700 shadow-xs outline-none
                                focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200
@@ -48,7 +50,8 @@
                         <option value="{{ $chave }}" @selected($grupo === $chave)>{{ $label }}</option>
                     @endforeach
                 </select>
-            </form>
+                </form>
+            </div>
         </div>
     </nav>
 

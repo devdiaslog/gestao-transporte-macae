@@ -77,6 +77,7 @@
             <span class="text-xs text-zinc-400 dark:text-zinc-600">Não inclui status: Em Operação Interna · Frota Reserva · Manutenção</span>
         </div>
         <div class="flex items-center gap-3">
+            @include('dashboard._atualizar')
             <form method="GET" action="{{ route('dashboard.tabela') }}">
                 <select name="grupo" onchange="this.form.submit()"
                         class="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-zinc-700 shadow-xs outline-none

@@ -83,6 +83,7 @@
                         @endforeach
                     </select>
                 </form>
+                @include('dashboard._atualizar')
                 <div class="text-right">
                     <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">Atualizado</p>
                     <p class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{{ $agora->format('d/m/Y H:i:s') }}</p>

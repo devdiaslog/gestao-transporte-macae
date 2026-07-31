@@ -16,8 +16,10 @@ use App\Models\Medicao;
 use App\Models\StatusEvento;
 use App\Models\TipoEquipamento;
 use App\Services\BigcoreService;
+use App\Services\VfleetsService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -806,16 +808,55 @@ class DashboardController extends Controller
         ));
     }
 
-    public function capturarStatus(Request $request, BigcoreService $bigcore): JsonResponse
+    public function capturarStatus(Request $request, BigcoreService $bigcore, VfleetsService $vfleets): JsonResponse
     {
         if ($request->input('key') !== config('services.bigcore.sync_key') || ! config('services.bigcore.sync_key')) {
             abort(403);
         }
 
+        $resultado = $this->atualizarDados($bigcore, $vfleets);
+
+        return response()->json($resultado, ($resultado['ok'] ?? false) ? 200 : 500);
+    }
+
+    /**
+     * Atualização manual disparada pelo usuário no dashboard: sincroniza o
+     * rastreador e captura o snapshot do E-log.
+     */
+    public function atualizarManual(BigcoreService $bigcore, VfleetsService $vfleets): RedirectResponse
+    {
+        $r = $this->atualizarDados($bigcore, $vfleets);
+
+        if (! ($r['ok'] ?? false)) {
+            return redirect()->back()->with('error', 'Não foi possível atualizar: '.($r['erro'] ?? 'erro desconhecido').'.');
+        }
+
+        return redirect()->back()->with('success', sprintf(
+            'Dados atualizados: %d posição(ões) do rastreador · %d status.',
+            $r['posicoes_sincronizadas'] ?? 0,
+            $r['total_status'] ?? 0
+        ));
+    }
+
+    /**
+     * Sincroniza o rastreador (Vfleets) e captura o snapshot do E-log/Bigcore.
+     *
+     * @return array<string, mixed>
+     */
+    private function atualizarDados(BigcoreService $bigcore, VfleetsService $vfleets): array
+    {
+        // Rastreador (posições): não interrompe a captura se a API falhar/limitar.
+        $posicoesSync = 0;
+        try {
+            $posicoesSync = $vfleets->sincronizar();
+        } catch (\Throwable $e) {
+            // segue com as posições já existentes
+        }
+
         $veiculos = $bigcore->buscarTodos();
 
         if (empty($veiculos)) {
-            return response()->json(['ok' => false, 'erro' => 'Sem dados da API.'], 500);
+            return ['ok' => false, 'erro' => 'Sem dados da API.', 'posicoes_sincronizadas' => $posicoesSync];
         }
 
         $agora = now();
@@ -943,13 +984,14 @@ class DashboardController extends Controller
         $novasDemandas = $this->registrarDemandasNovas($veiculos);
         $elog = $this->rastrearElog($veiculos, $agora);
 
-        return response()->json([
+        return [
             'ok' => true,
             'capturado' => $agora->toDateTimeString(),
+            'posicoes_sincronizadas' => $posicoesSync,
             'total_status' => count($agrupado),
             'demandas_registradas' => $novasDemandas,
             'elog_iniciadas' => $elog['elog_iniciadas'],
             'elog_finalizadas' => $elog['elog_finalizadas'],
-        ]);
+        ];
     }
 }
