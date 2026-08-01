@@ -340,57 +340,60 @@ export function criarEditorCercas(opcoes) {
         });
     });
 
-    // Busca de endereço (Nominatim/OpenStreetMap)
-    const formBusca = document.getElementById('form-busca');
-    if (formBusca) {
-        formBusca.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const termo = document.getElementById('input-busca').value.trim();
-            const retorno = document.getElementById('busca-retorno');
+    // Busca de endereço (Nominatim/OpenStreetMap).
+    // Nota: não há <form> aqui — o editor é incluído dentro do formulário da
+    // cerca, e formulários aninhados fecham o form principal no parser HTML.
+    async function buscarEndereco() {
+        const termo = document.getElementById('input-busca')?.value.trim();
+        const retorno = document.getElementById('busca-retorno');
 
-            if (!termo) {
-                return;
+        if (!termo) {
+            return;
+        }
+
+        if (retorno) {
+            retorno.textContent = 'Buscando…';
+        }
+
+        try {
+            const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(termo);
+            const resp = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
+            const dados = await resp.json();
+
+            if (dados.length) {
+                map.setView([parseFloat(dados[0].lat), parseFloat(dados[0].lon)], 17);
+                if (retorno) retorno.textContent = dados[0].display_name;
+            } else if (retorno) {
+                retorno.textContent = 'Endereço não encontrado.';
             }
-
-            if (retorno) {
-                retorno.textContent = 'Buscando…';
-            }
-
-            try {
-                const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(termo);
-                const resp = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
-                const dados = await resp.json();
-
-                if (dados.length) {
-                    map.setView([parseFloat(dados[0].lat), parseFloat(dados[0].lon)], 17);
-                    if (retorno) retorno.textContent = dados[0].display_name;
-                } else if (retorno) {
-                    retorno.textContent = 'Endereço não encontrado.';
-                }
-            } catch {
-                if (retorno) retorno.textContent = 'Não foi possível buscar agora.';
-            }
-        });
+        } catch {
+            if (retorno) retorno.textContent = 'Não foi possível buscar agora.';
+        }
     }
+
+    acao('btn-buscar', buscarEndereco);
+
+    document.getElementById('input-busca')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // não deixa o Enter salvar a cerca
+            buscarEndereco();
+        }
+    });
 
     // Coordenadas coladas/digitadas: "lat, lng" por linha
-    const formCoords = document.getElementById('form-coordenadas');
-    if (formCoords) {
-        formCoords.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const texto = document.getElementById('input-coordenadas').value;
+    acao('btn-aplicar-coordenadas', () => {
+        const texto = document.getElementById('input-coordenadas')?.value || '';
 
-            const pontos = texto
-                .split(/\r?\n/)
-                .map((linha) => linha.split(/[,;\t]/).map((n) => parseFloat(n.trim())))
-                .filter((p) => p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]))
-                .map((p) => [p[0], p[1]]);
+        const pontos = texto
+            .split(/\r?\n/)
+            .map((linha) => linha.split(/[,;\t]/).map((n) => parseFloat(n.trim())))
+            .filter((p) => p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]))
+            .map((p) => [p[0], p[1]]);
 
-            if (pontos.length >= 3) {
-                desenharVertices(pontos);
-            }
-        });
-    }
+        if (pontos.length >= 3) {
+            desenharVertices(pontos);
+        }
+    });
 
     // Exportar GeoJSON
     acao('btn-exportar', () => {

@@ -12,7 +12,7 @@
     "src": "node_modules/leaflet/dist/images/marker-icon.png"
   },
   "resources/css/app.css": {
-    "file": "assets/app-BQrxzYJn.css",
+    "file": "assets/app-De038-YK.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -23,7 +23,7 @@
     "isEntry": true
   },
   "resources/js/cercas.js": {
-    "file": "assets/cercas-Cps_qQXd.js",
+    "file": "assets/cercas-eHpllPWm.js",
     "name": "cercas",
     "src": "resources/js/cercas.js",
     "isEntry": true,

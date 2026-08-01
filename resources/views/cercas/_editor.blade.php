@@ -33,7 +33,7 @@
 
     {{-- Barra superior: busca de endereço + ações --}}
     <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 px-4 py-2.5 dark:border-zinc-800">
-        <form id="form-busca" class="flex min-w-64 flex-1 items-center gap-2" onsubmit="return false">
+        <div id="form-busca" class="flex min-w-64 flex-1 items-center gap-2">
             <div class="flex flex-1 overflow-hidden rounded-lg border border-slate-200 dark:border-zinc-700">
                 <span class="flex items-center pl-2.5 text-zinc-400">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -42,11 +42,11 @@
                 </span>
                 <input type="text" id="input-busca" placeholder="Buscar endereço ou local…"
                        class="flex-1 bg-transparent px-2.5 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100">
-                <button type="submit" class="border-l border-slate-200 bg-slate-50 px-3 text-xs font-medium text-zinc-600 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                <button type="button" id="btn-buscar" class="border-l border-slate-200 bg-slate-50 px-3 text-xs font-medium text-zinc-600 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                     Ir
                 </button>
             </div>
-        </form>
+        </div>
 
         <div class="flex items-center gap-1.5">
             <button type="button" id="btn-minha-loc" title="Minha localização"
@@ -132,14 +132,14 @@
             <summary class="cursor-pointer text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200">
                 Inserir coordenadas manualmente
             </summary>
-            <form id="form-coordenadas" class="mt-2 flex flex-col gap-2 sm:flex-row" onsubmit="return false">
+            <div id="form-coordenadas" class="mt-2 flex flex-col gap-2 sm:flex-row">
                 <textarea id="input-coordenadas" rows="3" placeholder="-22.3756, -41.7769&#10;-22.3760, -41.7750&#10;-22.3770, -41.7760"
                           class="flex-1 rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs text-zinc-900 outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"></textarea>
-                <button type="submit"
+                <button type="button" id="btn-aplicar-coordenadas"
                         class="h-9 shrink-0 self-start rounded-lg bg-zinc-900 px-3 text-xs font-semibold text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900">
                     Aplicar
                 </button>
-            </form>
+            </div>
             <p class="mt-1 text-[10px] text-zinc-400 dark:text-zinc-600">Uma coordenada por linha, no formato latitude, longitude.</p>
         </details>
     </div>
