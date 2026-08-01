@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateCercaRequest;
 use App\Models\Cerca;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class CercaController extends Controller
@@ -26,9 +27,19 @@ class CercaController extends Controller
 
     public function create(): View
     {
-        $cercasExistentes = Cerca::query()
+        return view('cercas.create', ['cercasExistentes' => $this->vizinhas()]);
+    }
+
+    /**
+     * Cercas já cadastradas, usadas no editor como referência visual, alvo de
+     * snap e base da checagem de sobreposição. Exclui a própria cerca editada.
+     */
+    private function vizinhas(?Cerca $exceto = null): Collection
+    {
+        return Cerca::query()
             ->whereNotNull('poligono')
             ->where('status', true)
+            ->when($exceto, fn ($q) => $q->whereKeyNot($exceto->getKey()))
             ->get(['id', 'nome', 'atividade', 'poligono'])
             ->map(fn (Cerca $c) => [
                 'nome' => $c->nome,
@@ -37,8 +48,6 @@ class CercaController extends Controller
             ])
             ->filter(fn (array $c) => is_array($c['poligono']) && count($c['poligono']) >= 3)
             ->values();
-
-        return view('cercas.create', compact('cercasExistentes'));
     }
 
     public function store(StoreCercaRequest $request): RedirectResponse
@@ -51,7 +60,10 @@ class CercaController extends Controller
 
     public function edit(Cerca $cerca): View
     {
-        return view('cercas.edit', compact('cerca'));
+        return view('cercas.edit', [
+            'cerca' => $cerca,
+            'cercasExistentes' => $this->vizinhas($cerca),
+        ]);
     }
 
     public function update(UpdateCercaRequest $request, Cerca $cerca): RedirectResponse

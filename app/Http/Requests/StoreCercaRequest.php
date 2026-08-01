@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\AtividadeCerca;
+use App\Rules\PoligonoValido;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
@@ -22,10 +23,21 @@ class StoreCercaRequest extends FormRequest
         return [
             'nome' => ['required', 'string', 'max:150'],
             'atividade' => ['nullable', new Enum(AtividadeCerca::class)],
-            'poligono' => ['nullable', 'array'],
+            'poligono' => ['required', 'array', new PoligonoValido],
             'status' => ['required', 'boolean'],
             'tempo_minimo' => ['required', 'integer', 'min:1', 'max:1440'],
-            'tempo_maximo' => ['required', 'integer', 'min:1', 'max:1440'],
+            'tempo_maximo' => ['required', 'integer', 'min:1', 'max:1440', 'gte:tempo_minimo'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'poligono.required' => 'Desenhe a área da cerca no mapa antes de salvar.',
+            'tempo_maximo.gte' => 'O tempo máximo deve ser maior ou igual ao tempo mínimo.',
         ];
     }
 
