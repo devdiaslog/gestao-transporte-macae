@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\UserRole;
 use App\Http\Requests\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -47,10 +46,10 @@ class AuthController extends Controller
 
     private function homeRouteFor(mixed $user): string
     {
-        if ($user->role === UserRole::Visualizador) {
-            return 'mapa-geral.index';
-        }
-
-        return $user->can('access-dashboard') ? 'dashboard.demandas' : 'demandas.index';
+        return match (true) {
+            $user->can('dashboard.ver') => 'dashboard.demandas',
+            $user->can('demandas.ver') => 'demandas.index',
+            default => 'mapa-geral.index',
+        };
     }
 }

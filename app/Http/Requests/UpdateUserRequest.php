@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -26,7 +25,8 @@ class UpdateUserRequest extends FormRequest
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($this->route('user'))],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
             'status' => ['required', new Enum(UserStatus::class)],
-            'role' => ['required', new Enum(UserRole::class)],
+            'perfil' => ['required', 'string', 'exists:roles,name'],
+            'permissions' => ['array'],
         ];
     }
 
@@ -42,7 +42,8 @@ class UpdateUserRequest extends FormRequest
             'password.min' => 'A senha deve ter no mínimo 8 caracteres.',
             'password.confirmed' => 'A confirmação de senha não confere.',
             'status.required' => 'Selecione um status.',
-            'role.required' => 'Selecione um perfil.',
+            'perfil.required' => 'Selecione um perfil de acesso.',
+            'perfil.exists' => 'Perfil de acesso inválido.',
         ];
     }
 }

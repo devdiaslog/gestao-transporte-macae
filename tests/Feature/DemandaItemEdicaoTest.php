@@ -5,8 +5,6 @@ namespace Tests\Feature;
 use App\Enums\StatusDemanda;
 use App\Enums\StatusItemDemanda;
 use App\Enums\TipoDemanda;
-use App\Enums\UserPermission;
-use App\Enums\UserRole;
 use App\Models\Alerta;
 use App\Models\Demanda;
 use App\Models\DemandaItem;
@@ -573,8 +571,7 @@ class DemandaItemEdicaoTest extends TestCase
 
     public function test_remover_item_recalcula_a_demanda(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrador]);
-        $admin->permissions()->create(['permission' => UserPermission::Dashboard]);
+        $admin = User::factory()->create();
 
         $demanda = $this->demandaCom([
             ['local_origem' => 'BMAC', 'local_destino' => 'X', 'status_item' => StatusItemDemanda::Pendente],

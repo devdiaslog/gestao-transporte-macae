@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\StatusAuditoria;
-use App\Enums\UserRole;
 use App\Http\Requests\StoreOcorrenciaRequest;
 use App\Http\Requests\UpdateOcorrenciaRequest;
 use App\Models\Equipamento;
@@ -152,7 +151,8 @@ class OcorrenciaController extends Controller
         /** @var User $user */
         $user = auth()->user();
 
-        if ($user->role === UserRole::Operador && $ocorrencia->created_by !== $user->id) {
+        // Sem poder de supervisão (auditar), o usuário só remove o que registrou.
+        if (! $user->can('ocorrencias.auditar') && $ocorrencia->created_by !== $user->id) {
             abort(403, 'Você só pode remover ocorrências registradas por você.');
         }
 

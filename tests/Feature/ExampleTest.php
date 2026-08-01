@@ -16,10 +16,18 @@ class ExampleTest extends TestCase
         $this->get('/')->assertRedirect(route('login'));
     }
 
-    /** Rota raiz redireciona usuário autenticado para a gestão de demandas. */
-    public function test_root_redirects_authenticated_user_to_demandas(): void
+    /** Com acesso ao dashboard, a raiz leva à visão gerencial. */
+    public function test_root_redirects_authenticated_user_to_dashboard(): void
     {
         $user = User::factory()->create();
+
+        $this->actingAs($user)->get('/')->assertRedirect(route('dashboard.demandas'));
+    }
+
+    /** Sem dashboard, a raiz leva à listagem de demandas. */
+    public function test_root_redirects_operador_to_demandas(): void
+    {
+        $user = User::factory()->comPerfil('Operador')->create();
 
         $this->actingAs($user)->get('/')->assertRedirect(route('demandas.index'));
     }

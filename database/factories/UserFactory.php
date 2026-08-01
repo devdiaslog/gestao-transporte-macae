@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 
 /**
  * @extends Factory<User>
@@ -35,6 +36,34 @@ class UserFactory extends Factory
             'status' => UserStatus::Active,
             'role' => UserRole::Operador,
         ];
+    }
+
+    /**
+     * Por padrão o usuário de teste é Administrador (acesso total), evitando
+     * que cada teste precise montar permissões. Use ->comPerfil('Operador')
+     * ou ->semPerfil() para exercitar restrições de acesso.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            if (Role::where('name', 'Administrador')->exists()) {
+                $user->assignRole('Administrador');
+            }
+        });
+    }
+
+    /** Cria o usuário com um perfil específico. */
+    public function comPerfil(string $perfil): static
+    {
+        return $this->afterCreating(function (User $user) use ($perfil) {
+            $user->syncRoles(Role::where('name', $perfil)->exists() ? [$perfil] : []);
+        });
+    }
+
+    /** Cria o usuário sem nenhum perfil (nenhuma permissão). */
+    public function semPerfil(): static
+    {
+        return $this->afterCreating(fn (User $user) => $user->syncRoles([]));
     }
 
     /**

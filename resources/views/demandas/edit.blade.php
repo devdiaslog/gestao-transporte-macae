@@ -1,7 +1,7 @@
 <x-layouts.app title="Editar Demanda #{{ $demanda->numero_demanda }}">
 
 @php
-    $isAdmin = auth()->user()->role->value === 'administrador';
+    $isAdmin = auth()->user()->can('demandas.excluir');
 
     $etapas = $demanda->etapas();
     $totalItens = $demanda->itens->count();

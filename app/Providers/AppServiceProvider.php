@@ -2,8 +2,6 @@
 
 namespace App\Providers;
 
-use App\Enums\UserPermission;
-use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
@@ -17,25 +15,20 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::defaultView('pagination.custom');
 
-        /** Apenas Administrador pode gerenciar usuários e perfis. */
-        Gate::define('manage-users', fn (User $user) => $user->role === UserRole::Administrador);
+        /**
+         * Autorização por permissões (spatie): as rotas e views usam
+         * `can:modulo.acao`. O papel Administrador recebe tudo, inclusive
+         * módulos criados depois — evita perfil admin ficar sem acesso novo.
+         */
+        Gate::before(fn (User $user) => $user->hasRole('Administrador') ? true : null);
 
-        /** Administrador e Supervisor podem gerenciar tabelas de apoio (responsáveis, tipos de ocorrência, justificativas). */
-        Gate::define('manage-support-tables', fn (User $user) => in_array($user->role, [UserRole::Administrador, UserRole::Supervisor]));
-
-        /** Administrador e Supervisor podem gerenciar cadastros (equipamentos, divisões, motoristas, etc.). */
-        Gate::define('manage-cadastros', fn (User $user) => in_array($user->role, [UserRole::Administrador, UserRole::Supervisor]));
-
-        /** Administrador e Supervisor podem auditar ocorrências fechadas. */
-        Gate::define('auditar-ocorrencias', fn (User $user) => in_array($user->role, [UserRole::Administrador, UserRole::Supervisor]));
-
-        /** Visualizador tem acesso apenas ao Mapa Geral; demais perfis acessam o restante do sistema. */
-        Gate::define('access-app', fn (User $user) => $user->role !== UserRole::Visualizador);
-
-        /** Acesso ao Dashboard de Transporte — controlado por permissão individual. */
-        Gate::define('access-dashboard', fn (User $user) => $user->hasPermission(UserPermission::Dashboard));
-
-        /** Apenas Administrador pode excluir demandas. */
-        Gate::define('delete-demanda', fn (User $user) => $user->role === UserRole::Administrador);
+        /**
+         * Acesso geral ao sistema: qualquer permissão além do Mapa Geral.
+         * Mantido como gate por ser um "guarda-chuva" usado no grupo de rotas.
+         */
+        Gate::define('access-app', function (User $user) {
+            return $user->getAllPermissions()
+                ->contains(fn ($permissao) => $permissao->name !== 'mapa-geral.ver');
+        });
     }
 }

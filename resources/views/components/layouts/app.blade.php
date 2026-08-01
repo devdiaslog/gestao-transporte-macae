@@ -67,12 +67,15 @@
         {{-- Navigation --}}
         @php
             $authUser = auth()->user();
-            $isAdmin = $authUser?->role === \App\Enums\UserRole::Administrador;
-            $isSupervisor = $authUser?->role === \App\Enums\UserRole::Supervisor;
-            $isVisualizador = $authUser?->role === \App\Enums\UserRole::Visualizador;
-            $canManageUsers = $isAdmin;
-            $canManageCadastros = $isAdmin || $isSupervisor;
-            $isCadastrosActive = request()->routeIs('users.*', 'divisoes.*', 'subdivisoes.*', 'equipamentos.*', 'tipos-equipamentos.*', 'modelos-equipamentos.*', 'motoristas.*');
+            // Visibilidade do menu por permissão (não por papel): perfis novos
+            // criados na tela de Perfis passam a ver os módulos automaticamente.
+            $canManageUsers = $authUser?->can('usuarios.ver') || $authUser?->can('perfis.ver');
+            $canManageCadastros = collect(['divisoes', 'subdivisoes', 'equipamentos', 'tipos-equipamentos', 'modelos-equipamentos', 'motoristas', 'cercas', 'medicoes'])
+                ->contains(fn ($m) => $authUser?->can($m.'.ver'));
+            // "Somente consulta": sem acesso a nenhum módulo operacional.
+            $isVisualizador = ! collect(['demandas', 'alertas', 'ocorrencias', 'reportes', 'metricas', 'dashboard'])
+                ->contains(fn ($m) => $authUser?->can($m.'.ver'));
+            $isCadastrosActive = request()->routeIs('users.*', 'perfis.*', 'divisoes.*', 'subdivisoes.*', 'equipamentos.*', 'tipos-equipamentos.*', 'modelos-equipamentos.*', 'motoristas.*', 'cercas.*', 'medicoes.*');
             $isOcorrenciasActive = request()->routeIs('responsaveis.*', 'tipos-ocorrencia.*', 'justificativas.*', 'ocorrencias.*');
             $isReporteActive     = request()->routeIs('reportes.*');
         @endphp
@@ -105,78 +108,105 @@
 
                     {{-- Usuários --}}
                     @if($canManageUsers)
+                    @can('usuarios.ver')
                     <a href="{{ route('users.index') }}"
                        class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
                               {{ request()->routeIs('users.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Usuários
                     </a>
+                    @endcan
                     @endif
+
+                    {{-- Perfis de Acesso --}}
+                    @can('perfis.ver')
+                    <a href="{{ route('perfis.index') }}"
+                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium transition-all duration-200
+                              {{ request()->routeIs('perfis.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                        Perfis de Acesso
+                    </a>
+                    @endcan
 
                     {{-- Divisões → Motoristas — apenas Administrador e Supervisor --}}
                     @if($canManageCadastros)
+                    @can('divisoes.ver')
                     <a href="{{ route('divisoes.index') }}"
                        class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
                               {{ request()->routeIs('divisoes.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Divisões
                     </a>
+                    @endcan
 
                     {{-- Subdivisões --}}
+                    @can('subdivisoes.ver')
                     <a href="{{ route('subdivisoes.index') }}"
                        class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
                               {{ request()->routeIs('subdivisoes.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Subdivisões
                     </a>
+                    @endcan
 
                     {{-- Equipamentos --}}
+                    @can('equipamentos.ver')
                     <a href="{{ route('equipamentos.index') }}"
                        class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
                               {{ request()->routeIs('equipamentos.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Equipamentos
                     </a>
+                    @endcan
 
                     {{-- Tipos de Equipamentos --}}
+                    @can('tipos-equipamentos.ver')
                     <a href="{{ route('tipos-equipamentos.index') }}"
                        class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
                               {{ request()->routeIs('tipos-equipamentos.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Tipos de Equipamentos
                     </a>
+                    @endcan
 
                     {{-- Modelos de Equipamentos --}}
+                    @can('modelos-equipamentos.ver')
                     <a href="{{ route('modelos-equipamentos.index') }}"
                        class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
                               {{ request()->routeIs('modelos-equipamentos.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Modelos de Equipamentos
                     </a>
+                    @endcan
 
                     {{-- Motoristas --}}
+                    @can('motoristas.ver')
                     <a href="{{ route('motoristas.index') }}"
                        class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
                               {{ request()->routeIs('motoristas.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Motoristas
                     </a>
+                    @endcan
 
                     {{-- Cercas --}}
+                    @can('cercas.ver')
                     <a href="{{ route('cercas.index') }}"
                        class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
                               {{ request()->routeIs('cercas.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Cercas
                     </a>
+                    @endcan
 
                     {{-- Medições --}}
+                    @can('medicoes.ver')
                     <a href="{{ route('medicoes.index') }}"
                        class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
                               transition-all duration-200
                               {{ request()->routeIs('medicoes.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
                         Medições
                     </a>
+                    @endcan
                     @endif
                 </div>
             </div>
@@ -198,6 +228,7 @@
 
             {{-- Dashboard — visível apenas para quem tem permissão --}}
             @can('access-dashboard')
+            @can('dashboard.ver')
             <a href="{{ route('dashboard.status') }}"
                title="Dashboard"
                class="nav-link flex items-center justify-center rounded-lg py-2.5 text-sm font-medium
@@ -211,9 +242,11 @@
                 <span class="nav-label hidden whitespace-nowrap">Dashboard</span>
             </a>
             @endcan
+            @endcan
 
             {{-- Alertas — indisponível para o perfil Visualizador --}}
             @unless($isVisualizador)
+            @can('alertas.ver')
             <a href="{{ route('alertas.index') }}"
                title="Alertas"
                class="nav-link flex items-center justify-center rounded-lg py-2.5 text-sm font-medium
@@ -226,10 +259,12 @@
                 </svg>
                 <span class="nav-label hidden whitespace-nowrap">Alertas</span>
             </a>
+            @endcan
             @endunless
 
             {{-- Demandas — indisponível para o perfil Visualizador --}}
             @unless($isVisualizador)
+            @can('demandas.ver')
             <a href="{{ route('demandas.index') }}"
                title="Demandas"
                class="nav-link flex items-center justify-center rounded-lg py-2.5 text-sm font-medium
@@ -242,6 +277,7 @@
                 </svg>
                 <span class="nav-label hidden whitespace-nowrap">Demandas</span>
             </a>
+            @endcan
             @endunless
 
         </nav>
@@ -287,6 +323,14 @@
                             </p>
                         </div>
                         <div class="pt-1">
+                            <a href="{{ route('senha.editar') }}" role="menuitem"
+                               class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors
+                                      hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800/70">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
+                                </svg>
+                                Alterar minha senha
+                            </a>
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <button type="submit" role="menuitem"
@@ -352,7 +396,9 @@
                                 border-slate-200 dark:border-zinc-800 dark:bg-zinc-900">
                         <div class="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 dark:border-zinc-800">
                             <p class="text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-600">Alertas</p>
+                            @can('alertas.ver')
                             <a href="{{ route('alertas.index') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">Ver todos</a>
+                            @endcan
                         </div>
                         <div id="alertas-bell-list" class="max-h-80 overflow-y-auto py-1">
                             <p class="px-4 py-6 text-center text-xs text-zinc-400 dark:text-zinc-600">Carregando…</p>

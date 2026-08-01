@@ -442,7 +442,7 @@ class DemandaController extends Controller
 
     public function destroy(Demanda $demanda): RedirectResponse
     {
-        abort_unless(auth()->user()->role->value === 'administrador', 403, 'Apenas administradores podem excluir demandas.');
+        abort_unless(auth()->user()->can('demandas.excluir'), 403, 'Sem permissão para excluir demandas.');
 
         $demanda->delete();
 

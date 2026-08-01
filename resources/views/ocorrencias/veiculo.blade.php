@@ -267,7 +267,7 @@
                                             Editar
                                         </button>
 
-                                        @if(auth()->user()->role !== \App\Enums\UserRole::Operador || $ocorrencia->created_by === auth()->id())
+                                        @if(auth()->user()->can('ocorrencias.auditar') || $ocorrencia->created_by === auth()->id())
                                         <form method="POST" action="{{ route('ocorrencias.destroy', $ocorrencia) }}"
                                               data-confirm="true" data-user-name="ocorrência #{{ $ocorrencia->id_ocorrencia }}">
                                             @csrf @method('DELETE')

@@ -2,20 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\UserPermission;
-use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
+use App\Support\CatalogoPermissoes;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
+    /** Senha aplicada no reset feito pelo administrador. */
+    public const SENHA_PADRAO = '12345678';
+
     public function index(Request $request): View
     {
         $users = User::query()
@@ -40,8 +43,10 @@ class UserController extends Controller
     {
         return view('users.create', [
             'statuses' => UserStatus::cases(),
-            'roles' => UserRole::cases(),
-            'allPermissions' => UserPermission::cases(),
+            'perfis' => Role::orderBy('name')->get(),
+            'grupos' => CatalogoPermissoes::grupos(),
+            'papelAtual' => null,
+            'extras' => [],
         ]);
     }
 
@@ -55,7 +60,7 @@ class UserController extends Controller
             'role' => $request->role,
         ]);
 
-        $this->syncPermissions($user, $request->input('permissions', []));
+        $this->sincronizarAcessos($user, $request);
 
         return redirect()->route('users.index')
             ->with('success', 'Usuário criado com sucesso.');
@@ -63,13 +68,13 @@ class UserController extends Controller
 
     public function edit(User $user): View
     {
-        $user->load('permissions');
-
         return view('users.edit', [
             'user' => $user,
             'statuses' => UserStatus::cases(),
-            'roles' => UserRole::cases(),
-            'allPermissions' => UserPermission::cases(),
+            'perfis' => Role::orderBy('name')->get(),
+            'grupos' => CatalogoPermissoes::grupos(),
+            'papelAtual' => $user->papelPrincipal(),
+            'extras' => $user->getDirectPermissions()->pluck('name')->all(),
         ]);
     }
 
@@ -83,21 +88,43 @@ class UserController extends Controller
 
         $user->update($data);
 
-        $this->syncPermissions($user, $request->input('permissions', []));
+        $this->sincronizarAcessos($user, $request);
 
         return redirect()->route('users.index')
             ->with('success', 'Usuário atualizado com sucesso.');
     }
 
-    private function syncPermissions(User $user, array $permissions): void
+    /**
+     * Aplica o perfil (papel) e as permissões extras individuais do usuário.
+     */
+    private function sincronizarAcessos(User $user, Request $request): void
     {
-        $user->permissions()->delete();
+        $papel = $request->input('perfil');
+        $user->syncRoles($papel && Role::where('name', $papel)->exists() ? [$papel] : []);
 
-        foreach ($permissions as $permission) {
-            if (UserPermission::tryFrom($permission)) {
-                $user->permissions()->create(['permission' => $permission]);
-            }
-        }
+        // Extras: concedidas além do perfil, validadas pelo catálogo.
+        $extras = array_values(array_intersect(
+            (array) $request->input('permissions', []),
+            CatalogoPermissoes::todas()
+        ));
+
+        $user->syncPermissions($extras);
+    }
+
+    /**
+     * Redefine a senha para o padrão e obriga a troca no próximo acesso.
+     */
+    public function resetarSenha(User $user): RedirectResponse
+    {
+        $user->update([
+            'password' => Hash::make(self::SENHA_PADRAO),
+            'deve_trocar_senha' => true,
+        ]);
+
+        return redirect()->route('users.index')->with(
+            'success',
+            "Senha de {$user->name} redefinida para ".self::SENHA_PADRAO.'. O usuário deverá trocá-la no próximo acesso.'
+        );
     }
 
     public function destroy(User $user): RedirectResponse

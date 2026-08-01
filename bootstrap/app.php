@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ForcarTrocaDeSenha;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,7 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        // Senha resetada pelo admin: navegação bloqueada até definir uma nova.
+        $middleware->web(append: [
+            ForcarTrocaDeSenha::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

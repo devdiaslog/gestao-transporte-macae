@@ -245,6 +245,21 @@
                                             </svg>
                                             Editar
                                         </a>
+                                        @can('usuarios.resetar-senha')
+                                            <form method="POST" action="{{ route('users.resetar-senha', $user) }}"
+                                                  onsubmit="return confirm('Redefinir a senha de {{ $user->name }} para {{ App\Http\Controllers\UserController::SENHA_PADRAO }}? O usuário será obrigado a trocá-la no próximo acesso.')">
+                                                @csrf
+                                                <button type="submit" title="Redefinir senha para o padrão"
+                                                        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-150
+                                                               border-amber-200 text-amber-700 hover:bg-amber-50
+                                                               dark:border-amber-900/50 dark:text-amber-400 dark:hover:bg-amber-950/30">
+                                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
+                                                    </svg>
+                                                    Resetar senha
+                                                </button>
+                                            </form>
+                                        @endcan
                                         <form method="POST" action="{{ route('users.destroy', $user) }}"
                                               data-confirm="true"
                                               data-user-name="{{ $user->name }}">

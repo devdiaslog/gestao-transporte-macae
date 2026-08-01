@@ -118,59 +118,34 @@
                 @enderror
             </div>
 
-            {{-- Perfil --}}
+            {{-- Perfil de acesso --}}
             <div class="space-y-1.5">
-                <label for="role" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    Perfil <span class="text-red-500">*</span>
+                <label for="perfil" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Perfil de acesso <span class="text-red-500">*</span>
                 </label>
-                <select
-                    id="role"
-                    name="role"
-                    class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900
-                           shadow-xs outline-none transition-all duration-200
-                           focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10
-                           dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100
-                           dark:focus:border-slate-400 dark:focus:ring-slate-400/10
-                           {{ $errors->has('role') ? 'border-red-400 dark:border-red-600' : '' }}"
-                >
-                    @foreach($roles as $role)
-                        <option value="{{ $role->value }}" @selected(old('role', $user->role->value) === $role->value)>
-                            {{ $role->label() }}
-                        </option>
+                <select id="perfil" name="perfil"
+                        class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900
+                               shadow-xs outline-none transition-all duration-200
+                               focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10
+                               dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                    @foreach($perfis as $p)
+                        <option value="{{ $p->name }}" @selected(old('perfil', $papelAtual ?? 'Operador') === $p->name)>{{ $p->name }}</option>
                     @endforeach
                 </select>
-                @error('role')
-                    <p class="flex items-center gap-1.5 text-xs text-red-500 dark:text-red-400">
-                        <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
-                        </svg>
-                        {{ $message }}
-                    </p>
-                @enderror
+                <p class="text-xs text-slate-400 dark:text-slate-500">
+                    O perfil define as permissões base. Use os extras abaixo para conceder acessos adicionais só a este usuário.
+                </p>
             </div>
 
-            {{-- Permissões de módulos --}}
-            @if($allPermissions)
-                <div class="border-t border-slate-100 pt-5 dark:border-slate-800">
-                    <p class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300">Módulos com acesso</p>
-                    <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">Independente do perfil, cada módulo pode ser liberado individualmente.</p>
-                    <div class="space-y-2">
-                        @foreach($allPermissions as $perm)
-                            <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 px-3 py-2.5 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
-                                <input type="checkbox"
-                                       name="permissions[]"
-                                       value="{{ $perm->value }}"
-                                       @checked($user->permissions->contains('permission', $perm))
-                                       class="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:focus:ring-slate-400">
-                                <div>
-                                    <p class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ $perm->label() }}</p>
-                                    <p class="text-xs text-slate-400 dark:text-slate-500">{{ $perm->description() }}</p>
-                                </div>
-                            </label>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
+            {{-- Permissões extras individuais --}}
+            <div class="border-t border-slate-100 pt-5 dark:border-slate-800">
+                <p class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300">Permissões extras</p>
+                <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">
+                    Marque apenas o que este usuário deve ter <em>além</em> do perfil.
+                </p>
+                @include('perfis._matriz', ['grupos' => $grupos, 'selecionadas' => old('permissions', $extras)])
+            </div>
+
 
             {{-- Section: Change password --}}
             <div class="border-t border-slate-100 pt-5 dark:border-slate-800">

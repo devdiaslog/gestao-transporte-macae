@@ -1,7 +1,7 @@
 <x-layouts.app title="Demandas">
 
 @php
-    $isAdmin = auth()->user()->role->value === 'administrador';
+    $isAdmin = auth()->user()->can('demandas.excluir');
 @endphp
 
 <div class="py-8">

@@ -2,22 +2,20 @@
 
 namespace App\Models;
 
-use App\Enums\UserPermission;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
-use App\Models\UserPermission as UserPermissionModel;
 use App\Traits\HasEncryptedRouteKey;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasEncryptedRouteKey, HasFactory, Notifiable;
+    use HasApiTokens, HasEncryptedRouteKey, HasFactory, HasRoles, Notifiable;
 
     /** @var list<string> */
     protected $fillable = [
@@ -26,6 +24,7 @@ class User extends Authenticatable
         'password',
         'status',
         'role',
+        'deve_trocar_senha',
     ];
 
     /** @var list<string> */
@@ -42,16 +41,15 @@ class User extends Authenticatable
             'password' => 'hashed',
             'status' => UserStatus::class,
             'role' => UserRole::class,
+            'deve_trocar_senha' => 'boolean',
         ];
     }
 
-    public function permissions(): HasMany
+    /**
+     * Nome do papel principal do usuário (o primeiro atribuído).
+     */
+    public function papelPrincipal(): ?string
     {
-        return $this->hasMany(UserPermissionModel::class);
-    }
-
-    public function hasPermission(UserPermission $permission): bool
-    {
-        return $this->permissions->contains('permission', $permission);
+        return $this->roles->first()?->name;
     }
 }
