@@ -19,28 +19,41 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->boolean('deve_trocar_senha')->default(false)->after('status');
-        });
+        if (! Schema::hasColumn('users', 'deve_trocar_senha')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->boolean('deve_trocar_senha')
+                    ->default(false)
+                    ->after('status');
+            });
+        }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         // 1. Permissões do catálogo
         foreach (CatalogoPermissoes::todas() as $nome) {
-            Permission::firstOrCreate(['name' => $nome, 'guard_name' => 'web']);
+            Permission::firstOrCreate([
+                'name' => $nome,
+                'guard_name' => 'web',
+            ]);
         }
 
         // 2. Papéis padrão com suas permissões
         foreach (CatalogoPermissoes::papeisPadrao() as $nome => $config) {
-            $papel = Role::firstOrCreate(['name' => $nome, 'guard_name' => 'web']);
+            $papel = Role::firstOrCreate([
+                'name' => $nome,
+                'guard_name' => 'web',
+            ]);
 
-            $permissoes = $config['todas'] ?? false
+            $permissoes = ($config['todas'] ?? false)
                 ? CatalogoPermissoes::todas()
                 : collect($config['modulos'] ?? [])
-                    ->flatMap(fn (array $acoes, string $modulo) => array_map(fn ($a) => "{$modulo}.{$a}", $acoes))
-                    ->intersect(CatalogoPermissoes::todas())
-                    ->values()
-                    ->all();
+                ->flatMap(
+                    fn(array $acoes, string $modulo) =>
+                    array_map(fn($a) => "{$modulo}.{$a}", $acoes)
+                )
+                ->intersect(CatalogoPermissoes::todas())
+                ->values()
+                ->all();
 
             $papel->syncPermissions($permissoes);
         }
@@ -53,17 +66,22 @@ return new class extends Migration
             'visualizador' => 'Visualizador',
         ];
 
-        $usuarios = DB::table('users')->select('id', 'role')->get();
+        $usuarios = DB::table('users')
+            ->select('id', 'role')
+            ->get();
+
         $papeis = Role::pluck('id', 'name');
 
         foreach ($usuarios as $usuario) {
             $nomePapel = $equivalente[$usuario->role] ?? 'Operador';
 
-            DB::table('model_has_roles')->updateOrInsert([
-                'role_id' => $papeis[$nomePapel],
-                'model_type' => User::class,
-                'model_id' => $usuario->id,
-            ]);
+            if (isset($papeis[$nomePapel])) {
+                DB::table('model_has_roles')->updateOrInsert([
+                    'role_id' => $papeis[$nomePapel],
+                    'model_type' => User::class,
+                    'model_id' => $usuario->id,
+                ]);
+            }
         }
 
         // 4. Permissão individual antiga de Dashboard vira permissão direta
@@ -91,11 +109,20 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('deve_trocar_senha');
-        });
+        if (Schema::hasColumn('users', 'deve_trocar_senha')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropColumn('deve_trocar_senha');
+            });
+        }
 
-        DB::table('model_has_roles')->where('model_type', User::class)->delete();
-        DB::table('model_has_permissions')->where('model_type', User::class)->delete();
+        DB::table('model_has_roles')
+            ->where('model_type', User::class)
+            ->delete();
+
+        DB::table('model_has_permissions')
+            ->where('model_type', User::class)
+            ->delete();
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 };
