@@ -455,6 +455,72 @@ class ImportadorItensLiberadosTest extends TestCase
         $this->assertSame('03/07/2026 13:56:46', $item->data_hora_liberacao_rt->format('d/m/Y H:i:s'));
     }
 
+    /**
+     * A correção de rota feita pela equipe não pode ser desfeita pelo SAP.
+     *
+     * O ciclo real: o item chega com o local errado, a operação corrige pela
+     * tela, e no dia seguinte a planilha volta com o valor antigo.
+     */
+    public function test_rota_corrigida_pela_equipe_sobrevive_a_reimportacao(): void
+    {
+        $importador = app(ImportadorItensLiberados::class);
+        $importador->importar($this->planilha([$this->linha()]));
+
+        // O que a tela de itens faz ao corrigir a rota.
+        $item = DemandaItem::firstOrFail();
+        $item->update([
+            'local_origem' => 'BASE VITORIA CORRIGIDA',
+            'local_destino' => 'ARM-MACAE PATIO 2',
+            'campos_editados' => ['local_origem', 'local_destino'],
+        ]);
+
+        // O SAP volta a mandar os valores originais, várias vezes.
+        foreach (range(1, 3) as $reimportacao) {
+            $importador->importar($this->planilha([
+                $this->linha(['Origem' => 'BASE VITORIA', 'Destino' => 'ARM-MACAE']),
+            ]));
+        }
+
+        $item->refresh();
+        $this->assertSame('BASE VITORIA CORRIGIDA', $item->local_origem);
+        $this->assertSame('ARM-MACAE PATIO 2', $item->local_destino);
+        // A forma canônica acompanha a correção, então o agrupamento por rota
+        // também respeita o que a equipe definiu.
+        $this->assertSame('BASE VITORIA CORRIGIDA', $item->local_origem_norm);
+        $this->assertSame('ARM MACAE PATIO 2', $item->local_destino_norm);
+    }
+
+    /**
+     * O mesmo vale quando o item entra pela importação de demandas.
+     */
+    public function test_rota_corrigida_sobrevive_ao_import_de_demandas(): void
+    {
+        app(ImportadorItensLiberados::class)->importar($this->planilha([$this->linha()]));
+
+        DemandaItem::firstOrFail()->update([
+            'local_destino' => 'ARM-MACAE PATIO 2',
+            'campos_editados' => ['local_destino'],
+        ]);
+
+        app(ImportadorDemandas::class)->importarLinhas([
+            1 => [
+                'nota' => '509538496',
+                'numero_rt' => '326213060',
+                'numero_item' => '5',
+                'subitem' => '2',
+                'status_item' => '04',
+                'local_origem' => 'BASE VITORIA',
+                'local_destino' => 'ARM-MACAE',
+            ],
+        ]);
+
+        $item = DemandaItem::firstOrFail();
+        $this->assertSame('ARM-MACAE PATIO 2', $item->local_destino);
+        $this->assertSame('ARM MACAE PATIO 2', $item->local_destino_norm);
+        // A origem não foi assumida pela equipe, então o SAP segue mandando nela.
+        $this->assertSame('BASE VITORIA', $item->local_origem);
+    }
+
     public function test_modelo_de_importacao_traz_o_cabecalho_esperado(): void
     {
         $caminho = app(ImportadorItensLiberados::class)->gerarModelo();
