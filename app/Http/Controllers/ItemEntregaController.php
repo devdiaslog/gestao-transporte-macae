@@ -105,6 +105,9 @@ class ItemEntregaController extends Controller
                 sum(case when fora_escopo = 0 and data_hora_previsao_entrega is null then 1 else 0 end) as sem_previsao,
                 sum(case when fora_escopo = 0 and data_hora_previsao_entrega is not null
                           and prazo_item is not null
+                          and data_hora_previsao_entrega <= prazo_item then 1 else 0 end) as no_prazo,
+                sum(case when fora_escopo = 0 and data_hora_previsao_entrega is not null
+                          and prazo_item is not null
                           and data_hora_previsao_entrega > prazo_item then 1 else 0 end) as fora_do_prazo,
                 sum(case when fora_escopo = 1 then 1 else 0 end) as fora_escopo,
                 min(prazo_item) as prazo_mais_proximo,

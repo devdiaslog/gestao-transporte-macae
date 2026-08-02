@@ -15,7 +15,7 @@
         <div>
             <h2 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Itens de Entrega</h2>
             <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                Itens por trecho
+                Itens por rota
             </p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
@@ -57,11 +57,12 @@
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-slate-200 dark:border-zinc-800">
-                            <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Trecho</th>
+                            <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Rota</th>
                             <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Itens</th>
-                            <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Peso</th>
+                            <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Área</th>
                             <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Sem previsão</th>
-                            <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Fora do prazo</th>
+                            <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Previsão no prazo</th>
+                            <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Previsão fora do prazo</th>
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Prazo mais próximo</th>
                             <th class="w-10"></th>
                         </tr>
@@ -91,14 +92,10 @@
                                 </td>
                                 <td class="px-4 py-3 text-right font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $t->total }}</td>
                                 <td class="px-4 py-3 text-right">
-                                    <p class="tabular-nums text-zinc-600 dark:text-zinc-400">
-                                        {{ $t->peso > 0 ? number_format((float) $t->peso, 0, ',', '.').' kg' : '—' }}
+                                    <p class="tabular-nums text-zinc-600 dark:text-zinc-400"
+                                       title="Área de piso somada, contando cada embalagem uma vez">
+                                        {{ $t->area > 0 ? number_format((float) $t->area, 2, ',', '.').' m²' : '—' }}
                                     </p>
-                                    @if($t->area > 0)
-                                        <p class="text-[10px] tabular-nums text-zinc-400" title="Área de piso somada, contando cada embalagem uma vez">
-                                            {{ number_format((float) $t->area, 2, ',', '.') }} m²
-                                        </p>
-                                    @endif
                                     @if($t->medidas_suspeitas > 0)
                                         <p class="text-[10px] text-amber-600 dark:text-amber-500"
                                            title="Medidas fora de escala para transporte rodoviário, provavelmente enviadas pelo SAP em centímetros ou milímetros. Ficam de fora do total.">
@@ -109,6 +106,13 @@
                                 <td class="px-4 py-3 text-right">
                                     @if($t->sem_previsao > 0)
                                         <span class="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{{ $t->sem_previsao }}</span>
+                                    @else
+                                        <span class="text-xs text-zinc-300 dark:text-zinc-700">0</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    @if($t->no_prazo > 0)
+                                        <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold tabular-nums text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">{{ $t->no_prazo }}</span>
                                     @else
                                         <span class="text-xs text-zinc-300 dark:text-zinc-700">0</span>
                                     @endif
@@ -141,20 +145,14 @@
                     <tfoot>
                         <tr class="border-t-2 border-slate-200 bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800/50">
                             <td class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                {{ $trechos->count() }} trecho(s)
+                                {{ $trechos->count() }} {{ $trechos->count() === 1 ? 'rota' : 'rotas' }}
                             </td>
                             <td class="px-4 py-3 text-right font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $totalItens }}</td>
-                            <td class="px-4 py-3 text-right">
-                                <p class="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
-                                    {{ $totalPeso > 0 ? number_format((float) $totalPeso, 0, ',', '.').' kg' : '—' }}
-                                </p>
-                                @if($trechos->sum('area') > 0)
-                                    <p class="text-[10px] tabular-nums text-zinc-500 dark:text-zinc-400">
-                                        {{ number_format((float) $trechos->sum('area'), 2, ',', '.') }} m²
-                                    </p>
-                                @endif
+                            <td class="px-4 py-3 text-right font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
+                                {{ $trechos->sum('area') > 0 ? number_format((float) $trechos->sum('area'), 2, ',', '.').' m²' : '—' }}
                             </td>
                             <td class="px-4 py-3 text-right font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $totalSemPrevisao }}</td>
+                            <td class="px-4 py-3 text-right font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $trechos->sum('no_prazo') }}</td>
                             <td class="px-4 py-3 text-right font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $trechos->sum('fora_do_prazo') }}</td>
                             <td colspan="2"></td>
                         </tr>

@@ -13,7 +13,7 @@
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
                 </svg>
-                Todos os trechos
+                Todas as rotas
             </a>
             <h2 class="mt-1 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
                 @if($origemTrecho || $destinoTrecho)
@@ -23,7 +23,7 @@
                 @endif
             </h2>
             <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                {{ $itens->total() }} item(ns) neste recorte. Selecione para informar a previsão ou corrigir a rota.
+                {{ $itens->total() }} item(ns) nesta rota. Selecione para informar a previsão ou corrigir a rota.
             </p>
         </div>
         <a href="{{ route('itens-entrega.export', request()->query()) }}"
@@ -96,7 +96,7 @@
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Carga</th>
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Retirada</th>
                             @unless($origemTrecho || $destinoTrecho)
-                                <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Trecho</th>
+                                <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Rota</th>
                             @endunless
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Liberada</th>
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Prazo</th>

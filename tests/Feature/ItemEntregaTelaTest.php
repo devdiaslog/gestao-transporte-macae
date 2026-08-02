@@ -237,10 +237,10 @@ class ItemEntregaTelaTest extends TestCase
     }
 
     /**
-     * A tela inicial mostra fluxos, não itens soltos: é olhando o trecho que a
+     * A tela inicial mostra fluxos, não itens soltos: é olhando a rota que a
      * operação decide a previsão.
      */
-    public function test_index_agrupa_por_trecho_com_somatorios(): void
+    public function test_index_agrupa_por_rota_com_somatorios(): void
     {
         $this->item(['local_origem' => 'PACU', 'local_destino' => 'ARM-MACAE', 'peso_total' => 1000]);
         $this->item(['local_origem' => 'PACU', 'local_destino' => 'ARM-MACAÉ', 'peso_total' => 500]);
@@ -249,6 +249,7 @@ class ItemEntregaTelaTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get(route('itens-entrega.index'))
             ->assertOk()
+            ->assertSee('Itens por rota')
             ->assertViewHas('trechos', function ($trechos) {
                 // As grafias ARM-MACAE e ARM-MACAÉ são o mesmo destino.
                 $this->assertCount(2, $trechos);
@@ -256,8 +257,34 @@ class ItemEntregaTelaTest extends TestCase
                 $pacu = $trechos->firstWhere('local_origem_norm', 'PACU');
                 $this->assertSame('ARM MACAE', $pacu->local_destino_norm);
                 $this->assertSame(2, (int) $pacu->total);
-                $this->assertSame(1500.0, (float) $pacu->peso);
                 $this->assertSame(2, (int) $pacu->sem_previsao);
+
+                return true;
+            });
+    }
+
+    /**
+     * A rota resume as três situações de previsão, que é o que diz onde agir.
+     */
+    public function test_index_conta_previsao_no_prazo_e_fora_do_prazo(): void
+    {
+        $noPrazo = $this->item(['local_origem' => 'PACU']);
+        $noPrazo->registrarPrevisao($noPrazo->prazo_item->copy()->subHours(2));
+
+        $atrasado = $this->item(['local_origem' => 'PACU']);
+        $atrasado->registrarPrevisao($atrasado->prazo_item->copy()->addDay());
+
+        $this->item(['local_origem' => 'PACU']); // sem previsão
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index'))
+            ->assertOk()
+            ->assertViewHas('trechos', function ($trechos) {
+                $pacu = $trechos->firstWhere('local_origem_norm', 'PACU');
+
+                $this->assertSame(1, (int) $pacu->no_prazo);
+                $this->assertSame(1, (int) $pacu->fora_do_prazo);
+                $this->assertSame(1, (int) $pacu->sem_previsao);
 
                 return true;
             });
