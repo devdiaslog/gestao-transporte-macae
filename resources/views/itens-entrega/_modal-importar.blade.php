@@ -4,8 +4,7 @@
         @csrf
         <h3 class="text-base font-semibold text-zinc-900 dark:text-zinc-100">Importar itens do SAP</h3>
         <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            Planilha com os itens liberados (03) e programados (04). Reimportar atualiza os itens existentes;
-            o que o operador já editou é preservado.
+            Reimportar atualiza os itens existentes. O que a equipe já editou é preservado.
         </p>
 
         <label class="mt-4 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Planilha (.xlsx)</label>
@@ -19,9 +18,7 @@
                    class="mt-0.5 h-4 w-4 rounded border-slate-300 text-zinc-900 dark:border-zinc-600">
             <span class="text-xs text-zinc-600 dark:text-zinc-400">
                 <span class="font-semibold text-zinc-800 dark:text-zinc-200">Esta planilha traz todos os itens em cobrança</span><br>
-                Os que não constarem nela serão marcados para conferência. Deixe desmarcado se estiver
-                importando um recorte — do contrário o sistema sinaliza como sumidos itens que apenas
-                ficaram de fora do arquivo.
+                Os que não constarem nela serão marcados para conferência. Deixe desmarcado ao importar um recorte.
             </span>
         </label>
 

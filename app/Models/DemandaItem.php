@@ -39,6 +39,10 @@ class DemandaItem extends Model
         'status_item',
         'status_sap',
         'prazo_item',
+        'prazo_sap',
+        'prazo_motivo',
+        'prazo_alterado_por',
+        'prazo_alterado_em',
         'data_hora_entrega',
         'observacao',
         'campos_editados',
@@ -84,6 +88,8 @@ class DemandaItem extends Model
             'status_item' => StatusItemDemanda::class,
             'status_sap' => StatusSap::class,
             'prazo_item' => 'datetime',
+            'prazo_sap' => 'datetime',
+            'prazo_alterado_em' => 'datetime',
             'data_hora_entrega' => 'datetime',
             'campos_editados' => 'array',
             'data_hora_criacao_rt' => 'datetime',
@@ -171,6 +177,45 @@ class DemandaItem extends Model
     public function prazoExequivel(): bool
     {
         return $this->prazo_item !== null && $this->prazo_item->isFuture();
+    }
+
+    /**
+     * Registra um prazo renegociado com o cliente.
+     *
+     * Nem todo atraso é atraso: quando o prazo é renegociado, é o novo que vale
+     * — cobrar o item contra a data original mostraria uma realidade que não
+     * existe mais. O campo passa a ser do operador, então a importação seguinte
+     * não o desfaz, e o prazo original do SAP continua guardado para que a
+     * renegociação fique visível.
+     */
+    public function renegociarPrazo(\DateTimeInterface $prazo, int $usuarioId, ?string $motivo = null): void
+    {
+        $editados = $this->campos_editados ?? [];
+        $editados[] = 'prazo_item';
+
+        $this->forceFill([
+            'prazo_item' => $prazo,
+            'prazo_motivo' => $motivo,
+            'prazo_alterado_por' => $usuarioId,
+            'prazo_alterado_em' => now(),
+            'campos_editados' => array_values(array_unique($editados)),
+        ])->save();
+    }
+
+    /**
+     * O prazo em vigor difere do que o SAP mandou.
+     */
+    public function prazoRenegociado(): bool
+    {
+        return $this->prazo_alterado_em !== null
+            && $this->prazo_sap !== null
+            && $this->prazo_item !== null
+            && ! $this->prazo_item->equalTo($this->prazo_sap);
+    }
+
+    public function prazoAlteradoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'prazo_alterado_por');
     }
 
     /**

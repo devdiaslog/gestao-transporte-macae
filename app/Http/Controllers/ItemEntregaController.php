@@ -8,6 +8,7 @@ use App\Http\Requests\AjustarRotaRequest;
 use App\Http\Requests\DefinirPrevisaoRequest;
 use App\Http\Requests\ImportarItensLiberadosRequest;
 use App\Http\Requests\MarcarForaEscopoRequest;
+use App\Http\Requests\RenegociarPrazoRequest;
 use App\Models\DemandaItem;
 use App\Services\ImportadorItensLiberados;
 use App\Support\ContentorSap;
@@ -277,6 +278,36 @@ class ItemEntregaController extends Controller
             $fora
                 ? ($um ? 'marcado como fora do nosso escopo' : 'marcados como fora do nosso escopo')
                 : ($um ? 'devolvido ao nosso escopo' : 'devolvidos ao nosso escopo'),
+        ));
+    }
+
+    /**
+     * Registra um prazo renegociado com o cliente.
+     *
+     * Item programado cujo prazo foi acordado de novo não está atrasado — a
+     * tela mostrava "fora do prazo" contra uma data que não vale mais. A partir
+     * daqui vale o prazo acordado, e o do SAP fica visível ao lado para a
+     * renegociação não desaparecer.
+     */
+    public function renegociarPrazo(RenegociarPrazoRequest $request): RedirectResponse
+    {
+        $ids = $request->validated('itens');
+        $prazo = now()->parse($request->validated('prazo_item'));
+
+        DB::transaction(function () use ($ids, $prazo, $request) {
+            foreach (DemandaItem::whereIn('id', $ids)->get() as $item) {
+                $item->renegociarPrazo($prazo, $request->user()->id, $request->validated('motivo'));
+            }
+        });
+
+        $total = count($ids);
+
+        return back()->with('success', sprintf(
+            'Prazo de %d %s alterado para %s. O SAP não vai mais sobrescrever %s.',
+            $total,
+            $total === 1 ? 'item' : 'itens',
+            $prazo->format('d/m/Y H:i'),
+            $total === 1 ? 'este prazo' : 'estes prazos',
         ));
     }
 

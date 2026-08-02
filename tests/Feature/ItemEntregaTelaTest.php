@@ -943,6 +943,70 @@ class ItemEntregaTelaTest extends TestCase
         }
     }
 
+    /**
+     * Prazo renegociado com o cliente vale sobre o do SAP: mostrar "fora do
+     * prazo" contra uma data que não vale mais é falso alarme.
+     */
+    public function test_renegocia_o_prazo_e_o_item_deixa_de_estar_atrasado(): void
+    {
+        $item = $this->item(['prazo_item' => now()->addDay(), 'prazo_sap' => now()->addDay()]);
+        // Previsão depois do prazo original: hoje aparece como fora do prazo.
+        $item->registrarPrevisao(now()->addDays(5));
+        $this->assertSame('fora_do_prazo', $item->fresh()->situacaoPrevisao());
+
+        $usuario = User::factory()->create();
+        $novoPrazo = now()->addDays(7)->startOfMinute();
+
+        $this->actingAs($usuario)
+            ->post(route('itens-entrega.prazo'), [
+                'itens' => [$item->id],
+                'prazo_item' => $novoPrazo->format('Y-m-d\TH:i'),
+                'motivo' => 'Acordado com o cliente na reunião de segunda',
+            ])->assertRedirect()->assertSessionHas('success');
+
+        $item->refresh();
+
+        $this->assertTrue($item->prazo_item->equalTo($novoPrazo));
+        $this->assertSame($usuario->id, $item->prazo_alterado_por);
+        $this->assertNotNull($item->prazo_alterado_em);
+        $this->assertSame('Acordado com o cliente na reunião de segunda', $item->prazo_motivo);
+        $this->assertTrue($item->prazoRenegociado());
+
+        // Com o prazo acordado, a previsão volta a caber.
+        $this->assertSame('no_prazo', $item->situacaoPrevisao());
+    }
+
+    public function test_renegociacao_de_prazo_exige_motivo(): void
+    {
+        $item = $this->item();
+
+        $this->actingAs(User::factory()->create())
+            ->post(route('itens-entrega.prazo'), [
+                'itens' => [$item->id],
+                'prazo_item' => now()->addDays(3)->format('Y-m-d\TH:i'),
+                'motivo' => 'ok',
+            ])->assertSessionHasErrors('motivo');
+    }
+
+    /**
+     * Renegociar prazo é compromisso com o cliente: o Operador não tem essa
+     * permissão por padrão.
+     */
+    public function test_renegociacao_de_prazo_exige_permissao_propria(): void
+    {
+        $item = $this->item(['prazo_item' => now()->addDay()]);
+        $prazoOriginal = $item->prazo_item;
+
+        $this->actingAs(User::factory()->comPerfil('Operador')->create())
+            ->post(route('itens-entrega.prazo'), [
+                'itens' => [$item->id],
+                'prazo_item' => now()->addDays(7)->format('Y-m-d\TH:i'),
+                'motivo' => 'Acordado com o cliente',
+            ])->assertForbidden();
+
+        $this->assertTrue($item->fresh()->prazo_item->equalTo($prazoOriginal));
+    }
+
     public function test_baixa_o_modelo_de_importacao(): void
     {
         $this->actingAs(User::factory()->create())

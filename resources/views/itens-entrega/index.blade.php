@@ -53,10 +53,12 @@
                 <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Ajuste os filtros ou importe o export do SAP.</p>
             </div>
         @else
-            <div class="overflow-x-auto">
+            {{-- Scroll interno: o cabeçalho e os totais ficam à vista por mais
+                 longa que seja a lista, e a página não estica sem fim. --}}
+            <div class="max-h-[60vh] overflow-auto">
                 <table class="w-full text-sm">
-                    <thead>
-                        <tr class="border-b border-slate-200 dark:border-zinc-800">
+                    <thead class="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgb(226_232_240)] dark:bg-zinc-900 dark:shadow-[0_1px_0_0_rgb(39_39_42)]">
+                        <tr>
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Rota</th>
                             <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Itens</th>
                             <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Área</th>
@@ -142,8 +144,8 @@
                             </tr>
                         @endforeach
                     </tbody>
-                    <tfoot>
-                        <tr class="border-t-2 border-slate-200 bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800/50">
+                    <tfoot class="sticky bottom-0 z-10">
+                        <tr class="border-t-2 border-slate-200 bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800">
                             <td class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                                 {{ $trechos->count() }} {{ $trechos->count() === 1 ? 'rota' : 'rotas' }}
                             </td>

@@ -2,6 +2,7 @@
 
     @php
         $podePrever = auth()->user()->can('itens-entrega.prever');
+        $podePrazo = auth()->user()->can('itens-entrega.prazo');
         $podeEscopo = auth()->user()->can('itens-entrega.escopo');
         $rotuloTrecho = ($origemTrecho ?? 'SEM ORIGEM').' → '.($destinoTrecho ?? 'SEM DESTINO');
     @endphp
@@ -42,7 +43,7 @@
     @include('itens-entrega._filtros', ['rota' => 'itens-entrega.trecho'])
 
     {{-- Barra de ações em lote, revelada quando há seleção --}}
-    @if($podePrever || $podeEscopo)
+    @if($podePrever || $podePrazo || $podeEscopo)
     @php
         $acaoLote = 'rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700
                      transition-colors hover:bg-slate-50 hover:text-zinc-900
@@ -60,6 +61,11 @@
                 </button>
                 <button type="button" onclick="abrirModal('modal-rota')" class="{{ $acaoLote }}">
                     Corrigir rota
+                </button>
+            @endif
+            @if($podePrazo)
+                <button type="button" onclick="abrirModal('modal-prazo')" class="{{ $acaoLote }}">
+                    Renegociar prazo
                 </button>
             @endif
             @if($podeEscopo)
@@ -82,11 +88,13 @@
                 <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Ajuste os filtros ou importe o export do SAP.</p>
             </div>
         @else
-            <div class="overflow-x-auto">
+            {{-- Scroll interno: o cabeçalho e os totais ficam à vista por mais
+                 longa que seja a lista, e a página não estica sem fim. --}}
+            <div class="max-h-[60vh] overflow-auto">
                 <table class="w-full text-sm">
-                    <thead>
-                        <tr class="border-b border-slate-200 dark:border-zinc-800">
-                            @if($podePrever || $podeEscopo)
+                    <thead class="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_rgb(226_232_240)] dark:bg-zinc-900 dark:shadow-[0_1px_0_0_rgb(39_39_42)]">
+                        <tr>
+                            @if($podePrever || $podePrazo || $podeEscopo)
                             <th class="w-10 px-4 py-4">
                                 <input type="checkbox" id="marcar-todos" onclick="alternarTodos(this)"
                                        class="h-4 w-4 rounded border-slate-300 text-zinc-900 dark:border-zinc-700">
@@ -105,7 +113,7 @@
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">SAP</th>
                         </tr>
                     </thead>
-                    @php $colunas = ($podePrever || $podeEscopo ? 1 : 0) + (($origemTrecho || $destinoTrecho) ? 7 : 8); @endphp
+                    @php $colunas = ($podePrever || $podePrazo || $podeEscopo ? 1 : 0) + (($origemTrecho || $destinoTrecho) ? 7 : 8); @endphp
                     <tbody class="divide-y divide-slate-100 dark:divide-zinc-800/70">
                         @php $embalagemAnterior = false; @endphp
                         @foreach($itens as $item)
@@ -121,14 +129,14 @@
                             @if($abreGrupo)
                                 @php $grupo = $embalagens[$embalagem] ?? null; @endphp
                                 <tr class="bg-slate-50/80 dark:bg-zinc-800/40">
-                                    @if($podePrever || $podeEscopo)
+                                    @if($podePrever || $podePrazo || $podeEscopo)
                                         <td class="px-4 py-2">
                                             <input type="checkbox" title="Selecionar todos os itens desta embalagem"
                                                    class="chk-embalagem h-4 w-4 rounded border-slate-300 text-zinc-900 dark:border-zinc-700"
                                                    onclick="alternarEmbalagem(this, '{{ $embalagem }}')">
                                         </td>
                                     @endif
-                                    <td colspan="{{ $colunas - ($podePrever || $podeEscopo ? 1 : 0) }}" class="px-4 py-2">
+                                    <td colspan="{{ $colunas - ($podePrever || $podePrazo || $podeEscopo ? 1 : 0) }}" class="px-4 py-2">
                                         <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
                                             <span class="text-xs font-bold text-zinc-800 dark:text-zinc-200">📦 {{ $embalagem }}</span>
                                             @if($grupo && $grupo['descricao'])
@@ -147,7 +155,7 @@
                             @endif
 
                             <tr class="transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/40">
-                                @if($podePrever || $podeEscopo)
+                                @if($podePrever || $podePrazo || $podeEscopo)
                                 <td class="px-4 py-3">
                                     <input type="checkbox" class="chk-item h-4 w-4 rounded border-slate-300 text-zinc-900 dark:border-zinc-700"
                                            value="{{ $item->id }}"
@@ -237,6 +245,12 @@
                                             {{ $item->prazo_item->format('d/m/Y H:i') }}
                                         </p>
                                         <p class="text-[10px] text-zinc-400">{{ $item->prazo_item->diffForHumans() }}</p>
+                                        @if($item->prazoRenegociado())
+                                            <p class="mt-0.5 text-[10px] text-amber-600 dark:text-amber-500"
+                                               title="{{ $item->prazo_motivo }}">
+                                                renegociado &middot; SAP: {{ $item->prazo_sap->format('d/m/Y H:i') }}
+                                            </p>
+                                        @endif
                                     @else
                                         <span class="text-xs text-zinc-400">—</span>
                                     @endif
@@ -284,7 +298,7 @@
                             </tr>
                         @endforeach
                     </tbody>
-                    <tfoot>
+                    <tfoot class="sticky bottom-0 z-20">
                         @php
                             // Somatórios da página exibida — é o que a operação
                             // enxerga ao decidir se cabe num veículo só. A área
@@ -293,8 +307,8 @@
                             $pesoPagina = $itens->sum('peso_total');
                             $areaPagina = $areaDePiso;
                         @endphp
-                        <tr class="border-t-2 border-slate-200 bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800/50">
-                            @if($podePrever || $podeEscopo)<td></td>@endif
+                        <tr class="border-t-2 border-slate-200 bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800">
+                            @if($podePrever || $podePrazo || $podeEscopo)<td></td>@endif
                             <td class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                                 {{ $itens->count() }} nesta página
                             </td>
@@ -372,6 +386,38 @@
                     <button type="button" onclick="fecharModal('modal-escopo')" class="rounded-lg px-4 py-2 text-sm text-zinc-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800">Cancelar</button>
                     <button type="submit" name="fora_escopo" value="1" class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900">Marcar</button>
                 </div>
+            </div>
+        </form>
+    </div>
+    @endif
+
+    {{-- Modal: renegociar prazo --}}
+    @if($podePrazo)
+    <div id="modal-prazo" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+        <form method="POST" action="{{ route('itens-entrega.prazo') }}" class="w-full max-w-md rounded-xl bg-white p-5 shadow-xl dark:bg-zinc-900">
+            @csrf
+            <div id="itens-prazo"></div>
+            <h3 class="text-base font-semibold text-zinc-900 dark:text-zinc-100">Renegociar prazo</h3>
+            <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                <span id="resumo-prazo"></span>
+            </p>
+            <p class="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                O novo prazo passa a valer sobre o do SAP e não será desfeito pela próxima importação.
+                O prazo original continua visível ao lado.
+            </p>
+
+            <label class="mt-4 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Novo prazo acordado</label>
+            <input type="datetime-local" name="prazo_item" required
+                   class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+
+            <label class="mt-3 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Motivo</label>
+            <textarea name="motivo" rows="2" required minlength="5" maxlength="500"
+                      placeholder="Com quem foi acordado e por quê"
+                      class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"></textarea>
+
+            <div class="mt-5 flex justify-end gap-2">
+                <button type="button" onclick="fecharModal('modal-prazo')" class="rounded-lg px-4 py-2 text-sm text-zinc-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800">Cancelar</button>
+                <button type="submit" class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900">Registrar</button>
             </div>
         </form>
     </div>
@@ -458,13 +504,13 @@
                 if (barra) { barra.classList.toggle('hidden', marcados.length === 0); }
 
                 var descricao = descrever(marcados);
-                ['resumo-previsao', 'resumo-escopo', 'resumo-rota'].forEach(function (id) {
+                ['resumo-previsao', 'resumo-escopo', 'resumo-rota', 'resumo-prazo'].forEach(function (id) {
                     var el = document.getElementById(id);
                     if (el) { el.textContent = descricao; }
                 });
 
                 // Os ids seguem para o POST como campos ocultos dos formulários.
-                ['itens-previsao', 'itens-escopo', 'itens-rota'].forEach(function (id) {
+                ['itens-previsao', 'itens-escopo', 'itens-rota', 'itens-prazo'].forEach(function (id) {
                     var alvo = document.getElementById(id);
                     if (!alvo) { return; }
                     alvo.innerHTML = marcados.map(function (c) {
@@ -507,11 +553,11 @@
             };
 
             document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') { ['modal-previsao', 'modal-escopo', 'modal-rota'].forEach(window.fecharModal); }
+                if (e.key === 'Escape') { ['modal-previsao', 'modal-escopo', 'modal-rota', 'modal-prazo'].forEach(window.fecharModal); }
             });
 
             // Fecha ao clicar no fundo, não no conteúdo do modal.
-            ['modal-previsao', 'modal-escopo', 'modal-rota'].forEach(function (id) {
+            ['modal-previsao', 'modal-escopo', 'modal-rota', 'modal-prazo'].forEach(function (id) {
                 var m = document.getElementById(id);
                 if (m) {
                     m.addEventListener('click', function (e) {

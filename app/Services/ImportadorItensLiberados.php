@@ -331,13 +331,21 @@ class ImportadorItensLiberados
      */
     private function aplicarPrazo(DemandaItem $item, array $linha): void
     {
-        if (! array_key_exists('prazo_data', $linha) || $item->campoEditadoPeloOperador('prazo_item')) {
+        if (! array_key_exists('prazo_data', $linha)) {
             return;
         }
 
         $prazo = $this->prazoDe($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null);
 
-        if ($prazo !== null) {
+        if ($prazo === null) {
+            return;
+        }
+
+        // O prazo do SAP é registrado sempre, mesmo quando o vigente foi
+        // renegociado: é o que torna a renegociação visível na tela.
+        $item->prazo_sap = $prazo;
+
+        if (! $item->campoEditadoPeloOperador('prazo_item')) {
             $item->prazo_item = $prazo;
         }
     }

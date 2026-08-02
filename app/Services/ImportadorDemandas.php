@@ -291,9 +291,17 @@ class ImportadorDemandas
                         $item->{$campoMestre} = $this->limpar($linha[$campoMestre]);
                     }
                 }
-                if ((array_key_exists('prazo_data', $linha) || array_key_exists('prazo_hora', $linha))
-                    && ! $item->campoEditadoPeloOperador('prazo_item')) {
-                    $item->prazo_item = $this->montarDataHora($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null);
+                if (array_key_exists('prazo_data', $linha) || array_key_exists('prazo_hora', $linha)) {
+                    $prazo = $this->montarDataHora($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null);
+
+                    // O prazo do SAP fica registrado mesmo quando o vigente foi
+                    // renegociado com o cliente: é o que torna a renegociação
+                    // visível em vez de o dado original sumir.
+                    $item->prazo_sap = $prazo;
+
+                    if (! $item->campoEditadoPeloOperador('prazo_item')) {
+                        $item->prazo_item = $prazo;
+                    }
                 }
 
                 // Peso e dimensões da carga: dados do SAP, re-sincronizam quando a

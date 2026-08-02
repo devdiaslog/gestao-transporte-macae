@@ -22,24 +22,43 @@
     @endif
     @if(request('situacao'))<input type="hidden" name="situacao" value="{{ request('situacao') }}">@endif
 
-    {{-- Status: cada um é um botão que liga e desliga --}}
-    <div class="flex flex-wrap items-center gap-1.5">
-        <span class="mr-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Status</span>
-        @foreach($statusDisponiveis as $s)
-            <label class="cursor-pointer">
-                <input type="checkbox" name="status[]" value="{{ $s->value }}" class="peer sr-only"
-                       @checked(in_array($s->value, $statusSelecionados, true))
-                       onchange="this.form.submit()">
-                <span title="{{ $s->descricao() }}"
-                      class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all
-                             border-slate-200 bg-white text-zinc-500 hover:border-slate-300 hover:text-zinc-700
-                             dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-300
-                             {{ $coresStatus[$s->value] ?? '' }}">
-                    <span class="font-bold tabular-nums opacity-60">{{ $s->value }}</span>
-                    {{ $s->label() }}
-                </span>
-            </label>
-        @endforeach
+    {{-- Cards e status dividem a mesma linha: cada centímetro de altura conta
+         numa tela cuja função é mostrar tabela. --}}
+    <div class="grid gap-3 xl:grid-cols-2">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            @foreach($situacoesResumo as $situacao)
+                @php $ativo = request('situacao') === $situacao; @endphp
+                <a href="{{ request()->fullUrlWithQuery(['situacao' => $ativo ? null : $situacao, 'page' => null]) }}"
+                   class="flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5 transition-all
+                          {{ $ativo
+                              ? 'border-zinc-900 bg-zinc-50 dark:border-zinc-100 dark:bg-zinc-800'
+                              : 'border-slate-200 bg-white hover:border-slate-300 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-zinc-700' }}">
+                    <span class="flex items-center gap-1.5">
+                        <span class="h-2 w-2 shrink-0 rounded-full {{ $cores[$situacao]['dot'] }}"></span>
+                        <span class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{{ $cores[$situacao]['label'] }}</span>
+                    </span>
+                    <span class="text-xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $resumo[$situacao] }}</span>
+                </a>
+            @endforeach
+        </div>
+
+        {{-- Status: cada um é um botão que liga e desliga --}}
+        <div class="flex flex-wrap content-center items-center gap-1.5">
+            @foreach($statusDisponiveis as $s)
+                <label class="cursor-pointer">
+                    <input type="checkbox" name="status[]" value="{{ $s->value }}" class="peer sr-only"
+                           @checked(in_array($s->value, $statusSelecionados, true))
+                           onchange="this.form.submit()">
+                    <span class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-all
+                                 border-slate-200 bg-white text-zinc-500 hover:border-slate-300 hover:text-zinc-700
+                                 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-300
+                                 {{ $coresStatus[$s->value] ?? '' }}">
+                        <span class="font-bold tabular-nums opacity-60">{{ $s->value }}</span>
+                        {{ $s->label() }}
+                    </span>
+                </label>
+            @endforeach
+        </div>
     </div>
 
     <div class="flex flex-wrap items-end gap-3">
