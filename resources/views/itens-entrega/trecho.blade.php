@@ -43,31 +43,32 @@
 
     {{-- Barra de ações em lote, revelada quando há seleção --}}
     @if($podePrever || $podeEscopo)
-    <div id="barra-lote" class="mt-4 hidden rounded-xl border border-zinc-900 bg-zinc-900 px-4 py-3 dark:border-zinc-100 dark:bg-zinc-100">
+    @php
+        $acaoLote = 'rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700
+                     transition-colors hover:bg-slate-50 hover:text-zinc-900
+                     dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100';
+    @endphp
+    <div id="barra-lote" class="mt-4 hidden rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">
         <div class="flex flex-wrap items-center gap-3">
-            <span class="text-sm font-semibold text-white dark:text-zinc-900">
+            <span class="text-sm font-semibold text-zinc-700 dark:text-zinc-200">
                 <span id="contador-selecao">0</span> selecionado(s)
             </span>
             @if($podePrever)
                 <button type="button" onclick="abrirModal('modal-previsao')"
-                        class="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900 hover:bg-slate-100 dark:bg-zinc-900 dark:text-white">
+                        class="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
                     Definir previsão
                 </button>
-            @endif
-            @if($podePrever)
-                <button type="button" onclick="abrirModal('modal-rota')"
-                        class="rounded-lg border border-white/40 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/10 dark:border-zinc-900/40 dark:text-zinc-900 dark:hover:bg-zinc-900/10">
+                <button type="button" onclick="abrirModal('modal-rota')" class="{{ $acaoLote }}">
                     Corrigir rota
                 </button>
             @endif
             @if($podeEscopo)
-                <button type="button" onclick="abrirModal('modal-escopo')"
-                        class="rounded-lg border border-white/40 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/10 dark:border-zinc-900/40 dark:text-zinc-900 dark:hover:bg-zinc-900/10">
+                <button type="button" onclick="abrirModal('modal-escopo')" class="{{ $acaoLote }}">
                     Não é nossa responsabilidade
                 </button>
             @endif
             <button type="button" onclick="limparSelecao()"
-                    class="ml-auto text-xs font-medium text-white/70 hover:text-white dark:text-zinc-900/70 dark:hover:text-zinc-900">
+                    class="ml-auto text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200">
                 Limpar seleção
             </button>
         </div>

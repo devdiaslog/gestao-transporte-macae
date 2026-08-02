@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\OrigemPrevisao;
 use App\Enums\StatusSap;
+use App\Models\Demanda;
 use App\Models\DemandaItem;
 use App\Models\User;
 use App\Support\ContentorSap;
@@ -139,6 +140,39 @@ class ItemEntregaTelaTest extends TestCase
             ->assertOk()
             ->assertSee($liberado->numero_rt)
             ->assertDontSee($atendido->numero_rt);
+    }
+
+    /**
+     * O operador costuma ter o número da viagem em mãos e querer saber o que
+     * ela carrega.
+     */
+    public function test_busca_pelo_numero_da_viagem(): void
+    {
+        $demanda = Demanda::factory()->create(['numero_demanda' => 509538496]);
+        $daViagem = $this->item(['demanda_id' => $demanda->id]);
+        $outro = $this->item();
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.trecho', ['busca' => '509538496']))
+            ->assertOk()
+            ->assertSee($daViagem->numero_rt)
+            ->assertDontSee($outro->numero_rt);
+    }
+
+    public function test_busca_por_rt_carga_e_contentor(): void
+    {
+        $porRt = $this->item(['numero_rt' => '326999001']);
+        $porCarga = $this->item(['descricao_item' => 'SKID DE PERFURACAO']);
+        $porContentor = $this->item(['doc_unitizacao_superior' => '4810768']);
+
+        $usuario = User::factory()->create();
+
+        foreach ([['326999001', $porRt], ['SKID DE PERFURACAO', $porCarga], ['4810768', $porContentor]] as [$termo, $esperado]) {
+            $this->actingAs($usuario)
+                ->get(route('itens-entrega.trecho', ['busca' => $termo]))
+                ->assertOk()
+                ->assertSee($esperado->numero_rt);
+        }
     }
 
     /**

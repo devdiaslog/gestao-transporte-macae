@@ -449,7 +449,11 @@ class ItemEntregaController extends Controller
                 $q->where(fn (Builder $s) => $s
                     ->where('numero_rt', 'like', "%{$busca}%")
                     ->orWhere('descricao_item', 'like', "%{$busca}%")
-                    ->orWhere('doc_unitizacao_superior', 'like', "%{$busca}%"));
+                    ->orWhere('doc_unitizacao_superior', 'like', "%{$busca}%")
+                    ->orWhere('numero_contentor', 'like', "%{$busca}%")
+                    // Número do atendimento: o operador costuma ter a viagem em
+                    // mãos e querer saber o que ela carrega.
+                    ->orWhereHas('demanda', fn (Builder $d) => $d->where('numero_demanda', 'like', "%{$busca}%")));
             })
             // O trecho é filtrado pela forma canônica: as variações de grafia do
             // SAP ("ARM-MACAE", "ARM MACAÉ") são o mesmo lugar.
