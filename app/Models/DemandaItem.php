@@ -62,6 +62,8 @@ class DemandaItem extends Model
         'fora_escopo_por',
         'fora_escopo_em',
         'ausente_no_sap_em',
+        'retornou_ao_sap_em',
+        'vezes_ausente',
     ];
 
     /**
@@ -98,6 +100,7 @@ class DemandaItem extends Model
             'fora_escopo' => 'boolean',
             'fora_escopo_em' => 'datetime',
             'ausente_no_sap_em' => 'datetime',
+            'retornou_ao_sap_em' => 'datetime',
         ];
     }
 
@@ -216,6 +219,32 @@ class DemandaItem extends Model
     public function prazoAlteradoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'prazo_alterado_por');
+    }
+
+    /**
+     * O item saiu do export e voltou.
+     *
+     * Acontece quando muda de grupo de planejamento ou volta a um status
+     * anterior à liberação: some do filtro, e reaparece quando é devolvido ao
+     * grupo e liberado de novo.
+     */
+    public function voltouAoSap(): bool
+    {
+        return $this->retornou_ao_sap_em !== null;
+    }
+
+    /**
+     * Voltou trazendo de volta uma previsão prometida antes de sumir.
+     *
+     * É o caso que pede atenção: o item ficou fora do radar e a data que o
+     * cliente recebeu provavelmente não vale mais.
+     */
+    public function previsaoAnteriorAoRetorno(): bool
+    {
+        return $this->voltouAoSap()
+            && $this->data_hora_previsao_entrega !== null
+            && $this->previsaoAtual !== null
+            && $this->previsaoAtual->created_at->lessThan($this->retornou_ao_sap_em);
     }
 
     /**

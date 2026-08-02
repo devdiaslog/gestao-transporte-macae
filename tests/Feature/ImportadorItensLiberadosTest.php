@@ -271,6 +271,82 @@ class ImportadorItensLiberadosTest extends TestCase
         $this->assertNull(DemandaItem::where('numero_rt', '326340468')->firstOrFail()->ausente_no_sap_em);
     }
 
+    /**
+     * O item sai e volta do export.
+     *
+     * Acontece quando muda de grupo de planejamento ou volta a um status
+     * anterior à liberação: some do filtro, e reaparece quando é devolvido ao
+     * grupo e liberado de novo. É o mesmo item, com a mesma chave — o que ele
+     * já tinha é preservado, e a ida e volta fica registrada.
+     */
+    public function test_item_que_sai_e_volta_registra_o_retorno(): void
+    {
+        $importador = app(ImportadorItensLiberados::class);
+        $importador->importar($this->planilha([$this->linha()]));
+
+        $item = DemandaItem::firstOrFail();
+        $item->registrarPrevisao(now()->addDays(3));
+        $this->assertSame(0, $item->fresh()->vezes_ausente);
+
+        // Trocou de grupo no SAP: some do export.
+        $this->travel(1)->days();
+        $importador->importar($this->planilha([$this->linha(['Nota' => '326999999'])]));
+        $item->refresh();
+        $this->assertNotNull($item->ausente_no_sap_em);
+        $this->assertFalse($item->voltouAoSap());
+
+        // Devolvido ao grupo e liberado de novo, dias depois: volta.
+        $this->travel(3)->days();
+        $importador->importar($this->planilha([$this->linha()]));
+        $item->refresh();
+
+        $this->assertNull($item->ausente_no_sap_em);
+        $this->assertTrue($item->voltouAoSap());
+        $this->assertSame(1, $item->vezes_ausente);
+        // A previsão dada antes de sumir continua lá, mas sinalizada: o item
+        // ficou fora do radar e a data prometida provavelmente não vale mais.
+        $this->assertNotNull($item->data_hora_previsao_entrega);
+        $this->assertTrue($item->previsaoAnteriorAoRetorno());
+        // E nada do que a operação tinha registrado se perdeu: é o mesmo item
+        // voltando, não um novo.
+        $this->assertCount(1, $item->previsoes);
+        $this->assertSame(1, DemandaItem::where('numero_rt', '326213060')->count());
+    }
+
+    /**
+     * Cada ciclo conta: item que vive saindo e voltando é retrabalho visível.
+     */
+    public function test_conta_quantas_vezes_o_item_ficou_fora(): void
+    {
+        $importador = app(ImportadorItensLiberados::class);
+        $importador->importar($this->planilha([$this->linha()]));
+
+        foreach (range(1, 3) as $ciclo) {
+            $importador->importar($this->planilha([$this->linha(['Nota' => '326999999'])]));
+            $importador->importar($this->planilha([$this->linha()]));
+        }
+
+        $this->assertSame(3, DemandaItem::where('numero_rt', '326213060')->firstOrFail()->vezes_ausente);
+    }
+
+    /**
+     * Previsão registrada depois do retorno não é mais a que ficou para trás.
+     */
+    public function test_previsao_dada_apos_o_retorno_nao_e_sinalizada(): void
+    {
+        $importador = app(ImportadorItensLiberados::class);
+        $importador->importar($this->planilha([$this->linha()]));
+        $importador->importar($this->planilha([$this->linha(['Nota' => '326999999'])]));
+        $importador->importar($this->planilha([$this->linha()]));
+
+        $this->travel(1)->days();
+        $item = DemandaItem::where('numero_rt', '326213060')->firstOrFail();
+        $item->registrarPrevisao(now()->addDays(5));
+
+        $this->assertTrue($item->fresh()->voltouAoSap());
+        $this->assertFalse($item->fresh()->previsaoAnteriorAoRetorno());
+    }
+
     public function test_marcar_ausentes_pode_ser_desligado_para_importacao_parcial(): void
     {
         $importador = app(ImportadorItensLiberados::class);

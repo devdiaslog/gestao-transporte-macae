@@ -110,10 +110,11 @@
             </select>
         </div>
 
-        <label class="flex h-10 items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+        <label class="flex h-10 items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300"
+               title="Itens que não vieram na última importação">
             <input type="checkbox" name="ausentes" value="1" @checked(request()->boolean('ausentes'))
                    class="h-4 w-4 rounded border-slate-300 text-zinc-900 dark:border-zinc-700">
-            Sumiram do SAP
+            Conferir no SAP
         </label>
 
         <button type="submit" class="h-10 rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">

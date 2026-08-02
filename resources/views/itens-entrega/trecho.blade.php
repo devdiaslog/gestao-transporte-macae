@@ -173,12 +173,25 @@
                                     <p class="mt-0.5 max-w-72 truncate text-xs text-zinc-500 dark:text-zinc-400" title="{{ $item->descricao_item }}">
                                         {{ $item->descricao_item ?? '—' }}
                                     </p>
-                                    @if($item->ausente_no_sap_em)
-                                        <div class="mt-1">
-                                            <span title="Não veio na última importação — confira o que aconteceu no SAP"
-                                                  class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
-                                                sumiu do SAP
-                                            </span>
+                                    @if($item->ausente_no_sap_em || $item->voltouAoSap())
+                                        <div class="mt-1 flex flex-wrap gap-1">
+                                            @if($item->ausente_no_sap_em)
+                                                <span title="Não veio na importação de {{ $item->ausente_no_sap_em->format('d/m/Y H:i') }}"
+                                                      class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
+                                                    conferir no SAP
+                                                </span>
+                                            @elseif($item->previsaoAnteriorAoRetorno())
+                                                <span title="Voltou em {{ $item->retornou_ao_sap_em->format('d/m/Y H:i') }} com a previsão dada antes de sumir — confirme a data com o cliente"
+                                                      class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
+                                                    previsão anterior ao retorno
+                                                </span>
+                                            @endif
+                                            @if($item->vezes_ausente > 0)
+                                                <span title="Saiu e voltou {{ $item->vezes_ausente }}x no SAP. Último retorno em {{ $item->retornou_ao_sap_em?->format('d/m/Y H:i') }}"
+                                                      class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                                                    {{ $item->vezes_ausente }}x fora do SAP
+                                                </span>
+                                            @endif
                                         </div>
                                     @endif
                                 </td>

@@ -199,8 +199,14 @@ class ImportadorItensLiberados
                 $this->aplicarStatusSap($item, $linha, $numeroLinha, $resultado);
                 $this->aplicarPrazo($item, $linha);
 
-                // Reapareceu no export: deixa de estar pendente de conferência.
-                $item->ausente_no_sap_em = null;
+                // Reapareceu no export depois de ter sumido: registra o retorno
+                // para quem prometeu uma data antes saber que o item ficou fora
+                // do radar nesse intervalo.
+                if ($item->ausente_no_sap_em !== null) {
+                    $item->retornou_ao_sap_em = now();
+                    $item->vezes_ausente = (int) $item->vezes_ausente + 1;
+                    $item->ausente_no_sap_em = null;
+                }
 
                 if ($item->isDirty() || $novo) {
                     $item->save();
