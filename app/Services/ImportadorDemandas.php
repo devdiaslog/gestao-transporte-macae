@@ -68,6 +68,13 @@ class ImportadorDemandas
         'liberacao_data' => ['Data Liberação', 'Data Liber'],
         'liberacao_hora' => ['Hora Liberação', 'Hora Liber'],
         'doc_unitizacao_superior' => ['Documento Unitização', 'DocUnitSup'],
+        'numero_contentor' => ['Numero Contentor', 'Numero Con', 'Número Contentor'],
+        'descricao_contentor' => ['Descrição Contentor', 'Descricao Contentor'],
+        // Medidas da unitização: o SAP as entrega em colunas proprias, com
+        // nomes truncados no ALV ("Altura Emb", "Largura  E").
+        'comprimento_embalagem' => ['Comprimento Embalagem', 'Compriment Emb', 'Comprimento Emb'],
+        'largura_embalagem' => ['Largura Embalagem', 'Largura  E', 'Largura Emb'],
+        'altura_embalagem' => ['Altura Embalagem', 'Altura Emb'],
         'grupo_planejamento' => ['Grupo Planejamento', 'Grupo plan'],
     ];
 
@@ -105,6 +112,8 @@ class ImportadorDemandas
         'Data Liberação',
         'Hora Liberação',
         'Documento Unitização',
+        'Numero Contentor',
+        'Descrição Contentor',
         'Grupo Planejamento',
     ];
 
@@ -114,8 +123,8 @@ class ImportadorDemandas
      * @var array<int, array<int, string>>
      */
     private const EXEMPLOS_MODELO = [
-        ['509538496', '23.07.2026', '08:00:00', 'Backload', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Tubos de perfuração', '2.500,50', '2,60', '2,40', '12,00', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00', '', '', '', '20.07.2026', '07:15:00', '21.07.2026', '09:30:00', '4803478', 'T44'],
-        ['619012345', '24.07.2026', '09:15:00', '', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', '800', '1,20', '1,00', '2,40', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00', '25.07.2026', '13:45:00', 'Insight da análise', '', '', '', '', '', 'T44'],
+        ['509538496', '23.07.2026', '08:00:00', 'Backload', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Tubos de perfuração', '2.500,50', '2,60', '2,40', '12,00', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00', '', '', '', '20.07.2026', '07:15:00', '21.07.2026', '09:30:00', '4803478', '30112162', 'CISA1010093 Container 3MDry(3,0x2,4x2,4)', 'T44'],
+        ['619012345', '24.07.2026', '09:15:00', '', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', '800', '1,20', '1,00', '2,40', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00', '25.07.2026', '13:45:00', 'Insight da análise', '', '', '', '', '', '', '', 'T44'],
     ];
 
     public function __construct(private DemandaCalculadora $calculadora) {}
@@ -289,7 +298,7 @@ class ImportadorDemandas
 
                 // Peso e dimensões da carga: dados do SAP, re-sincronizam quando a
                 // coluna existe na planilha.
-                foreach (['peso_total', 'altura', 'largura', 'comprimento'] as $campoMedida) {
+                foreach (['peso_total', 'altura', 'largura', 'comprimento', 'comprimento_embalagem', 'largura_embalagem', 'altura_embalagem'] as $campoMedida) {
                     if (array_key_exists($campoMedida, $linha)) {
                         $item->{$campoMedida} = $this->numero($linha[$campoMedida]);
                     }
@@ -416,7 +425,7 @@ class ImportadorDemandas
             $item->data_hora_liberacao_rt = $liberacao;
         }
 
-        foreach (['doc_unitizacao_superior', 'grupo_planejamento'] as $campo) {
+        foreach (['doc_unitizacao_superior', 'grupo_planejamento', 'numero_contentor', 'descricao_contentor'] as $campo) {
             if (array_key_exists($campo, $linha) && ($valor = $this->limpar($linha[$campo])) !== null) {
                 $item->{$campo} = $valor;
             }

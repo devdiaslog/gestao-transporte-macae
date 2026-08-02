@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\OrigemPrevisao;
 use App\Enums\StatusItemDemanda;
 use App\Enums\StatusSap;
+use App\Support\ContentorSap;
 use App\Support\NormalizadorLocal;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -44,6 +45,12 @@ class DemandaItem extends Model
         'data_hora_criacao_rt',
         'data_hora_liberacao_rt',
         'doc_unitizacao_superior',
+        'numero_contentor',
+        'descricao_contentor',
+        'comprimento_embalagem',
+        'largura_embalagem',
+        'altura_embalagem',
+        'area_embalagem',
         'grupo_planejamento',
         'data_hora_previsao_entrega',
         'fora_escopo',
@@ -102,6 +109,16 @@ class DemandaItem extends Model
             if ($item->isDirty('local_destino')) {
                 $item->local_destino_norm = NormalizadorLocal::canonizar($item->local_destino);
             }
+
+            // Área de piso da unitização, das colunas do SAP ou, na falta
+            // delas, do que a descrição do contentor traz no texto.
+            if ($item->isDirty(['comprimento_embalagem', 'largura_embalagem', 'descricao_contentor'])) {
+                $item->area_embalagem = ContentorSap::area(
+                    $item->comprimento_embalagem !== null ? (float) $item->comprimento_embalagem : null,
+                    $item->largura_embalagem !== null ? (float) $item->largura_embalagem : null,
+                    $item->descricao_contentor,
+                );
+            }
         });
     }
 
@@ -157,7 +174,7 @@ class DemandaItem extends Model
     }
 
     /**
-     * Área ocupada no piso da carreta, em m².
+     * Área ocupada no piso da carreta pelas medidas do próprio item, em m².
      *
      * Só comprimento × largura: a altura não disputa espaço de piso, ela entra
      * na classificação do porte.
@@ -169,6 +186,27 @@ class DemandaItem extends Model
         }
 
         return round((float) $this->comprimento * (float) $this->largura, 2);
+    }
+
+    /**
+     * Área que o item de fato ocupa no veículo, em m².
+     *
+     * Dentro de um contentor, quem ocupa o piso é o contentor — as medidas das
+     * caixas lá dentro não importam para o carregamento. Ao somar vários itens
+     * do mesmo contentor, essa área deve ser contada uma única vez.
+     */
+    public function areaEfetiva(): ?float
+    {
+        if ($this->dentroDeContentor()) {
+            return $this->area_embalagem !== null ? (float) $this->area_embalagem : null;
+        }
+
+        return $this->area();
+    }
+
+    public function dentroDeContentor(): bool
+    {
+        return $this->numero_contentor !== null && $this->numero_contentor !== '';
     }
 
     /**

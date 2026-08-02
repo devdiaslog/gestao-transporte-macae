@@ -6,6 +6,7 @@ use App\Enums\OrigemPrevisao;
 use App\Enums\StatusSap;
 use App\Models\DemandaItem;
 use App\Models\User;
+use App\Support\ContentorSap;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use OpenSpout\Common\Entity\Row;
@@ -155,6 +156,159 @@ class ItemEntregaTelaTest extends TestCase
         // Área é só comprimento × largura: a altura não ocupa piso.
         $this->assertSame(10.23, $item->area());
         $this->assertSame('3,10 × 3,30 × 3,60', $item->dimensoes());
+    }
+
+    /**
+     * Dentro de um contentor quem ocupa o piso é o contentor. Somar as caixas
+     * de dentro contaria o mesmo espaço várias vezes.
+     */
+    public function test_area_de_piso_conta_o_contentor_uma_vez_so(): void
+    {
+        // Três itens no mesmo contentor de 3,0 × 2,4 m.
+        $noContentor = collect(range(1, 3))->map(fn ($n) => $this->item([
+            'comprimento' => 1.0,
+            'largura' => 1.0,
+            'numero_contentor' => '30112162',
+            'descricao_contentor' => 'CISA1010093 Container 3MDry(3,0x2,4x2,4)',
+            'comprimento_embalagem' => 3.0,
+            'largura_embalagem' => 2.4,
+            'altura_embalagem' => 2.4,
+        ]));
+
+        $solto = $this->item(['comprimento' => 2.0, 'largura' => 1.5]);
+
+        $this->assertSame(7.2, (float) $noContentor->first()->fresh()->area_embalagem);
+        $this->assertSame(7.2, $noContentor->first()->fresh()->areaEfetiva());
+
+        // 7,2 do contentor (uma vez) + 3,0 do item solto.
+        $this->assertSame(10.2, ContentorSap::areaDePiso($noContentor->push($solto)->map->fresh()));
+    }
+
+    public function test_area_da_embalagem_vem_das_colunas_do_sap(): void
+    {
+        $item = $this->item([
+            'comprimento_embalagem' => 6.0,
+            'largura_embalagem' => 2.4,
+            'numero_contentor' => '30112163',
+            // Descrição com medidas diferentes: as colunas do SAP têm prioridade.
+            'descricao_contentor' => 'CISA0420487 Caixa 1M (1,10x1,10x1,10)',
+        ]);
+
+        $this->assertSame(14.4, (float) $item->fresh()->area_embalagem);
+    }
+
+    /**
+     * Quando o layout não traz as colunas de medida, a descrição serve de
+     * reserva — o texto costuma repetir as dimensões.
+     */
+    public function test_area_da_embalagem_cai_para_a_descricao_quando_falta_coluna(): void
+    {
+        $item = $this->item([
+            'numero_contentor' => '30112164',
+            'descricao_contentor' => 'CISA0420487 Caixa 1M (1,10x1,10x1,10)',
+        ]);
+
+        $this->assertSame(1.21, (float) $item->fresh()->area_embalagem);
+    }
+
+    public function test_tela_agrupa_por_embalagem_superior(): void
+    {
+        $this->item([
+            'numero_contentor' => '30112162',
+            'descricao_contentor' => 'CISA1010093 Container 3MDry(3,0x2,4x2,4)',
+            'comprimento_embalagem' => 3.0,
+            'largura_embalagem' => 2.4,
+            'peso_total' => 100,
+        ]);
+        $this->item([
+            'numero_contentor' => '30112162',
+            'descricao_contentor' => 'CISA1010093 Container 3MDry(3,0x2,4x2,4)',
+            'comprimento_embalagem' => 3.0,
+            'largura_embalagem' => 2.4,
+            'peso_total' => 250,
+        ]);
+        $this->item(); // solto
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.trecho'))
+            ->assertOk()
+            ->assertSee('30112162')
+            ->assertSee('1 embalagem superior')
+            ->assertViewHas('embalagens', function ($embalagens) {
+                $this->assertCount(1, $embalagens);
+                $e = $embalagens->first();
+                $this->assertSame(2, $e['itens']);
+                $this->assertSame(350.0, $e['peso']);
+                $this->assertSame(7.2, $e['area']);
+
+                return true;
+            });
+    }
+
+    public function test_filtra_os_itens_de_uma_embalagem(): void
+    {
+        $dentro = $this->item(['numero_contentor' => '30112162']);
+        $fora = $this->item();
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.trecho', ['contentor' => '30112162']))
+            ->assertOk()
+            ->assertSee($dentro->numero_rt)
+            ->assertDontSee($fora->numero_rt);
+    }
+
+    public function test_area_do_trecho_soma_contentor_uma_vez(): void
+    {
+        foreach (range(1, 3) as $n) {
+            $this->item([
+                'local_origem' => 'PACU',
+                'local_destino' => 'ARM-MACAE',
+                'comprimento' => 1.0,
+                'largura' => 1.0,
+                'numero_contentor' => '30112162',
+                'comprimento_embalagem' => 3.0,
+                'largura_embalagem' => 2.4,
+            ]);
+        }
+        $this->item(['local_origem' => 'PACU', 'local_destino' => 'ARM-MACAE', 'comprimento' => 2.0, 'largura' => 1.5]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index'))
+            ->assertOk()
+            ->assertViewHas('trechos', function ($trechos) {
+                // 7,2 do contentor + 3,0 do solto — não 3 × 1,0 + 3,0.
+                $this->assertSame(10.2, $trechos->firstWhere('local_origem_norm', 'PACU')->area);
+
+                return true;
+            });
+    }
+
+    /**
+     * Um contentor é montado para um destino só, então a área dele nunca é
+     * contada em mais de um trecho — nem quando o mesmo número aparece em
+     * itens de trechos diferentes por erro de cadastro.
+     */
+    public function test_contentor_nao_duplica_area_entre_trechos(): void
+    {
+        $contentor = [
+            'numero_contentor' => '30112162',
+            'comprimento_embalagem' => 3.0,
+            'largura_embalagem' => 2.4,
+        ];
+
+        $this->item(array_merge($contentor, ['local_origem' => 'PACU', 'local_destino' => 'ARM-MACAE']));
+        $this->item(array_merge($contentor, ['local_origem' => 'PACU', 'local_destino' => 'ARM-MACAE']));
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index'))
+            ->assertOk()
+            ->assertViewHas('trechos', function ($trechos) {
+                $this->assertCount(1, $trechos);
+                // Dois itens, um contentor: 7,2 m² e não 14,4.
+                $this->assertSame(7.2, $trechos->first()->area);
+
+                return true;
+            });
     }
 
     public function test_area_e_dimensoes_sao_nulas_sem_medidas(): void

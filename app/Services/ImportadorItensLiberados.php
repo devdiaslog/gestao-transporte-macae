@@ -61,6 +61,13 @@ class ImportadorItensLiberados
         'comprimento' => ['Comprimento', 'Compriment', 'Comprimento RT'],
 
         'doc_unitizacao_superior' => ['Documento Unitização', 'DocUnitSup'],
+        'numero_contentor' => ['Numero Contentor', 'Numero Con', 'Número Contentor'],
+        'descricao_contentor' => ['Descrição Contentor', 'Descricao Contentor'],
+        // Medidas da unitização: o SAP as entrega em colunas proprias, com
+        // nomes truncados no ALV ("Altura Emb", "Largura  E").
+        'comprimento_embalagem' => ['Comprimento Embalagem', 'Compriment Emb', 'Comprimento Emb'],
+        'largura_embalagem' => ['Largura Embalagem', 'Largura  E', 'Largura Emb'],
+        'altura_embalagem' => ['Altura Embalagem', 'Altura Emb'],
         'grupo_planejamento' => ['Grupo Planejamento', 'Grupo plan'],
         'status_sap' => ['Status', 'Status do'],
     ];
@@ -85,6 +92,8 @@ class ImportadorItensLiberados
         'Largura',
         'Altura',
         'Documento Unitização',
+        'Numero Contentor',
+        'Descrição Contentor',
         'Grupo Planejamento',
         'Status',
     ];
@@ -92,9 +101,9 @@ class ImportadorItensLiberados
     /** @var array<int, array<int, string>> */
     private const EXEMPLOS_MODELO = [
         ['326213060', '5', '2', '03.07.2026', '13:56:13', '03.07.2026', '13:56:46', '10.07.2026', '00:00:00',
-            'BASE VITORIA', '', 'ARM-MACAE', 'SKID P/PROTEÇÃO E TRANSPORTE', '2.408,000', '3,1000', '3,3000', '3,6000', '4803478', 'T44', '03'],
+            'BASE VITORIA', '', 'ARM-MACAE', 'SKID P/PROTEÇÃO E TRANSPORTE', '2.408,000', '3,1000', '3,3000', '3,6000', '4803478', '30112162', 'CISA1010093 Container 3MDry(3,0x2,4x2,4)', 'T44', '03'],
         ['326340468', '1', '2', '10.07.2026', '16:18:40', '10.07.2026', '16:22:02', '22.07.2026', '14:00:00',
-            'BASE VITORIA', 'AL-06', 'ARM-MACAE', 'SKID P/ARMAZ.E TRANSFERÊNCIA', '12.706,000', '4,7000', '3,2000', '3,7000', '', 'T44', '03'],
+            'BASE VITORIA', 'AL-06', 'ARM-MACAE', 'SKID P/ARMAZ.E TRANSFERÊNCIA', '12.706,000', '4,7000', '3,2000', '3,7000', '', '', '', 'T44', '03'],
     ];
 
     /**
@@ -249,13 +258,13 @@ class ImportadorItensLiberados
             $item->data_hora_liberacao_rt = $liberacao;
         }
 
-        foreach (['doc_unitizacao_superior', 'grupo_planejamento'] as $campo) {
+        foreach (['doc_unitizacao_superior', 'grupo_planejamento', 'numero_contentor', 'descricao_contentor'] as $campo) {
             if (array_key_exists($campo, $linha)) {
                 $item->{$campo} = $this->limpar($linha[$campo]);
             }
         }
 
-        foreach (['peso_total', 'altura', 'largura', 'comprimento'] as $medida) {
+        foreach (['peso_total', 'altura', 'largura', 'comprimento', 'comprimento_embalagem', 'largura_embalagem', 'altura_embalagem'] as $medida) {
             if (array_key_exists($medida, $linha)) {
                 $item->{$medida} = $this->numero($linha[$medida]);
             }

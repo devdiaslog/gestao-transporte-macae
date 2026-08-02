@@ -10,11 +10,13 @@ use App\Http\Requests\ImportarItensLiberadosRequest;
 use App\Http\Requests\MarcarForaEscopoRequest;
 use App\Models\DemandaItem;
 use App\Services\ImportadorItensLiberados;
+use App\Support\ContentorSap;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -68,13 +70,18 @@ class ItemEntregaController extends Controller
         $aba = $this->abaDe($request);
         $dias = $this->diasDe($request);
 
+        // Área de piso: item solto vale pelas próprias medidas; dentro de
+        // contentor vale a área do contentor, somada à parte para contar cada
+        // um uma vez só.
         $trechos = $this->queryFiltrada($request, $aba, $dias)
             ->selectRaw('
                 local_origem_norm,
                 local_destino_norm,
                 count(*) as total,
                 sum(coalesce(peso_total, 0)) as peso,
-                sum(coalesce(comprimento, 0) * coalesce(largura, 0)) as area,
+                sum(case when numero_contentor is null
+                         then coalesce(comprimento, 0) * coalesce(largura, 0)
+                         else 0 end) as area_solta,
                 sum(case when fora_escopo = 0 and data_hora_previsao_entrega is null then 1 else 0 end) as sem_previsao,
                 sum(case when fora_escopo = 0 and data_hora_previsao_entrega is not null
                           and prazo_item is not null
@@ -87,6 +94,13 @@ class ItemEntregaController extends Controller
             ->orderByDesc('sem_previsao')
             ->orderByDesc('total')
             ->get();
+
+        $areaPorTrecho = $this->areaDosContentoresPorTrecho($request, $aba, $dias);
+
+        $trechos->each(function ($trecho) use ($areaPorTrecho) {
+            $chave = $trecho->local_origem_norm.'|'.$trecho->local_destino_norm;
+            $trecho->area = round((float) $trecho->area_solta + ($areaPorTrecho[$chave] ?? 0), 2);
+        });
 
         return view('itens-entrega.index', [
             'trechos' => $trechos,
@@ -110,6 +124,9 @@ class ItemEntregaController extends Controller
 
         $itens = $this->queryFiltrada($request, $aba, $dias)
             ->with(['demanda.equipamento', 'previsaoAtual.autor', 'marcadoForaDoEscopoPor'])
+            // Itens da mesma embalagem ficam juntos: eles viajam juntos.
+            ->orderByRaw('numero_contentor is null')
+            ->orderBy('numero_contentor')
             ->orderByRaw('prazo_item is null')
             ->orderBy('prazo_item')
             ->paginate(50)
@@ -117,6 +134,8 @@ class ItemEntregaController extends Controller
 
         return view('itens-entrega.trecho', [
             'itens' => $itens,
+            'embalagens' => $this->embalagensDaPagina($itens->getCollection()),
+            'areaDePiso' => ContentorSap::areaDePiso($itens->getCollection()),
             'aba' => $aba,
             'abas' => self::ABAS,
             'dias' => $dias,
@@ -387,6 +406,7 @@ class ItemEntregaController extends Controller
             ->when($request->filled('origem_norm'), fn (Builder $q) => $q->where('local_origem_norm', $request->input('origem_norm')))
             ->when($request->filled('destino_norm'), fn (Builder $q) => $q->where('local_destino_norm', $request->input('destino_norm')))
             ->when($request->filled('doc_unitizacao'), fn (Builder $q) => $q->where('doc_unitizacao_superior', $request->input('doc_unitizacao')))
+            ->when($request->filled('contentor'), fn (Builder $q) => $q->where('numero_contentor', $request->input('contentor')))
             ->when($request->boolean('ausentes'), fn (Builder $q) => $q->whereNotNull('ausente_no_sap_em'))
             ->when($request->filled('situacao'), fn (Builder $q) => $this->aplicarSituacao($q, (string) $request->input('situacao')));
     }
@@ -460,6 +480,59 @@ class ItemEntregaController extends Controller
         }
 
         return $contadores;
+    }
+
+    /**
+     * Área de piso dos contentores, por trecho.
+     *
+     * Cada contentor conta uma vez só — a query principal não consegue fazer
+     * isso num único GROUP BY, porque somaria a área do contentor tantas vezes
+     * quantos itens ele carrega.
+     *
+     * Um contentor tem sempre um único trecho: ele é montado para um destino.
+     * É essa garantia da operação que permite somar por trecho sem risco de
+     * contar a mesma embalagem em dois lugares.
+     *
+     * @return array<string, float> chave "origem|destino"
+     */
+    private function areaDosContentoresPorTrecho(Request $request, string $aba, int $dias): array
+    {
+        return $this->queryFiltrada($request, $aba, $dias)
+            ->whereNotNull('numero_contentor')
+            ->whereNotNull('area_embalagem')
+            ->select('local_origem_norm', 'local_destino_norm', 'numero_contentor', 'area_embalagem')
+            ->distinct()
+            ->get()
+            ->groupBy(fn ($linha) => $linha->local_origem_norm.'|'.$linha->local_destino_norm)
+            ->map(fn ($contentores) => (float) $contentores->sum('area_embalagem'))
+            ->all();
+    }
+
+    /**
+     * Resumo das embalagens presentes na página.
+     *
+     * O que viaja é o contentor: saber quantos itens ele carrega, quanto pesa
+     * no total e quanto ocupa de piso é o que permite decidir o veículo.
+     *
+     * @param  Collection<int, DemandaItem>  $itens
+     * @return Collection<string, array{descricao: string|null, itens: int, peso: float, area: float|null, sem_previsao: int}>
+     */
+    private function embalagensDaPagina(Collection $itens): Collection
+    {
+        return $itens
+            ->filter(fn (DemandaItem $i) => $i->dentroDeContentor())
+            ->groupBy('numero_contentor')
+            ->map(fn ($doContentor) => [
+                'descricao' => $doContentor->first()->descricao_contentor,
+                'itens' => $doContentor->count(),
+                'peso' => (float) $doContentor->sum('peso_total'),
+                // A área é do contentor, não a soma do que está dentro dele.
+                'area' => $doContentor->first()->area_embalagem !== null
+                    ? (float) $doContentor->first()->area_embalagem
+                    : null,
+                'sem_previsao' => $doContentor->whereNull('data_hora_previsao_entrega')->count(),
+            ])
+            ->sortByDesc('itens');
     }
 
     /**

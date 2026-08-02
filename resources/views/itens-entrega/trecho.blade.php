@@ -111,6 +111,52 @@
     </div>
     @endif
 
+    {{-- Embalagens superiores: o que de fato ocupa o piso do veículo --}}
+    @if($embalagens->isNotEmpty())
+        <div class="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
+            <div class="flex items-center justify-between gap-3">
+                <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    {{ $embalagens->count() }} {{ $embalagens->count() === 1 ? 'embalagem superior' : 'embalagens superiores' }} nesta página
+                </h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                    Os itens dentro de um contentor ocupam o espaço dele, não a soma das próprias medidas.
+                </p>
+            </div>
+
+            <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach($embalagens as $numero => $e)
+                    <a href="{{ request()->fullUrlWithQuery(['contentor' => $numero, 'page' => null]) }}"
+                       class="rounded-lg border px-3 py-2 transition-colors
+                              {{ request('contentor') === (string) $numero
+                                  ? 'border-zinc-900 bg-zinc-50 dark:border-zinc-100 dark:bg-zinc-800'
+                                  : 'border-slate-200 hover:border-slate-300 dark:border-zinc-800 dark:hover:border-zinc-700' }}">
+                        <p class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">📦 {{ $numero }}</p>
+                        @if($e['descricao'])
+                            <p class="mt-0.5 truncate text-[11px] text-zinc-500 dark:text-zinc-400" title="{{ $e['descricao'] }}">{{ $e['descricao'] }}</p>
+                        @endif
+                        <p class="mt-1 text-[11px] tabular-nums text-zinc-600 dark:text-zinc-400">
+                            {{ $e['itens'] }} {{ $e['itens'] === 1 ? 'item' : 'itens' }}
+                            @if($e['peso'] > 0) · {{ number_format($e['peso'], 0, ',', '.') }} kg @endif
+                            @if($e['area']) · {{ number_format($e['area'], 2, ',', '.') }} m² @endif
+                        </p>
+                        @if($e['sem_previsao'] > 0)
+                            <p class="mt-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+                                {{ $e['sem_previsao'] }} sem previsão
+                            </p>
+                        @endif
+                    </a>
+                @endforeach
+            </div>
+
+            @if(request('contentor'))
+                <a href="{{ request()->fullUrlWithQuery(['contentor' => null, 'page' => null]) }}"
+                   class="mt-3 inline-block text-xs text-zinc-500 hover:text-zinc-800 dark:text-zinc-400">
+                    Mostrar todos os itens do trecho
+                </a>
+            @endif
+        </div>
+    @endif
+
     <div class="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
         @if($itens->isEmpty())
             <div class="flex flex-col items-center justify-center px-6 py-20 text-center">
@@ -198,7 +244,16 @@
                                             {{ $item->dimensoes() }} m
                                         </p>
                                     @endif
-                                    @if($item->area())
+                                    @if($item->dentroDeContentor())
+                                        <p class="text-[10px] tabular-nums text-zinc-400"
+                                           title="Vai dentro do contentor {{ $item->numero_contentor }} — quem ocupa o piso é ele">
+                                            @if($item->area_embalagem)
+                                                {{ number_format((float) $item->area_embalagem, 2, ',', '.') }} m² (contentor)
+                                            @else
+                                                dentro de contentor
+                                            @endif
+                                        </p>
+                                    @elseif($item->area())
                                         <p class="text-[10px] tabular-nums text-zinc-400"
                                            title="Área de piso ocupada: comprimento × largura">
                                             {{ number_format($item->area(), 2, ',', '.') }} m² de piso
@@ -287,9 +342,11 @@
                     <tfoot>
                         @php
                             // Somatórios da página exibida — é o que a operação
-                            // enxerga ao decidir se cabe num veículo só.
+                            // enxerga ao decidir se cabe num veículo só. A área
+                            // vem do controller porque cada contentor conta uma
+                            // vez, independente de quantos itens carrega.
                             $pesoPagina = $itens->sum('peso_total');
-                            $areaPagina = $itens->sum(fn ($i) => $i->area() ?? 0);
+                            $areaPagina = $areaDePiso;
                         @endphp
                         <tr class="border-t-2 border-slate-200 bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800/50">
                             @if($podePrever || $podeEscopo)<td></td>@endif
