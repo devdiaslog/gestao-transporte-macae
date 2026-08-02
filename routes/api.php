@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DemandaConsultaController;
 use App\Http\Controllers\Api\DemandaImportacaoController;
 use App\Http\Controllers\Api\ItemLiberadoImportacaoController;
 use App\Http\Controllers\Api\OcorrenciaController;
@@ -20,6 +21,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
 
     Route::get('/ocorrencias', [OcorrenciaController::class, 'index'])->name('api.ocorrencias.index');
+
+    // Consulta dos atendimentos, para a automação buscar no SAP só o que precisa.
+    Route::get('/demandas', [DemandaConsultaController::class, 'index'])->name('api.demandas.index');
 
     Route::post('/demandas/importar', [DemandaImportacaoController::class, 'store'])->name('api.demandas.importar');
 
