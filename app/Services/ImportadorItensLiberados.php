@@ -61,6 +61,9 @@ class ImportadorItensLiberados
         'comprimento' => ['Comprimento', 'Compriment', 'Comprimento RT'],
 
         'doc_unitizacao_superior' => ['Documento Unitização', 'DocUnitSup'],
+        // O export de itens liberados não traz o contentor físico — quem
+        // agrupa aqui é o documento de unitização. O mapeamento fica para o
+        // caso de a coluna passar a ser incluída no layout.
         'numero_contentor' => ['Numero Contentor', 'Numero Con', 'Número Contentor'],
         'descricao_contentor' => ['Descrição Contentor', 'Descricao Contentor'],
         // Medidas da unitização: o SAP as entrega em colunas proprias, com
@@ -92,18 +95,24 @@ class ImportadorItensLiberados
         'Largura',
         'Altura',
         'Documento Unitização',
-        'Numero Contentor',
         'Descrição Contentor',
+        'Comprimento Embalagem',
+        'Largura Embalagem',
+        'Altura Embalagem',
         'Grupo Planejamento',
         'Status',
     ];
 
     /** @var array<int, array<int, string>> */
     private const EXEMPLOS_MODELO = [
+        // Item dentro de uma unitização: quem ocupa o piso é ela.
         ['326213060', '5', '2', '03.07.2026', '13:56:13', '03.07.2026', '13:56:46', '10.07.2026', '00:00:00',
-            'BASE VITORIA', '', 'ARM-MACAE', 'SKID P/PROTEÇÃO E TRANSPORTE', '2.408,000', '3,1000', '3,3000', '3,6000', '4803478', '30112162', 'CISA1010093 Container 3MDry(3,0x2,4x2,4)', 'T44', '03'],
+            'BASE VITORIA', '', 'ARM-MACAE', 'SKID P/PROTEÇÃO E TRANSPORTE', '2.408,000', '3,1000', '3,3000', '3,6000',
+            '4803478', 'CISA1010093 Container 3MDry(3,0x2,4x2,4)', '3,0000', '2,4000', '2,4000', 'T44', '03'],
+        // Item solto: vale pelas próprias medidas.
         ['326340468', '1', '2', '10.07.2026', '16:18:40', '10.07.2026', '16:22:02', '22.07.2026', '14:00:00',
-            'BASE VITORIA', 'AL-06', 'ARM-MACAE', 'SKID P/ARMAZ.E TRANSFERÊNCIA', '12.706,000', '4,7000', '3,2000', '3,7000', '', '', '', 'T44', '03'],
+            'BASE VITORIA', 'AL-06', 'ARM-MACAE', 'SKID P/ARMAZ.E TRANSFERÊNCIA', '12.706,000', '4,7000', '3,2000', '3,7000',
+            '', '', '', '', '', 'T44', '03'],
     ];
 
     /**
