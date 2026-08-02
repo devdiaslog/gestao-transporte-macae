@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\FonteDemanda;
 use App\Enums\StatusDemanda;
 use App\Enums\StatusItemDemanda;
+use App\Enums\StatusSap;
 use App\Enums\TipoDemanda;
 use App\Models\Alerta;
 use App\Models\Demanda;
@@ -315,7 +316,7 @@ class ImportadorDemandasTest extends TestCase
         $item = $demanda->itens()->first();
 
         $this->assertSame('22/07/2026 08:30', $demanda->data_hora_criacao_sap->format('d/m/Y H:i'));
-        $this->assertSame('04', $item->status_sap);
+        $this->assertSame(StatusSap::Programado, $item->status_sap);
 
         // Operador assume o status no sistema; o código bruto do SAP continua
         // sincronizando nas reimportações (é a referência ao finalizar o item).
@@ -328,7 +329,26 @@ class ImportadorDemandasTest extends TestCase
         $item->refresh();
 
         $this->assertSame(StatusItemDemanda::Recusado, $item->status_item);
-        $this->assertSame('07', $item->status_sap);
+        $this->assertSame(StatusSap::Atendido, $item->status_sap);
+    }
+
+    /**
+     * Um código fora do ciclo de vida conhecido não pode derrubar a importação:
+     * o item mantém o status anterior e a ocorrência fica na observação.
+     */
+    public function test_status_do_sap_desconhecido_nao_quebra_a_importacao(): void
+    {
+        $importador = app(ImportadorDemandas::class);
+        $cabecalho = ['Nota', 'Data Criação', 'Hora Criação', 'Nº da RT', 'Item da RT', 'Status do'];
+
+        $importador->importar($this->planilhaComCabecalho($cabecalho, null, [
+            ['509800071', '22.07.2026', '08:30:00', '326000601', '1', '99'],
+        ]));
+
+        $item = Demanda::where('numero_demanda', 509800071)->firstOrFail()->itens()->first();
+
+        $this->assertNull($item->status_sap);
+        $this->assertStringContainsString('99', (string) $item->observacao);
     }
 
     public function test_destino_usa_o_codigo_do_local_e_nao_a_descricao_formatada(): void

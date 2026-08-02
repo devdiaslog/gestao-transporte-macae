@@ -447,7 +447,7 @@
                                                         'prazo_item' => $item->prazo_item?->format('Y-m-d\TH:i'),
                                                         'data_hora_entrega' => $item->data_hora_entrega?->format('Y-m-d\TH:i'),
                                                         'observacao' => $item->observacao,
-                                                        'status_sap' => $item->status_sap,
+                                                        'status_sap' => $item->status_sap?->value,
                                                         'peso_total' => $item->peso_total ? number_format((float) $item->peso_total, 0, ',', '.').' kg' : null,
                                                         'dimensoes' => ($item->comprimento || $item->largura || $item->altura)
                                                             ? sprintf('%s × %s × %s m',
@@ -491,8 +491,8 @@
                                                         </span>
                                                         @if($item->status_sap)
                                                             <div class="mt-0.5 text-[10px] text-zinc-400 dark:text-zinc-600"
-                                                                 title="Código bruto do status no SAP, sempre atualizado pela importação — confira antes de finalizar o item.">
-                                                                SAP: {{ $item->status_sap }}
+                                                                 title="{{ $item->status_sap->descricao() }} — status no SAP, sempre atualizado pela importação; confira antes de finalizar o item.">
+                                                                SAP {{ $item->status_sap->value }}: {{ $item->status_sap->label() }}
                                                             </div>
                                                         @endif
                                                     </td>

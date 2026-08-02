@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\StatusDemanda;
 use App\Enums\StatusItemDemanda;
+use App\Enums\StatusSap;
 use App\Enums\TipoCadastro;
 use App\Enums\TipoDemanda;
 use App\Models\Demanda;
@@ -261,11 +262,19 @@ class ImportadorDemandas
                     }
                 }
 
-                // Código bruto do status no SAP: sempre re-sincroniza — mesmo com o
-                // status do sistema assumido pelo operador, ele enxerga o estado real
-                // do SAP ao finalizar o item.
+                // Status no SAP: sempre re-sincroniza — mesmo com o status do sistema
+                // assumido pelo operador, ele enxerga o estado real do SAP ao
+                // finalizar o item. Código fora do ciclo de vida conhecido é ignorado
+                // (fica registrado na observação) para não derrubar a importação
+                // inteira caso o SAP passe a emitir um status novo.
                 if (array_key_exists('status_item', $linha) && ($codigoSap = $this->limpar($linha['status_item'])) !== null) {
-                    $item->status_sap = str_pad($codigoSap, 2, '0', STR_PAD_LEFT);
+                    $statusSap = StatusSap::fromCodigo($codigoSap);
+
+                    if ($statusSap !== null) {
+                        $item->status_sap = $statusSap;
+                    } else {
+                        $item->acrescentarObservacao("Status do SAP não reconhecido na importação: {$codigoSap}.");
+                    }
                 }
 
                 // Status e entrega: o SAP atualiza livremente (itens podem ser
