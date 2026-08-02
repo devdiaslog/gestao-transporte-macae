@@ -129,7 +129,12 @@
                             </th>
                             @endif
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Item</th>
-                            <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Trecho</th>
+                            <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Carga</th>
+                            <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Retirada</th>
+                            @unless($origemTrecho || $destinoTrecho)
+                                <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Trecho</th>
+                            @endunless
+                            <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Liberada</th>
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Prazo</th>
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Previsão</th>
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Situação</th>
@@ -178,10 +183,52 @@
                                     </div>
                                 </td>
 
+                                {{-- Carga: o que a operação precisa saber para dimensionar o veículo --}}
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    @if($item->peso_total)
+                                        <p class="text-xs font-semibold tabular-nums text-zinc-800 dark:text-zinc-200">
+                                            {{ number_format((float) $item->peso_total, 0, ',', '.') }} kg
+                                        </p>
+                                    @else
+                                        <p class="text-xs text-zinc-400">sem peso</p>
+                                    @endif
+                                    @if($item->dimensoes())
+                                        <p class="mt-0.5 text-[11px] tabular-nums text-zinc-500 dark:text-zinc-400"
+                                           title="Comprimento × Largura × Altura, em metros">
+                                            {{ $item->dimensoes() }} m
+                                        </p>
+                                    @endif
+                                    @if($item->area())
+                                        <p class="text-[10px] tabular-nums text-zinc-400"
+                                           title="Área de piso ocupada: comprimento × largura">
+                                            {{ number_format($item->area(), 2, ',', '.') }} m² de piso
+                                        </p>
+                                    @endif
+                                </td>
+
                                 <td class="px-4 py-3">
-                                    <p class="text-xs text-zinc-700 dark:text-zinc-300">{{ $item->local_origem ?? '—' }}</p>
-                                    <p class="text-xs text-zinc-400">↓</p>
-                                    <p class="text-xs text-zinc-700 dark:text-zinc-300">{{ $item->local_destino ?? '—' }}</p>
+                                    <p class="max-w-40 truncate text-xs text-zinc-700 dark:text-zinc-300" title="{{ $item->descricao_local_retirada }}">
+                                        {{ $item->descricao_local_retirada ?? '—' }}
+                                    </p>
+                                </td>
+
+                                @unless($origemTrecho || $destinoTrecho)
+                                    <td class="px-4 py-3">
+                                        <p class="text-xs text-zinc-700 dark:text-zinc-300">{{ $item->local_origem ?? '—' }}</p>
+                                        <p class="text-xs text-zinc-400">↓</p>
+                                        <p class="text-xs text-zinc-700 dark:text-zinc-300">{{ $item->local_destino ?? '—' }}</p>
+                                    </td>
+                                @endunless
+
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    @if($item->data_hora_liberacao_rt)
+                                        <p class="text-xs tabular-nums text-zinc-700 dark:text-zinc-300">{{ $item->data_hora_liberacao_rt->format('d/m/Y H:i') }}</p>
+                                        <p class="text-[10px] text-zinc-400" title="Tempo desde que o cliente liberou o item">
+                                            {{ $item->data_hora_liberacao_rt->diffForHumans() }}
+                                        </p>
+                                    @else
+                                        <span class="text-xs text-zinc-400">—</span>
+                                    @endif
                                 </td>
 
                                 <td class="px-4 py-3 whitespace-nowrap">
@@ -237,6 +284,31 @@
                             </tr>
                         @endforeach
                     </tbody>
+                    <tfoot>
+                        @php
+                            // Somatórios da página exibida — é o que a operação
+                            // enxerga ao decidir se cabe num veículo só.
+                            $pesoPagina = $itens->sum('peso_total');
+                            $areaPagina = $itens->sum(fn ($i) => $i->area() ?? 0);
+                        @endphp
+                        <tr class="border-t-2 border-slate-200 bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800/50">
+                            @if($podePrever || $podeEscopo)<td></td>@endif
+                            <td class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                                {{ $itens->count() }} nesta página
+                            </td>
+                            <td class="px-4 py-3">
+                                <p class="text-xs font-bold tabular-nums text-zinc-900 dark:text-zinc-100">
+                                    {{ $pesoPagina > 0 ? number_format((float) $pesoPagina, 0, ',', '.').' kg' : '—' }}
+                                </p>
+                                @if($areaPagina > 0)
+                                    <p class="text-[10px] tabular-nums text-zinc-500 dark:text-zinc-400">
+                                        {{ number_format($areaPagina, 2, ',', '.') }} m² de piso
+                                    </p>
+                                @endif
+                            </td>
+                            <td colspan="{{ ($origemTrecho || $destinoTrecho) ? 5 : 6 }}"></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
 

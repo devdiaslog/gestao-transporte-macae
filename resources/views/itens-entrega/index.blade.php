@@ -129,8 +129,15 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-right font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $t->total }}</td>
-                                <td class="px-4 py-3 text-right tabular-nums text-zinc-600 dark:text-zinc-400">
-                                    {{ $t->peso > 0 ? number_format((float) $t->peso, 0, ',', '.').' kg' : '—' }}
+                                <td class="px-4 py-3 text-right">
+                                    <p class="tabular-nums text-zinc-600 dark:text-zinc-400">
+                                        {{ $t->peso > 0 ? number_format((float) $t->peso, 0, ',', '.').' kg' : '—' }}
+                                    </p>
+                                    @if($t->area > 0)
+                                        <p class="text-[10px] tabular-nums text-zinc-400" title="Área de piso somada: comprimento × largura de cada item">
+                                            {{ number_format((float) $t->area, 2, ',', '.') }} m²
+                                        </p>
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3 text-right">
                                     @if($t->sem_previsao > 0)
@@ -170,8 +177,15 @@
                                 {{ $trechos->count() }} trecho(s)
                             </td>
                             <td class="px-4 py-3 text-right font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $totalItens }}</td>
-                            <td class="px-4 py-3 text-right font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
-                                {{ $totalPeso > 0 ? number_format((float) $totalPeso, 0, ',', '.').' kg' : '—' }}
+                            <td class="px-4 py-3 text-right">
+                                <p class="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
+                                    {{ $totalPeso > 0 ? number_format((float) $totalPeso, 0, ',', '.').' kg' : '—' }}
+                                </p>
+                                @if($trechos->sum('area') > 0)
+                                    <p class="text-[10px] tabular-nums text-zinc-500 dark:text-zinc-400">
+                                        {{ number_format((float) $trechos->sum('area'), 2, ',', '.') }} m²
+                                    </p>
+                                @endif
                             </td>
                             <td class="px-4 py-3 text-right font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $totalSemPrevisao }}</td>
                             <td class="px-4 py-3 text-right font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $trechos->sum('fora_do_prazo') }}</td>

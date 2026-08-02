@@ -74,6 +74,7 @@ class ItemEntregaController extends Controller
                 local_destino_norm,
                 count(*) as total,
                 sum(coalesce(peso_total, 0)) as peso,
+                sum(coalesce(comprimento, 0) * coalesce(largura, 0)) as area,
                 sum(case when fora_escopo = 0 and data_hora_previsao_entrega is null then 1 else 0 end) as sem_previsao,
                 sum(case when fora_escopo = 0 and data_hora_previsao_entrega is not null
                           and prazo_item is not null
@@ -314,7 +315,8 @@ class ItemEntregaController extends Controller
 
         $headers = [
             'RT', 'Item', 'Subitem', 'Descrição da Carga', 'Origem', 'Retirada', 'Destino',
-            'Peso (kg)', 'Contentor', 'Grupo Planejamento',
+            'Peso (kg)', 'Comprimento (m)', 'Largura (m)', 'Altura (m)', 'Área (m²)',
+            'Contentor', 'Grupo Planejamento',
             'Criada em', 'Liberada em', 'Prazo', 'Previsão', 'Situação',
             'Status SAP', 'Atendimento', 'Veículo', 'Fora do Escopo', 'Justificativa',
         ];
@@ -328,6 +330,10 @@ class ItemEntregaController extends Controller
             $i->descricao_local_retirada ?? '',
             $i->local_destino ?? '',
             $i->peso_total ?? '',
+            $i->comprimento ?? '',
+            $i->largura ?? '',
+            $i->altura ?? '',
+            $i->area() ?? '',
             $i->doc_unitizacao_superior ?? '',
             $i->grupo_planejamento ?? '',
             $fmt($i->data_hora_criacao_rt),

@@ -130,6 +130,60 @@ class ItemEntregaTelaTest extends TestCase
             });
     }
 
+    /**
+     * O operador define a previsão olhando a carga, não só o número da RT.
+     */
+    public function test_tela_do_trecho_mostra_as_caracteristicas_da_carga(): void
+    {
+        $item = $this->item([
+            'descricao_local_retirada' => 'AL-06 B06R13Q01A',
+            'peso_total' => 2408,
+            'comprimento' => 3.10,
+            'largura' => 3.30,
+            'altura' => 3.60,
+            'data_hora_liberacao_rt' => '2026-07-03 13:56:46',
+        ]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.trecho'))
+            ->assertOk()
+            ->assertSee('AL-06 B06R13Q01A')
+            ->assertSee('2.408 kg')
+            ->assertSee('3,10 × 3,30 × 3,60 m')
+            ->assertSee('03/07/2026 13:56');
+
+        // Área é só comprimento × largura: a altura não ocupa piso.
+        $this->assertSame(10.23, $item->area());
+        $this->assertSame('3,10 × 3,30 × 3,60', $item->dimensoes());
+    }
+
+    public function test_area_e_dimensoes_sao_nulas_sem_medidas(): void
+    {
+        $item = $this->item(['comprimento' => null, 'largura' => null, 'altura' => null]);
+
+        $this->assertNull($item->area());
+        $this->assertNull($item->dimensoes());
+
+        // Sem uma das duas medidas de piso não há área a calcular.
+        $item->update(['comprimento' => 3.0]);
+        $this->assertNull($item->fresh()->area());
+        $this->assertSame('3,00 × ? × ?', $item->fresh()->dimensoes());
+    }
+
+    public function test_export_traz_dimensoes_e_area(): void
+    {
+        $this->item(['comprimento' => 3.10, 'largura' => 3.30, 'altura' => 3.60, 'peso_total' => 2408]);
+
+        $csv = $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.export'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('Área (m²)', $csv);
+        $this->assertStringContainsString('Comprimento (m)', $csv);
+        $this->assertStringContainsString('10.23', $csv);
+    }
+
     public function test_trecho_filtra_pelos_locais_normalizados(): void
     {
         $doTrecho = $this->item(['local_origem' => 'PACU', 'local_destino' => 'ARM-MACAÉ']);

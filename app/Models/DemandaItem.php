@@ -157,6 +157,35 @@ class DemandaItem extends Model
     }
 
     /**
+     * Área ocupada no piso da carreta, em m².
+     *
+     * Só comprimento × largura: a altura não disputa espaço de piso, ela entra
+     * na classificação do porte.
+     */
+    public function area(): ?float
+    {
+        if (! $this->comprimento || ! $this->largura) {
+            return null;
+        }
+
+        return round((float) $this->comprimento * (float) $this->largura, 2);
+    }
+
+    /**
+     * Dimensões formatadas como "C × L × A" em metros.
+     */
+    public function dimensoes(): ?string
+    {
+        if (! $this->comprimento && ! $this->largura && ! $this->altura) {
+            return null;
+        }
+
+        $fmt = fn ($v) => $v ? number_format((float) $v, 2, ',', '.') : '?';
+
+        return sprintf('%s × %s × %s', $fmt($this->comprimento), $fmt($this->largura), $fmt($this->altura));
+    }
+
+    /**
      * Registra uma previsão de entrega, guardando-a no histórico e deixando o
      * item com a data vigente. Previsão idêntica à atual não gera nova linha.
      */
