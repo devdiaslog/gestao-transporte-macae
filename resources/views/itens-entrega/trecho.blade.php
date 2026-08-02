@@ -62,6 +62,9 @@
                 <button type="button" onclick="abrirModal('modal-rota')" class="{{ $acaoLote }}">
                     Corrigir rota
                 </button>
+                <button type="button" onclick="abrirModal('modal-tipo')" class="{{ $acaoLote }}">
+                    Definir tipo
+                </button>
             @endif
             @if($podePrazo)
                 <button type="button" onclick="abrirModal('modal-prazo')" class="{{ $acaoLote }}">
@@ -173,6 +176,13 @@
                                     <p class="mt-0.5 max-w-72 truncate text-xs text-zinc-500 dark:text-zinc-400" title="{{ $item->descricao_item }}">
                                         {{ $item->descricao_item ?? '—' }}
                                     </p>
+                                    @if($item->tipo_item)
+                                        <span class="mt-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium {{ $coresTipo[$item->tipo_item->value] }}"
+                                              @if($item->tipo_item_manual) title="Tipo definido pela equipe" @endif>
+                                            {{ $item->tipo_item->label() }}
+                                            @if($item->tipo_item_manual)<span class="opacity-60">fixo</span>@endif
+                                        </span>
+                                    @endif
                                     @if($item->ausente_no_sap_em || $item->voltouAoSap())
                                         <div class="mt-1 flex flex-wrap gap-1">
                                             @if($item->ausente_no_sap_em)
@@ -436,6 +446,37 @@
     </div>
     @endif
 
+    {{-- Modal: definir tipo --}}
+    @if($podePrever)
+    <div id="modal-tipo" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+        <form method="POST" action="{{ route('itens-entrega.tipo') }}" class="w-full max-w-md rounded-xl bg-white p-5 shadow-xl dark:bg-zinc-900">
+            @csrf
+            <div id="itens-tipo"></div>
+            <h3 class="text-base font-semibold text-zinc-900 dark:text-zinc-100">Definir tipo</h3>
+            <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                <span id="resumo-tipo"></span>
+            </p>
+            <p class="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                O tipo definido aqui não será desfeito pela próxima importação do SAP.
+            </p>
+
+            <label class="mt-4 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Tipo</label>
+            <select name="tipo_item"
+                    class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                <option value="">Acompanhar a rota</option>
+                @foreach(\App\Enums\TipoDemanda::cases() as $t)
+                    <option value="{{ $t->value }}">{{ $t->label() }}</option>
+                @endforeach
+            </select>
+
+            <div class="mt-5 flex justify-end gap-2">
+                <button type="button" onclick="fecharModal('modal-tipo')" class="rounded-lg px-4 py-2 text-sm text-zinc-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800">Cancelar</button>
+                <button type="submit" class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900">Definir</button>
+            </div>
+        </form>
+    </div>
+    @endif
+
     {{-- Modal: corrigir rota --}}
     @if($podePrever)
     <div id="modal-rota" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
@@ -517,13 +558,13 @@
                 if (barra) { barra.classList.toggle('hidden', marcados.length === 0); }
 
                 var descricao = descrever(marcados);
-                ['resumo-previsao', 'resumo-escopo', 'resumo-rota', 'resumo-prazo'].forEach(function (id) {
+                ['resumo-previsao', 'resumo-escopo', 'resumo-rota', 'resumo-prazo', 'resumo-tipo'].forEach(function (id) {
                     var el = document.getElementById(id);
                     if (el) { el.textContent = descricao; }
                 });
 
                 // Os ids seguem para o POST como campos ocultos dos formulários.
-                ['itens-previsao', 'itens-escopo', 'itens-rota', 'itens-prazo'].forEach(function (id) {
+                ['itens-previsao', 'itens-escopo', 'itens-rota', 'itens-prazo', 'itens-tipo'].forEach(function (id) {
                     var alvo = document.getElementById(id);
                     if (!alvo) { return; }
                     alvo.innerHTML = marcados.map(function (c) {
@@ -566,11 +607,11 @@
             };
 
             document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') { ['modal-previsao', 'modal-escopo', 'modal-rota', 'modal-prazo'].forEach(window.fecharModal); }
+                if (e.key === 'Escape') { ['modal-previsao', 'modal-escopo', 'modal-rota', 'modal-prazo', 'modal-tipo'].forEach(window.fecharModal); }
             });
 
             // Fecha ao clicar no fundo, não no conteúdo do modal.
-            ['modal-previsao', 'modal-escopo', 'modal-rota', 'modal-prazo'].forEach(function (id) {
+            ['modal-previsao', 'modal-escopo', 'modal-rota', 'modal-prazo', 'modal-tipo'].forEach(function (id) {
                 var m = document.getElementById(id);
                 if (m) {
                     m.addEventListener('click', function (e) {

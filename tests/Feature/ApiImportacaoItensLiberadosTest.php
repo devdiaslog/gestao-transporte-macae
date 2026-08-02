@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\StatusSap;
+use App\Enums\TipoDemanda;
 use App\Models\DemandaItem;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -169,5 +170,73 @@ class ApiImportacaoItensLiberadosTest extends TestCase
         $this->postJson(route('api.itens-liberados.importar'), ['itens' => $itens])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('itens');
+    }
+
+    public function test_api_aceita_as_medidas_da_embalagem_superior(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->postJson(route('api.itens-liberados.importar'), [
+            'itens' => [[
+                'numero_rt' => '326213060',
+                'numero_item' => '5',
+                'subitem' => '2',
+                'local_origem' => 'BASE VITORIA',
+                'local_destino' => 'ARM-MACAE',
+                'doc_unitizacao_superior' => '4810768',
+                'descricao_contentor' => 'CISA042074 Caixa 1M',
+                'comprimento_embalagem' => '3,0000',
+                'largura_embalagem' => '2,4000',
+                'altura_embalagem' => '1,1000',
+            ]],
+        ])->assertOk();
+
+        $item = DemandaItem::firstOrFail();
+
+        $this->assertSame(3.0, (float) $item->comprimento_embalagem);
+        $this->assertSame(2.4, (float) $item->largura_embalagem);
+        $this->assertSame(1.1, (float) $item->altura_embalagem);
+        // Área de piso da embalagem, calculada na gravação.
+        $this->assertSame(7.2, round((float) $item->area_embalagem, 2));
+    }
+
+    public function test_tipo_do_item_segue_a_rota_ate_o_usuario_fixar(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->postJson(route('api.itens-liberados.importar'), [
+            'itens' => [[
+                'numero_rt' => '326213060',
+                'numero_item' => '5',
+                'local_origem' => 'BASE VITORIA',
+                'local_destino' => 'PACU',
+            ]],
+        ])->assertOk();
+
+        $item = DemandaItem::firstOrFail();
+
+        // Ponto-chave no destino: mesma leitura que a demanda faz.
+        $this->assertSame(TipoDemanda::Load, $item->tipo_item);
+        $this->assertFalse($item->tipo_item_manual);
+
+        $item->definirTipo(TipoDemanda::Backload);
+
+        // Reenvio do SAP não desfaz a escolha do usuário.
+        $this->postJson(route('api.itens-liberados.importar'), [
+            'itens' => [[
+                'numero_rt' => '326213060',
+                'numero_item' => '5',
+                'local_origem' => 'PACU',
+                'local_destino' => 'ARM-MACAE',
+            ]],
+        ])->assertOk();
+
+        $this->assertSame(TipoDemanda::Backload, $item->refresh()->tipo_item);
+
+        // Sem tipo, o item volta a acompanhar a rota.
+        $item->definirTipo(null);
+
+        $this->assertSame(TipoDemanda::Backload, $item->refresh()->tipo_item);
+        $this->assertFalse($item->tipo_item_manual);
     }
 }

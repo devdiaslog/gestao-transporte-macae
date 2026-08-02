@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Enums\OrigemPrevisao;
 use App\Enums\StatusItemDemanda;
 use App\Enums\StatusSap;
+use App\Enums\TipoDemanda;
+use App\Services\DemandaCalculadora;
 use App\Support\ContentorSap;
 use App\Support\NormalizadorLocal;
 use Illuminate\Database\Eloquent\Model;
@@ -32,6 +34,8 @@ class DemandaItem extends Model
         'local_destino',
         'descricao_local_retirada',
         'descricao_item',
+        'tipo_item',
+        'tipo_item_manual',
         'peso_total',
         'altura',
         'largura',
@@ -88,6 +92,8 @@ class DemandaItem extends Model
     {
         return [
             'status_item' => StatusItemDemanda::class,
+            'tipo_item' => TipoDemanda::class,
+            'tipo_item_manual' => 'boolean',
             'status_sap' => StatusSap::class,
             'prazo_item' => 'datetime',
             'prazo_sap' => 'datetime',
@@ -119,6 +125,11 @@ class DemandaItem extends Model
                 $item->local_destino_norm = NormalizadorLocal::canonizar($item->local_destino);
             }
 
+            // O tipo acompanha a rota enquanto o usuário não o fixar na mão.
+            if (! $item->tipo_item_manual && $item->isDirty(['local_origem', 'local_destino'])) {
+                $item->tipo_item = $item->tipoPelaRota();
+            }
+
             // Área de piso da unitização, das colunas do SAP ou, na falta
             // delas, do que a descrição do contentor traz no texto.
             if ($item->isDirty(['comprimento_embalagem', 'largura_embalagem', 'descricao_contentor'])) {
@@ -129,6 +140,42 @@ class DemandaItem extends Model
                 );
             }
         });
+    }
+
+    /**
+     * Tipo deduzido da rota do item, pelo mesmo critério usado na demanda:
+     * ponto-chave no destino é Load, na origem é Backload, e o restante é
+     * transferência. Sem rota, o tipo fica indefinido.
+     */
+    public function tipoPelaRota(): ?TipoDemanda
+    {
+        $origem = NormalizadorLocal::canonizar($this->local_origem);
+        $destino = NormalizadorLocal::canonizar($this->local_destino);
+
+        if ($origem === null && $destino === null) {
+            return null;
+        }
+
+        if (in_array($destino, DemandaCalculadora::PONTOS_CHAVE, true)) {
+            return TipoDemanda::Load;
+        }
+
+        if (in_array($origem, DemandaCalculadora::PONTOS_CHAVE, true)) {
+            return TipoDemanda::Backload;
+        }
+
+        return TipoDemanda::Transferencia;
+    }
+
+    /**
+     * Fixa o tipo informado pelo usuário; a partir daí a rota deixa de mandar
+     * nele. Sem tipo, o item volta a acompanhar a rota.
+     */
+    public function definirTipo(?TipoDemanda $tipo): void
+    {
+        $this->tipo_item_manual = $tipo !== null;
+        $this->tipo_item = $tipo ?? $this->tipoPelaRota();
+        $this->save();
     }
 
     public function campoEditadoPeloOperador(string $campo): bool

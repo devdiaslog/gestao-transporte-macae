@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\OrigemPrevisao;
 use App\Enums\StatusSap;
+use App\Enums\TipoDemanda;
 use App\Models\Demanda;
 use App\Models\DemandaItem;
 use App\Models\User;
@@ -1027,5 +1028,43 @@ class ItemEntregaTelaTest extends TestCase
 
         $this->assertStringContainsString($suspenso->numero_rt, $csv);
         $this->assertStringNotContainsString($emCobranca->numero_rt, $csv);
+    }
+
+    public function test_define_o_tipo_do_item_pela_tela_e_protege_do_sap(): void
+    {
+        $item = $this->item(['local_origem' => 'BASE VITORIA', 'local_destino' => 'PACU']);
+
+        // Ponto-chave no destino: o tipo já nasce classificado pela rota.
+        $this->assertSame(TipoDemanda::Load, $item->tipo_item);
+
+        $this->actingAs(User::factory()->create())
+            ->post(route('itens-entrega.tipo'), [
+                'itens' => [$item->id],
+                'tipo_item' => TipoDemanda::Transferencia->value,
+            ])->assertRedirect()->assertSessionHas('success');
+
+        $item->refresh();
+        $this->assertSame(TipoDemanda::Transferencia, $item->tipo_item);
+        $this->assertTrue($item->tipo_item_manual);
+
+        // Mudar a rota deixa de reclassificar o item.
+        $item->update(['local_origem' => 'PACU', 'local_destino' => 'ARM-MACAE']);
+        $this->assertSame(TipoDemanda::Transferencia, $item->refresh()->tipo_item);
+    }
+
+    public function test_tipo_em_branco_devolve_o_item_a_rota(): void
+    {
+        $item = $this->item(['local_origem' => 'PACU', 'local_destino' => 'ARM-MACAE']);
+        $item->definirTipo(TipoDemanda::Load);
+
+        $this->actingAs(User::factory()->create())
+            ->post(route('itens-entrega.tipo'), [
+                'itens' => [$item->id],
+                'tipo_item' => '',
+            ])->assertRedirect()->assertSessionHas('success');
+
+        $item->refresh();
+        $this->assertSame(TipoDemanda::Backload, $item->tipo_item);
+        $this->assertFalse($item->tipo_item_manual);
     }
 }

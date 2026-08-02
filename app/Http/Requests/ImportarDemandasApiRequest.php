@@ -52,6 +52,10 @@ class ImportarDemandasApiRequest extends FormRequest
             'itens.*.liberacao_data' => ['nullable', 'string'],
             'itens.*.liberacao_hora' => ['nullable', 'string'],
             'itens.*.doc_unitizacao_superior' => ['nullable', 'string', 'max:255'],
+            'itens.*.descricao_contentor' => ['nullable', 'string', 'max:2000'],
+            'itens.*.comprimento_embalagem' => ['nullable', 'string', 'max:30'],
+            'itens.*.largura_embalagem' => ['nullable', 'string', 'max:30'],
+            'itens.*.altura_embalagem' => ['nullable', 'string', 'max:30'],
             'itens.*.grupo_planejamento' => ['nullable', 'string', 'max:255'],
         ];
     }

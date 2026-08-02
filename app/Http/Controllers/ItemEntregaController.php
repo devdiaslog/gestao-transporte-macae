@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Enums\OrigemPrevisao;
 use App\Enums\StatusSap;
+use App\Enums\TipoDemanda;
 use App\Http\Requests\AjustarRotaRequest;
 use App\Http\Requests\DefinirPrevisaoRequest;
+use App\Http\Requests\DefinirTipoItemRequest;
 use App\Http\Requests\ImportarItensLiberadosRequest;
 use App\Http\Requests\MarcarForaEscopoRequest;
 use App\Http\Requests\RenegociarPrazoRequest;
@@ -66,6 +68,18 @@ class ItemEntregaController extends Controller
      * Vive aqui, e não na view, porque as duas telas e o export precisam do
      * mesmo vocabulário — o cliente lê "Fora do prazo" no CSV e na tela.
      */
+    /**
+     * Classes completas por tipo — o Tailwind não enxerga nome de cor montado
+     * por interpolação.
+     *
+     * @var array<string, string>
+     */
+    private const CORES_TIPO = [
+        'load' => 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400',
+        'backload' => 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400',
+        'transferencia' => 'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-400',
+    ];
+
     private const CORES_SITUACAO = [
         'no_prazo' => ['label' => 'Previsto no prazo', 'dot' => 'bg-emerald-500', 'chip' => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'],
         'fora_do_prazo' => ['label' => 'Previsto fora do prazo', 'dot' => 'bg-red-500', 'chip' => 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400'],
@@ -136,6 +150,7 @@ class ItemEntregaController extends Controller
             'diasPrevisao' => $this->diasPrevisaoDe($request),
             'resumo' => $this->resumo($request, $status, $dias),
             'cores' => self::CORES_SITUACAO,
+            'coresTipo' => self::CORES_TIPO,
             'filtros' => $request->only(['busca', 'situacao', 'ausentes', 'previsao']),
         ]);
     }
@@ -173,6 +188,7 @@ class ItemEntregaController extends Controller
             'resumo' => $this->resumo($request, $status, $dias),
             'locais' => $this->locaisConhecidos(),
             'cores' => self::CORES_SITUACAO,
+            'coresTipo' => self::CORES_TIPO,
             'filtros' => $request->only(['busca', 'situacao', 'doc_unitizacao', 'ausentes', 'origem_norm', 'destino_norm', 'previsao']),
         ]);
     }
@@ -319,6 +335,30 @@ class ItemEntregaController extends Controller
      * operação, e é aqui que ela corrige. Os campos passam a contar como
      * editados pelo operador, então a próxima importação não os desfaz.
      */
+    /**
+     * Fixa o tipo dos itens selecionados; sem tipo, devolve cada um ao que a
+     * rota indica.
+     */
+    public function definirTipo(DefinirTipoItemRequest $request): RedirectResponse
+    {
+        $ids = $request->validated('itens');
+        $valor = $request->validated('tipo_item');
+        $tipo = $valor !== null ? TipoDemanda::from($valor) : null;
+
+        DB::transaction(function () use ($ids, $tipo) {
+            foreach (DemandaItem::whereIn('id', $ids)->get() as $item) {
+                $item->definirTipo($tipo);
+            }
+        });
+
+        $total = count($ids);
+        $rotulo = $total === 1 ? 'item' : 'itens';
+
+        return back()->with('success', $tipo !== null
+            ? sprintf('%d %s definidos como %s.', $total, $rotulo, $tipo->label())
+            : sprintf('%d %s voltaram a acompanhar a rota.', $total, $rotulo));
+    }
+
     public function ajustarRota(AjustarRotaRequest $request): RedirectResponse
     {
         $ids = $request->validated('itens');
