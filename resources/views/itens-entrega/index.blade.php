@@ -88,8 +88,8 @@
                                         </svg>
                                         <span>{{ $t->local_destino_norm ?? 'SEM DESTINO' }}</span>
                                     </div>
-                                    @if($t->contentores > 0)
-                                        <p class="mt-0.5 text-[11px] text-zinc-400">{{ $t->contentores }} contentor(es)</p>
+                                    @if($t->embalagens > 0)
+                                        <p class="mt-0.5 text-[11px] text-zinc-400">{{ $t->embalagens }} {{ $t->embalagens == 1 ? 'embalagem' : 'embalagens' }}</p>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-right font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $t->total }}</td>

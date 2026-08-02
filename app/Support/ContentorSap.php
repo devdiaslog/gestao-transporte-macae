@@ -73,19 +73,19 @@ class ContentorSap
     /**
      * Área de piso de um conjunto de itens, em m².
      *
-     * Cada contentor entra uma única vez, por mais itens que carregue dentro:
-     * dez caixas no mesmo contentor ocupam o espaço do contentor, não a soma
-     * das dez. Itens fora de contentor entram pelas próprias medidas.
+     * Cada embalagem entra uma única vez, por mais itens que carregue dentro:
+     * dez caixas na mesma embalagem ocupam o espaço dela, não a soma das dez.
+     * Item sem embalagem entra pelas próprias medidas.
      *
-     * Um contentor é montado para um único destino, então nunca se divide
-     * entre trechos — somar por trecho não corre risco de duplicar.
+     * Uma embalagem é montada para um único destino, então nunca se divide
+     * entre rotas — somar por rota não corre risco de duplicar.
      *
      * @param  iterable<DemandaItem>  $itens
      */
     public static function areaDePiso(iterable $itens): float
     {
         $total = 0.0;
-        $contentoresContados = [];
+        $embalagensContadas = [];
 
         foreach ($itens as $item) {
             // Medida que veio do SAP em outra unidade estragaria o total.
@@ -101,11 +101,11 @@ class ContentorSap
                 continue;
             }
 
-            if (isset($contentoresContados[$embalagem])) {
+            if (isset($embalagensContadas[$embalagem])) {
                 continue;
             }
 
-            $contentoresContados[$embalagem] = true;
+            $embalagensContadas[$embalagem] = true;
 
             // Embalagem sem medidas conhecidas: vale o que o item ocupa, para
             // não zerar a área do grupo inteiro.

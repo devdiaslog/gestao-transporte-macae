@@ -88,9 +88,9 @@ class ItemEntregaController extends Controller
         $status = $this->statusDe($request);
         $dias = $this->diasDe($request);
 
-        // Área de piso: item solto vale pelas próprias medidas; dentro de
-        // contentor vale a área do contentor, somada à parte para contar cada
-        // um uma vez só.
+        // Área de piso: item sem embalagem vale pelas próprias medidas; dentro
+        // de uma embalagem superior vale a área dela, somada à parte para
+        // contar cada uma uma vez só.
         $trechos = $this->queryFiltrada($request, $status, $dias)
             ->selectRaw('
                 local_origem_norm,
@@ -112,14 +112,14 @@ class ItemEntregaController extends Controller
                           and data_hora_previsao_entrega > prazo_item then 1 else 0 end) as fora_do_prazo,
                 sum(case when fora_escopo = 1 then 1 else 0 end) as fora_escopo,
                 min(prazo_item) as prazo_mais_proximo,
-                count(distinct doc_unitizacao_superior) as contentores
+                count(distinct doc_unitizacao_superior) as embalagens
             ')
             ->groupBy('local_origem_norm', 'local_destino_norm')
             ->orderByDesc('sem_previsao')
             ->orderByDesc('total')
             ->get();
 
-        $areaPorTrecho = $this->areaDosContentoresPorTrecho($request, $status, $dias);
+        $areaPorTrecho = $this->areaDasEmbalagensPorTrecho($request, $status, $dias);
 
         $trechos->each(function ($trecho) use ($areaPorTrecho) {
             $chave = $trecho->local_origem_norm.'|'.$trecho->local_destino_norm;
@@ -568,19 +568,19 @@ class ItemEntregaController extends Controller
     }
 
     /**
-     * Área de piso dos contentores, por trecho.
+     * Área de piso das embalagens superiores, por trecho.
      *
-     * Cada contentor conta uma vez só — a query principal não consegue fazer
+     * Cada embalagem conta uma vez só — a query principal não consegue fazer
      * isso num único GROUP BY, porque somaria a área do contentor tantas vezes
      * quantos itens ele carrega.
      *
-     * Um contentor tem sempre um único trecho: ele é montado para um destino.
+     * Uma embalagem tem sempre um único trecho: ela é montada para um destino.
      * É essa garantia da operação que permite somar por trecho sem risco de
      * contar a mesma embalagem em dois lugares.
      *
      * @return array<string, float> chave "origem|destino"
      */
-    private function areaDosContentoresPorTrecho(Request $request, array $status, int $dias): array
+    private function areaDasEmbalagensPorTrecho(Request $request, array $status, int $dias): array
     {
         return $this->queryFiltrada($request, $status, $dias)
             ->where(fn (Builder $q) => $q->whereNotNull('doc_unitizacao_superior')->orWhereNotNull('numero_contentor'))

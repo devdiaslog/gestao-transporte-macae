@@ -66,11 +66,11 @@ class ImportadorItensLiberados
         // caso de a coluna passar a ser incluída no layout.
         'numero_contentor' => ['Numero Contentor', 'Numero Con', 'Número Contentor'],
         'descricao_contentor' => ['Descrição Contentor', 'Descricao Contentor'],
-        // Medidas da unitização: o SAP as entrega em colunas proprias, com
-        // nomes truncados no ALV ("Altura Emb", "Largura  E").
-        'comprimento_embalagem' => ['Comprimento Embalagem', 'Compriment Emb', 'Comprimento Emb'],
-        'largura_embalagem' => ['Largura Embalagem', 'Largura  E', 'Largura Emb'],
-        'altura_embalagem' => ['Altura Embalagem', 'Altura Emb'],
+        // Medidas da embalagem superior. O SAP as entrega como
+        // "Comprimento EmbSup(m)"; os demais rótulos são os truncados do ALV.
+        'comprimento_embalagem' => ['Comprimento Embalagem', 'Comprimento EmbSup(m)', 'Comprimento EmbSup', 'Compriment Emb', 'Comprimento Emb'],
+        'largura_embalagem' => ['Largura Embalagem', 'Largura EmbSup(m)', 'Largura EmbSup', 'Largura  E', 'Largura Emb'],
+        'altura_embalagem' => ['Altura Embalagem', 'Altura EmbSup(m)', 'Altura EmbSup', 'Altura Emb'],
         'grupo_planejamento' => ['Grupo Planejamento', 'Grupo plan'],
         'status_sap' => ['Status', 'Status do'],
     ];
@@ -96,9 +96,9 @@ class ImportadorItensLiberados
         'Altura',
         'Documento Unitização',
         'Descrição Contentor',
-        'Comprimento Embalagem',
-        'Largura Embalagem',
-        'Altura Embalagem',
+        'Comprimento EmbSup(m)',
+        'Largura EmbSup(m)',
+        'Altura EmbSup(m)',
         'Grupo Planejamento',
         'Status',
     ];

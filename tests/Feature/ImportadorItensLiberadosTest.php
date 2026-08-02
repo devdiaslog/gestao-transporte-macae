@@ -8,6 +8,7 @@ use App\Models\Demanda;
 use App\Models\DemandaItem;
 use App\Services\ImportadorDemandas;
 use App\Services\ImportadorItensLiberados;
+use App\Support\ContentorSap;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Writer\XLSX\Writer;
@@ -400,6 +401,57 @@ class ImportadorItensLiberadosTest extends TestCase
         $this->assertSame('4803478', $item->doc_unitizacao_superior);
         $this->assertSame('SKID P/PROTEÇÃO', $item->descricao_item);
         $this->assertSame(3.6, (float) $item->altura);
+    }
+
+    /**
+     * As medidas da embalagem superior vêm do SAP como "Comprimento EmbSup(m)".
+     */
+    public function test_le_as_medidas_da_embalagem_pelo_nome_do_sap(): void
+    {
+        $cabecalho = [
+            'Nota', 'Item', 'Subitem', 'Documento Unitização',
+            'Comprimento EmbSup(m)', 'Largura EmbSup(m)', 'Altura EmbSup(m)',
+        ];
+
+        app(ImportadorItensLiberados::class)->importar($this->planilha(
+            [['326213060', '5', '2', '4810768', '3,0000', '2,4000', '2,4000']],
+            $cabecalho
+        ));
+
+        $item = DemandaItem::firstOrFail();
+
+        $this->assertSame(3.0, (float) $item->comprimento_embalagem);
+        $this->assertSame(2.4, (float) $item->largura_embalagem);
+        $this->assertSame(2.4, (float) $item->altura_embalagem);
+        $this->assertSame(7.2, (float) $item->area_embalagem);
+        $this->assertSame(7.2, $item->areaEfetiva());
+    }
+
+    /**
+     * A embalagem superior nem sempre é um contentor: pode ser uma caixa de
+     * madeira ou um pallet que junta duas RTs. O que agrupa é o documento de
+     * unitização, com ou sem contentor.
+     */
+    public function test_embalagem_sem_contentor_agrupa_do_mesmo_jeito(): void
+    {
+        $cabecalho = ['Nota', 'Item', 'Subitem', 'Documento Unitização', 'Comprimento EmbSup(m)', 'Largura EmbSup(m)'];
+
+        app(ImportadorItensLiberados::class)->importar($this->planilha([
+            ['326213060', '1', '1', '4810768', '1,2000', '1,0000'],
+            ['326999888', '1', '1', '4810768', '1,2000', '1,0000'],
+        ], $cabecalho));
+
+        $itens = DemandaItem::all();
+
+        $this->assertCount(2, $itens);
+        foreach ($itens as $item) {
+            $this->assertNull($item->numero_contentor);
+            $this->assertSame('4810768', $item->embalagemSuperior());
+            $this->assertTrue($item->dentroDeEmbalagem());
+        }
+
+        // Duas RTs na mesma embalagem ocupam o espaço dela uma vez só.
+        $this->assertSame(1.2, ContentorSap::areaDePiso($itens));
     }
 
     public function test_linha_sem_rt_valida_e_ignorada(): void

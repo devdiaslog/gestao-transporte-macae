@@ -81,7 +81,7 @@
                 </svg>
             </span>
             <input type="text" name="busca" value="{{ $filtros['busca'] ?? '' }}" autocomplete="off"
-                   placeholder="RT, viagem, carga ou contentor…"
+                   placeholder="RT, viagem, carga ou embalagem…"
                    class="flex-1 bg-transparent px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100">
         </div>
 

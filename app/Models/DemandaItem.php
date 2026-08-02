@@ -278,7 +278,7 @@ class DemandaItem extends Model
      */
     public function medidaSuspeita(): bool
     {
-        $area = $this->dentroDeContentor()
+        $area = $this->dentroDeEmbalagem()
             ? ($this->area_embalagem !== null ? (float) $this->area_embalagem : null)
             : $this->area();
 
@@ -288,13 +288,13 @@ class DemandaItem extends Model
     /**
      * Área que o item de fato ocupa no veículo, em m².
      *
-     * Dentro de um contentor, quem ocupa o piso é o contentor — as medidas das
-     * caixas lá dentro não importam para o carregamento. Ao somar vários itens
-     * do mesmo contentor, essa área deve ser contada uma única vez.
+     * Dentro de uma embalagem superior, quem ocupa o piso é ela — as medidas
+     * do que está dentro não importam para o carregamento. Ao somar vários
+     * itens da mesma embalagem, essa área deve ser contada uma única vez.
      */
     public function areaEfetiva(): ?float
     {
-        if ($this->dentroDeContentor()) {
+        if ($this->dentroDeEmbalagem()) {
             return $this->area_embalagem !== null ? (float) $this->area_embalagem : null;
         }
 
@@ -304,9 +304,15 @@ class DemandaItem extends Model
     /**
      * Identificação da embalagem superior em que o item viaja.
      *
-     * O documento de unitização é o que agrupa os itens no status 03 — é ele
-     * que a operação enxerga. O número do contentor só aparece no export de
-     * viagem e serve de reserva para o item que não passou pela liberação.
+     * O documento de unitização é o código da embalagem — que pode ser um
+     * contentor, mas também uma caixa de madeira ou um pallet: duas RTs podem
+     * dividir a mesma embalagem sem estar dentro de contentor nenhum. É ele que
+     * agrupa os itens no status 03; o número do contentor só aparece no export
+     * de viagem e serve de reserva para o item que não passou pela liberação.
+     *
+     * O número é gerado pelo SAP e muda quando há desliberação e nova
+     * unitização. Não é identidade estável — o que mantém a visão correta é a
+     * re-sincronização a cada importação.
      */
     public function embalagemSuperior(): ?string
     {
@@ -319,7 +325,7 @@ class DemandaItem extends Model
         return null;
     }
 
-    public function dentroDeContentor(): bool
+    public function dentroDeEmbalagem(): bool
     {
         return $this->embalagemSuperior() !== null;
     }
