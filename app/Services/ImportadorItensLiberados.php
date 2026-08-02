@@ -13,11 +13,14 @@ use OpenSpout\Reader\XLSX\Reader;
 use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
 
 /**
- * Importa os itens que o cliente liberou no SAP (status 03).
+ * Importa os itens que o cliente ainda cobra: liberados (03) e programados (04).
  *
- * Nesse estágio o item ainda não tem atendimento — a RT foi criada e liberada,
- * mas nenhum veículo foi programado. Os itens entram no sistema sem demanda e
- * são adotados por uma quando o transporte é programado (status 04), pelo
+ * O que importa para o cliente é ser atendido, então o item segue na tela com
+ * sua previsão mesmo depois de um veículo ser programado — sai apenas quando é
+ * atendido, cancelado ou suspenso.
+ *
+ * O item liberado ainda não tem atendimento: entra no sistema sem demanda e é
+ * adotado por uma quando o transporte é programado, pelo
  * {@see ImportadorDemandas}.
  *
  * A chave do item é `Nota + Item + Subitem`, onde a Nota é a RT (padrão 32*) —
@@ -344,7 +347,11 @@ class ImportadorItensLiberados
     }
 
     /**
-     * Marca para conferência os itens liberados que já não constam no export.
+     * Marca para conferência os itens em cobrança que já não constam no export.
+     *
+     * O escopo é liberado + programado porque é isso que o export traz: o
+     * cliente acompanha o item até ser atendido, então o programado continua na
+     * tela com sua previsão. Sair do arquivo significa ter deixado a cobrança.
      *
      * O status não é alterado sozinho: o item pode ter sido atendido, cancelado
      * ou suspenso, e inferir o desfecho errado apagaria uma previsão válida.
@@ -354,8 +361,13 @@ class ImportadorItensLiberados
      */
     private function marcarAusentes(array $vistos): int
     {
+        $emCobranca = array_map(
+            fn (StatusSap $s) => $s->value,
+            array_filter(StatusSap::cases(), fn (StatusSap $s) => $s->emCobranca()),
+        );
+
         return DemandaItem::query()
-            ->where('status_sap', StatusSap::Liberado)
+            ->whereIn('status_sap', $emCobranca)
             ->whereNull('ausente_no_sap_em')
             ->when($vistos !== [], fn ($q) => $q->whereNotIn('id', $vistos))
             ->update(['ausente_no_sap_em' => now()]);

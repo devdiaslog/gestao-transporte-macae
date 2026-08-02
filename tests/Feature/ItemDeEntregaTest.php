@@ -153,13 +153,14 @@ class ItemDeEntregaTest extends TestCase
             $this->assertFalse($status->emCobranca(), $status->label());
         }
 
-        foreach ($encerrados as $status) {
-            $this->assertTrue($status->encerrado());
+        // Suspensos contam como encerrados: o subitem não volta a andar — o
+        // trabalho reaparece como subitem novo, com prazo próprio.
+        foreach ([...$encerrados, ...$suspensos] as $status) {
+            $this->assertTrue($status->encerrado(), $status->label());
         }
 
         foreach ($suspensos as $status) {
             $this->assertTrue($status->suspenso());
-            $this->assertFalse($status->encerrado());
         }
     }
 

@@ -9,6 +9,10 @@ namespace App\Enums;
  * torre controla — aqui os valores são os próprios códigos do SAP, porque a
  * distinção entre 13 e 18 importa para o negócio: ambos suspendem o item, mas
  * apenas o 18 é de responsabilidade do cliente.
+ *
+ * A chave do item no SAP é RT + Item + Subitem e nunca se repete: o Item é o
+ * material e o Subitem é a etapa origem→destino. Um subitem suspenso permanece
+ * suspenso; quando o impedimento é resolvido, nasce um subitem novo.
  */
 enum StatusSap: string
 {
@@ -68,8 +72,11 @@ enum StatusSap: string
     }
 
     /**
-     * Item parado que pode voltar a andar — e, quando voltar, possivelmente
-     * com um prazo novo.
+     * Item parado.
+     *
+     * O subitem suspenso não volta a andar: ele permanece nesse estado como
+     * base de cobrança, e quando o impedimento é resolvido o cliente abre um
+     * subitem novo — que entra no sistema como outro item, com prazo próprio.
      */
     public function suspenso(): bool
     {
@@ -77,16 +84,22 @@ enum StatusSap: string
     }
 
     /**
-     * Ciclo encerrado em definitivo: não retorna para a fila de atendimento.
+     * Ciclo encerrado: o item não retorna para a fila de atendimento.
+     *
+     * Inclui os suspensos porque o subitem em si não anda mais — o trabalho
+     * reaparece como subitem novo, nunca reativando este.
      */
     public function encerrado(): bool
     {
-        return in_array($this, [self::Atendido, self::Cancelado], true);
+        return ! $this->emCobranca();
     }
 
     /**
      * A suspensão é de responsabilidade do cliente (código 18) e não nossa.
-     * Separa os contadores que o gerente apresenta ao cliente.
+     *
+     * É o item que a operação mantém suspenso para faturar: não fomos nós que
+     * deixamos de entregar. Separa os contadores que o gerente apresenta ao
+     * cliente e a base do que pode ser cobrado.
      */
     public function responsabilidadeCliente(): bool
     {

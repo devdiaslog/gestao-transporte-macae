@@ -6,6 +6,7 @@ use App\Enums\StatusItemDemanda;
 use App\Enums\StatusSap;
 use App\Models\Demanda;
 use App\Models\DemandaItem;
+use App\Services\ImportadorDemandas;
 use App\Services\ImportadorItensLiberados;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use OpenSpout\Common\Entity\Row;
@@ -230,6 +231,46 @@ class ImportadorItensLiberadosTest extends TestCase
         $this->assertNull(DemandaItem::where('numero_rt', '326213060')->firstOrFail()->ausente_no_sap_em);
     }
 
+    /**
+     * O export traz liberados e programados: o cliente acompanha o item até ser
+     * atendido. Some do arquivo quem deixou a cobrança.
+     */
+    public function test_item_programado_que_some_tambem_e_marcado_para_conferencia(): void
+    {
+        $importador = app(ImportadorItensLiberados::class);
+
+        $importador->importar($this->planilha([
+            $this->linha(),
+            $this->linha(['Nota' => '326340468', 'Item' => '1', 'Status' => '04']),
+        ]));
+
+        $this->assertSame(StatusSap::Programado, DemandaItem::where('numero_rt', '326340468')->firstOrFail()->status_sap);
+
+        $resultado = $importador->importar($this->planilha([$this->linha()]));
+
+        $this->assertSame(1, $resultado['itens_ausentes']);
+        $this->assertNotNull(DemandaItem::where('numero_rt', '326340468')->firstOrFail()->ausente_no_sap_em);
+    }
+
+    /**
+     * Item já atendido saiu da cobrança por definição — não deve ser cobrado de
+     * conferência só por não constar mais no export.
+     */
+    public function test_item_atendido_nao_e_marcado_como_ausente(): void
+    {
+        $importador = app(ImportadorItensLiberados::class);
+
+        $importador->importar($this->planilha([
+            $this->linha(),
+            $this->linha(['Nota' => '326340468', 'Item' => '1', 'Status' => '07']),
+        ]));
+
+        $resultado = $importador->importar($this->planilha([$this->linha()]));
+
+        $this->assertSame(0, $resultado['itens_ausentes']);
+        $this->assertNull(DemandaItem::where('numero_rt', '326340468')->firstOrFail()->ausente_no_sap_em);
+    }
+
     public function test_marcar_ausentes_pode_ser_desligado_para_importacao_parcial(): void
     {
         $importador = app(ImportadorItensLiberados::class);
@@ -315,6 +356,48 @@ class ImportadorItensLiberadosTest extends TestCase
 
         $this->assertSame(['Nenhuma linha de dados encontrada na planilha.'], $resultado['erros']);
         $this->assertSame(0, DemandaItem::count());
+    }
+
+    /**
+     * Ciclo completo: o item entra liberado (03), sem demanda, e depois aparece
+     * no export de viagem já programado (04). Como a chave RT + item + subitem
+     * é única no SAP, é o mesmo item ganhando atendimento — a demanda o adota
+     * em vez de duplicá-lo, preservando a previsão prometida ao cliente.
+     */
+    public function test_item_liberado_e_adotado_pela_demanda_quando_programado(): void
+    {
+        app(ImportadorItensLiberados::class)->importar($this->planilha([$this->linha()]));
+
+        $item = DemandaItem::firstOrFail();
+        $item->registrarPrevisao(now()->addDays(2)->startOfSecond());
+        $previsao = $item->fresh()->data_hora_previsao_entrega;
+
+        $resultado = app(ImportadorDemandas::class)->importarLinhas([
+            1 => [
+                'nota' => '509538496',
+                'numero_rt' => '326213060',
+                'numero_item' => '5',
+                'subitem' => '2',
+                'status_item' => '04',
+                'local_destino' => 'ARM-MACAE',
+            ],
+        ]);
+
+        $this->assertSame(1, $resultado['itens_adotados']);
+        $this->assertSame(0, $resultado['itens_criados']);
+        $this->assertSame(1, DemandaItem::count());
+
+        $item->refresh();
+        $this->assertNotNull($item->demanda_id);
+        $this->assertSame(509538496, (int) $item->demanda->numero_demanda);
+        $this->assertSame(StatusSap::Programado, $item->status_sap);
+
+        // O que a operação já havia prometido e apurado da RT sobrevive.
+        $this->assertTrue($item->data_hora_previsao_entrega->equalTo($previsao));
+        $this->assertCount(1, $item->previsoes);
+        $this->assertSame('4803478', $item->doc_unitizacao_superior);
+        $this->assertSame('T44', $item->grupo_planejamento);
+        $this->assertNotNull($item->data_hora_liberacao_rt);
     }
 
     public function test_modelo_de_importacao_traz_o_cabecalho_esperado(): void

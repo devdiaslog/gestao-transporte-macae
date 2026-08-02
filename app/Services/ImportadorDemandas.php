@@ -125,7 +125,7 @@ class ImportadorDemandas
     /**
      * @param  int|null  $somenteNota  Quando informado, processa apenas as linhas
      *                                 dessa Nota (importação escopada a 1 demanda).
-     * @return array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, itens_remanejados: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
+     * @return array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, itens_adotados: int, itens_remanejados: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
      */
     public function importar(string $caminho, ?int $usuarioId = null, ?int $somenteNota = null): array
     {
@@ -136,6 +136,7 @@ class ImportadorDemandas
                 'demandas_criadas' => 0,
                 'itens_criados' => 0,
                 'itens_atualizados' => 0,
+                'itens_adotados' => 0,
                 'itens_remanejados' => 0,
                 'linhas_ignoradas' => 0,
                 'avisos' => [],
@@ -152,7 +153,7 @@ class ImportadorDemandas
      * campos mestres sincronizados, remanejo de RT e recálculo dos derivados.
      *
      * @param  array<int|string, array<string, string|null>>  $linhas
-     * @return array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, itens_remanejados: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
+     * @return array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, itens_adotados: int, itens_remanejados: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
      */
     public function importarLinhas(array $linhas, ?int $usuarioId = null, ?int $somenteNota = null): array
     {
@@ -160,6 +161,7 @@ class ImportadorDemandas
             'demandas_criadas' => 0,
             'itens_criados' => 0,
             'itens_atualizados' => 0,
+            'itens_adotados' => 0,
             'itens_remanejados' => 0,
             'linhas_ignoradas' => 0,
             'avisos' => [],
@@ -238,7 +240,20 @@ class ImportadorDemandas
                 $novo = ! $item->exists;
 
                 if ($novo) {
-                    $this->cancelarRemanejados($chave, $demanda, $resultado, $demandasTocadas);
+                    // O item pode já existir sem demanda, vindo da importação de
+                    // liberados (status 03). Como a chave RT + item + subitem é
+                    // única no SAP, é o mesmo item ganhando atendimento: a demanda
+                    // o adota, preservando a previsão e o histórico já registrados.
+                    $liberado = $this->itemLiberadoSemDemanda($chave);
+
+                    if ($liberado !== null) {
+                        $item = $liberado;
+                        $item->demanda_id = $demanda->id;
+                        $novo = false;
+                        $resultado['itens_adotados']++;
+                    } else {
+                        $this->cancelarRemanejados($chave, $demanda, $resultado, $demandasTocadas);
+                    }
                 }
 
                 // Campos mestres do SAP: re-sincronizam quando a coluna existe na
@@ -319,7 +334,7 @@ class ImportadorDemandas
      * operador na antiga não são alterados.
      *
      * @param  array{demanda_id: int, numero_rt: string, numero_item: string, subitem: string|null}  $chave
-     * @param  array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, itens_remanejados: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}  $resultado
+     * @param  array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, itens_adotados: int, itens_remanejados: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}  $resultado
      * @param  array<int, bool>  $demandasTocadas
      */
     private function cancelarRemanejados(array $chave, Demanda $demanda, array &$resultado, array &$demandasTocadas): void
@@ -358,6 +373,26 @@ class ImportadorDemandas
     private function lerPlanilha(string $caminho): array
     {
         return $this->lerPlanilhaSap($caminho, self::COLUNAS);
+    }
+
+    /**
+     * Item já cadastrado pela importação de liberados (status 03), que ainda
+     * não tem atendimento e portanto pode ser adotado por esta demanda.
+     *
+     * @param  array{demanda_id: int, numero_rt: string, numero_item: string, subitem: string|null}  $chave
+     */
+    private function itemLiberadoSemDemanda(array $chave): ?DemandaItem
+    {
+        return DemandaItem::query()
+            ->whereNull('demanda_id')
+            ->where('numero_rt', $chave['numero_rt'])
+            ->where('numero_item', $chave['numero_item'])
+            ->when(
+                $chave['subitem'] === null,
+                fn ($q) => $q->whereNull('subitem'),
+                fn ($q) => $q->where('subitem', $chave['subitem']),
+            )
+            ->first();
     }
 
     /**
