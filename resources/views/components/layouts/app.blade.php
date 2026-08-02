@@ -280,6 +280,24 @@
             @endcan
             @endunless
 
+            {{-- Itens de Entrega — a ótica do cliente, do item liberado ao atendido --}}
+            @unless($isVisualizador)
+            @can('itens-entrega.ver')
+            <a href="{{ route('itens-entrega.index') }}"
+               title="Itens de Entrega"
+               class="nav-link flex items-center justify-center rounded-lg py-2.5 text-sm font-medium
+                      transition-all duration-200
+                      {{ request()->routeIs('itens-entrega.*')
+                          ? 'bg-zinc-900 text-white dark:bg-zinc-800 dark:text-zinc-100'
+                          : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/>
+                </svg>
+                <span class="nav-label hidden whitespace-nowrap">Itens de Entrega</span>
+            </a>
+            @endcan
+            @endunless
+
         </nav>
 
         {{-- User footer --}}
