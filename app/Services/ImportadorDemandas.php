@@ -72,8 +72,8 @@ class ImportadorDemandas
         'descricao_contentor' => ['Descrição Contentor', 'Descricao Contentor'],
         // Medidas da embalagem superior. O SAP as entrega como
         // "Comprimento EmbSup(m)"; os demais rótulos são os truncados do ALV.
-        'comprimento_embalagem' => ['Comprimento Embalagem', 'Comprimento EmbSup(m)', 'Comprimento EmbSup', 'Compriment Emb', 'Comprimento Emb'],
-        'largura_embalagem' => ['Largura Embalagem', 'Largura EmbSup(m)', 'Largura EmbSup', 'Largura  E', 'Largura Emb'],
+        'comprimento_embalagem' => ['Comprimento Embalagem', 'Comprimento EmbSup(m)', 'Comprimento EmbSup', 'Compriment Emb', 'Comprimento Emb', 'Compriment'],
+        'largura_embalagem' => ['Largura Embalagem', 'Largura EmbSup(m)', 'Largura EmbSup', 'Largura  E', 'Largura Emb', 'Largura Em'],
         'altura_embalagem' => ['Altura Embalagem', 'Altura EmbSup(m)', 'Altura EmbSup', 'Altura Emb'],
         'grupo_planejamento' => ['Grupo Planejamento', 'Grupo plan'],
     ];
@@ -412,7 +412,12 @@ class ImportadorDemandas
      */
     private function lerPlanilha(string $caminho): array
     {
-        return $this->lerPlanilhaSap($caminho, self::COLUNAS);
+        // O export do SAP reserva as primeiras linhas para data e título; o
+        // modelo do sistema começa no cabeçalho. A nota e a RT identificam a
+        // linha certa nos dois casos.
+        $cabecalho = $this->localizarCabecalhoSap($caminho, self::COLUNAS, ['nota', 'numero_rt']);
+
+        return $this->lerPlanilhaSap($caminho, self::COLUNAS, $cabecalho);
     }
 
     /**

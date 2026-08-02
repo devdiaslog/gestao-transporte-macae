@@ -660,4 +660,74 @@ class ImportadorItensLiberadosTest extends TestCase
         // As duas linhas de exemplo do modelo são importáveis.
         $this->assertSame(2, $resultado['itens_criados']);
     }
+
+    public function test_le_o_export_bruto_do_sap_com_cabecalho_truncado(): void
+    {
+        // Rótulos como o SAP entrega: cortados pela largura da coluna, com
+        // "Compriment" repetido para a RT e para a embalagem.
+        $cabecalho = [
+            'Nota', 'Item', 'Subitem', 'Data de cr', 'HoraCr.', 'Data Liber', 'Hora Liber',
+            'Data+Tarde', 'Hr+Tarde', 'Origem', 'LocRetir', 'Destino', 'Descrição carga',
+            'Peso Total', 'Compriment', 'Largura RT', 'Altura RT(', 'DocUnitSup',
+            'Descrição Contentor', 'Compriment', 'Largura Em', 'Altura Emb',
+            'Grupo plan', 'Status do',
+        ];
+
+        $caminho = $this->planilha(
+            [[
+                '326213060', '5', '2', '03.07.2026', '13:56:13', '03.07.2026', '13:56:46',
+                '10.07.2026', '00:00:00', 'BASE VITORIA', 'AL-06 B06R13Q01A', 'ARM-MACAE',
+                'SKID P/PROTEÇÃO', '2.408,000', '3,1000', '3,3000', '3,6000', '4810768',
+                'CISA042074 Caixa 1M', '1,1000', '1,2000', '1,3000', 'T44', '03',
+            ]],
+            $cabecalho,
+            // O export reserva as quatro primeiras linhas para data e título.
+            [[], ['17.07.2026'], [], []],
+        );
+
+        $resultado = app(ImportadorItensLiberados::class)->importar($caminho);
+
+        $this->assertSame(1, $resultado['itens_criados']);
+        $this->assertSame(0, $resultado['linhas_ignoradas']);
+
+        $item = DemandaItem::firstOrFail();
+        $this->assertSame('AL-06 B06R13Q01A', $item->descricao_local_retirada);
+        $this->assertSame('4810768', $item->doc_unitizacao_superior);
+        // Os dois "Compriment" são desempatados pela ordem em que aparecem.
+        $this->assertSame(3.1, (float) $item->comprimento);
+        $this->assertSame(1.1, (float) $item->comprimento_embalagem);
+        $this->assertSame(1.2, (float) $item->largura_embalagem);
+    }
+
+    public function test_importador_de_demandas_le_o_export_bruto_do_sap(): void
+    {
+        $cabecalho = [
+            'Data', 'Hora', 'Dt entregu', 'Hr entregu', 'Data + tar', 'Hora + tar',
+            'Nota', 'Nº da RT', 'Item da RT', 'Subitem da', 'Descrição equipamento',
+            'Origem', 'Local retirada', 'Destino', 'Status do', 'Peso total',
+            'Altura RT(', 'Largura RT', 'Compriment', 'Descrição da carga',
+        ];
+
+        $caminho = $this->planilha(
+            [[
+                '17.07.2026', '08:21:48', '19.07.2026', '00:00:01', '11.07.2026', '00:00:00',
+                '509538496', '326741968', '1', '5', 'VIX 1993 - AXOR 1933 S 2P T44',
+                'PACU', 'PACU-SAIDA', 'ARM-MACAE', '07', '3.250,000',
+                '1,3100', '1,2000', '14,0000', 'CISA4580034',
+            ]],
+            $cabecalho,
+            [[], ['17.07.2026'], [], []],
+        );
+
+        $resultado = app(ImportadorDemandas::class)->importar($caminho);
+
+        $this->assertSame(0, $resultado['linhas_ignoradas']);
+        $this->assertSame(1, $resultado['itens_criados']);
+
+        $item = DemandaItem::firstOrFail();
+        $this->assertSame('326741968', $item->numero_rt);
+        $this->assertSame(14.0, (float) $item->comprimento);
+        // O layout de viagem não traz embalagem: a coluna da RT não é reaproveitada.
+        $this->assertNull($item->comprimento_embalagem);
+    }
 }

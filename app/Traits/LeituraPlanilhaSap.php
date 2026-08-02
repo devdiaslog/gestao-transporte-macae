@@ -64,6 +64,46 @@ trait LeituraPlanilhaSap
     }
 
     /**
+     * Descobre em que linha está o cabeçalho.
+     *
+     * O export padrão do SAP reserva as primeiras linhas para a data e o
+     * título do relatório; o modelo gerado pelo sistema começa direto no
+     * cabeçalho. É a primeira linha que identifica os campos informados.
+     *
+     * @param  array<string, array<int, string>>  $colunas
+     * @param  array<int, string>  $obrigatorios  campos que caracterizam o cabeçalho
+     */
+    protected function localizarCabecalhoSap(string $caminho, array $colunas, array $obrigatorios): int
+    {
+        $reader = new XlsxReader;
+        $reader->open($caminho);
+
+        $linha = 1;
+
+        foreach ($reader->getSheetIterator() as $sheet) {
+            foreach ($sheet->getRowIterator() as $indice => $row) {
+                if ($indice > 10) {
+                    break;
+                }
+
+                $mapa = $this->mapearCabecalhoSap($row->toArray(), $colunas);
+
+                if (count(array_intersect($obrigatorios, array_keys($mapa))) === count($obrigatorios)) {
+                    $linha = $indice;
+
+                    break 2;
+                }
+            }
+
+            break;
+        }
+
+        $reader->close();
+
+        return $linha;
+    }
+
+    /**
      * Casa cada campo interno com a posição da coluna no cabeçalho, por
      * igualdade exata do rótulo (ignorando caixa e acentos).
      *
@@ -93,6 +133,12 @@ trait LeituraPlanilhaSap
 
                 if ($posicao !== false) {
                     $mapa[$campo] = $posicao;
+                    // O SAP corta o nome da coluna pela largura dela, o que faz
+                    // rótulos diferentes chegarem iguais ("Compriment" da RT e o
+                    // da embalagem). Cada coluna atende um campo só, então a
+                    // ordem do mapa desempata: o primeiro campo fica com a
+                    // primeira ocorrência e o seguinte pega a próxima.
+                    unset($normalizado[$posicao]);
 
                     break;
                 }

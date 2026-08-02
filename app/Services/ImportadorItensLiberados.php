@@ -9,7 +9,6 @@ use App\Traits\LeituraPlanilhaSap;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use OpenSpout\Common\Entity\Row;
-use OpenSpout\Reader\XLSX\Reader;
 use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
 
 /**
@@ -68,8 +67,8 @@ class ImportadorItensLiberados
         'descricao_contentor' => ['Descrição Contentor', 'Descricao Contentor'],
         // Medidas da embalagem superior. O SAP as entrega como
         // "Comprimento EmbSup(m)"; os demais rótulos são os truncados do ALV.
-        'comprimento_embalagem' => ['Comprimento Embalagem', 'Comprimento EmbSup(m)', 'Comprimento EmbSup', 'Compriment Emb', 'Comprimento Emb'],
-        'largura_embalagem' => ['Largura Embalagem', 'Largura EmbSup(m)', 'Largura EmbSup', 'Largura  E', 'Largura Emb'],
+        'comprimento_embalagem' => ['Comprimento Embalagem', 'Comprimento EmbSup(m)', 'Comprimento EmbSup', 'Compriment Emb', 'Comprimento Emb', 'Compriment'],
+        'largura_embalagem' => ['Largura Embalagem', 'Largura EmbSup(m)', 'Largura EmbSup', 'Largura  E', 'Largura Emb', 'Largura Em'],
         'altura_embalagem' => ['Altura Embalagem', 'Altura EmbSup(m)', 'Altura EmbSup', 'Altura Emb'],
         'grupo_planejamento' => ['Grupo Planejamento', 'Grupo plan'],
         'status_sap' => ['Status', 'Status do'],
@@ -139,16 +138,17 @@ class ImportadorItensLiberados
      * @param  bool  $marcarAusentes  Quando o arquivo é o export completo dos itens
      *                                liberados, marca para conferência os que já
      *                                não constam nele.
-     * @return array{itens_criados: int, itens_atualizados: int, itens_ausentes: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
+     * @return array{itens_criados: int, itens_atualizados: int, itens_inalterados: int, itens_ausentes: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
      */
     public function importar(string $caminho, ?int $usuarioId = null, bool $marcarAusentes = true): array
     {
-        $linhas = $this->lerPlanilhaSap($caminho, self::COLUNAS, $this->localizarCabecalho($caminho));
+        $linhas = $this->lerPlanilhaSap($caminho, self::COLUNAS, $this->localizarCabecalhoSap($caminho, self::COLUNAS, ['numero_rt', 'numero_item']));
 
         if ($linhas === []) {
             return [
                 'itens_criados' => 0,
                 'itens_atualizados' => 0,
+                'itens_inalterados' => 0,
                 'itens_ausentes' => 0,
                 'linhas_ignoradas' => 0,
                 'avisos' => [],
@@ -163,13 +163,14 @@ class ImportadorItensLiberados
      * Processa linhas já estruturadas (da planilha ou da API).
      *
      * @param  array<int|string, array<string, string|null>>  $linhas
-     * @return array{itens_criados: int, itens_atualizados: int, itens_ausentes: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
+     * @return array{itens_criados: int, itens_atualizados: int, itens_inalterados: int, itens_ausentes: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
      */
     public function importarLinhas(array $linhas, ?int $usuarioId = null, bool $marcarAusentes = true): array
     {
         $resultado = [
             'itens_criados' => 0,
             'itens_atualizados' => 0,
+            'itens_inalterados' => 0,
             'itens_ausentes' => 0,
             'linhas_ignoradas' => 0,
             'avisos' => [],
@@ -220,6 +221,10 @@ class ImportadorItensLiberados
                 if ($item->isDirty() || $novo) {
                     $item->save();
                     $resultado[$novo ? 'itens_criados' : 'itens_atualizados']++;
+                } else {
+                    // Reimportação em que nada mudou: contabilizada para o
+                    // total bater com o que o arquivo trouxe.
+                    $resultado['itens_inalterados']++;
                 }
 
                 $vistos[] = $item->id;
@@ -403,42 +408,5 @@ class ImportadorItensLiberados
             ->whereNull('ausente_no_sap_em')
             ->when($vistos !== [], fn ($q) => $q->whereNotIn('id', $vistos))
             ->update(['ausente_no_sap_em' => now()]);
-    }
-
-    /**
-     * Descobre em que linha está o cabeçalho.
-     *
-     * O export padrão do SAP reserva as primeiras linhas para a data e o título
-     * do relatório; o modelo gerado pelo sistema começa direto no cabeçalho.
-     */
-    private function localizarCabecalho(string $caminho): int
-    {
-        $reader = new Reader;
-        $reader->open($caminho);
-
-        $linha = 1;
-
-        foreach ($reader->getSheetIterator() as $sheet) {
-            foreach ($sheet->getRowIterator() as $indice => $row) {
-                if ($indice > 10) {
-                    break;
-                }
-
-                $mapa = $this->mapearCabecalhoSap($row->toArray(), self::COLUNAS);
-
-                // Cabeçalho é a primeira linha que identifica a chave do item.
-                if (isset($mapa['numero_rt'], $mapa['numero_item'])) {
-                    $linha = $indice;
-
-                    break 2;
-                }
-            }
-
-            break;
-        }
-
-        $reader->close();
-
-        return $linha;
     }
 }
