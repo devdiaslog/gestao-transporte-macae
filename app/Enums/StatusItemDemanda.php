@@ -52,6 +52,19 @@ enum StatusItemDemanda: string
     }
 
     /**
+     * Status que pode ser registrado antes de a demanda começar.
+     *
+     * Uma demanda pode nascer, ser importada e ser cancelada antes de a torre
+     * tomar conhecimento dela — nesse caso não houve início, e exigir um seria
+     * inventar uma execução que não aconteceu. Os demais status descrevem o
+     * desfecho de uma execução e continuam dependendo do início.
+     */
+    public function dispensaInicioDaDemanda(): bool
+    {
+        return $this === self::Cancelado;
+    }
+
+    /**
      * Traduz o código bruto do SAP para o status interno.
      * Tolera valores de 1 dígito ("4" vira "04") e códigos desconhecidos (null).
      */

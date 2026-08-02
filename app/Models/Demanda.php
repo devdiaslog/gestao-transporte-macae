@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\FonteDemanda;
 use App\Enums\StatusDemanda;
+use App\Enums\StatusItemDemanda;
 use App\Enums\TipoCadastro;
 use App\Enums\TipoDemanda;
 use App\Traits\HasEncryptedRouteKey;
@@ -148,10 +149,14 @@ class Demanda extends Model
      * O fim é calculado automaticamente (maior data de entrega quando todos os
      * itens estão resolvidos), então não há travamento manual de fim.
      */
-    public function motivoBloqueioItens(): ?string
+    public function motivoBloqueioItens(?StatusItemDemanda $destino = null): ?string
     {
+        if ($destino?->dispensaInicioDaDemanda()) {
+            return null;
+        }
+
         if ($this->data_hora_inicio_demanda === null) {
-            return 'Informe o início da demanda para liberar a alteração dos itens.';
+            return 'Informe o início da demanda para liberar a alteração dos itens. O cancelamento continua disponível.';
         }
 
         return null;
