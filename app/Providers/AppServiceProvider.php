@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -14,6 +15,15 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Paginator::defaultView('pagination.custom');
+
+        /**
+         * Datas relativas em português ("há 3 semanas", "em 2 dias").
+         *
+         * Só o Carbon: mudar app.locale afetaria as mensagens de validação, que
+         * hoje vêm do pacote em inglês e são exibidas com textos próprios nos
+         * Form Requests.
+         */
+        Carbon::setLocale('pt_BR');
 
         /**
          * Autorização por permissões (spatie): as rotas e views usam

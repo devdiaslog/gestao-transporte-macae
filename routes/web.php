@@ -141,6 +141,8 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
     Route::delete('demanda-itens/{item}', [DemandaItemController::class, 'destroy'])->name('demanda-itens.destroy')->middleware('can:demandas.excluir')->whereNumber('item');
     // Itens de entrega: a visão do cliente, do item liberado no SAP até ser atendido.
     Route::get('itens-entrega', [ItemEntregaController::class, 'index'])->name('itens-entrega.index')->middleware('can:itens-entrega.ver');
+    Route::get('itens-entrega/trecho', [ItemEntregaController::class, 'trecho'])->name('itens-entrega.trecho')->middleware('can:itens-entrega.ver');
+    Route::post('itens-entrega/rota', [ItemEntregaController::class, 'ajustarRota'])->name('itens-entrega.rota')->middleware('can:itens-entrega.prever');
     Route::get('itens-entrega-export', [ItemEntregaController::class, 'export'])->name('itens-entrega.export')->middleware('can:itens-entrega.ver');
     Route::post('itens-entrega/previsao', [ItemEntregaController::class, 'definirPrevisao'])->name('itens-entrega.previsao')->middleware('can:itens-entrega.prever');
     Route::post('itens-entrega/escopo', [ItemEntregaController::class, 'marcarForaEscopo'])->name('itens-entrega.escopo')->middleware('can:itens-entrega.escopo');

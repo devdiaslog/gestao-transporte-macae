@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\OrigemPrevisao;
 use App\Enums\StatusItemDemanda;
 use App\Enums\StatusSap;
+use App\Support\NormalizadorLocal;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -85,6 +86,23 @@ class DemandaItem extends Model
             'fora_escopo_em' => 'datetime',
             'ausente_no_sap_em' => 'datetime',
         ];
+    }
+
+    /**
+     * Mantém a forma canônica dos locais sincronizada, venha o dado da
+     * importação, da API ou do ajuste manual do operador.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $item) {
+            if ($item->isDirty('local_origem')) {
+                $item->local_origem_norm = NormalizadorLocal::canonizar($item->local_origem);
+            }
+
+            if ($item->isDirty('local_destino')) {
+                $item->local_destino_norm = NormalizadorLocal::canonizar($item->local_destino);
+            }
+        });
     }
 
     public function campoEditadoPeloOperador(string $campo): bool

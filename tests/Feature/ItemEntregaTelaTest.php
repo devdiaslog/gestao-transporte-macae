@@ -54,7 +54,7 @@ class ItemEntregaTelaTest extends TestCase
         $atendido = $this->item(['status_sap' => StatusSap::Atendido]);
 
         $this->actingAs(User::factory()->create())
-            ->get(route('itens-entrega.index'))
+            ->get(route('itens-entrega.trecho'))
             ->assertOk()
             ->assertSee($liberado->numero_rt)
             ->assertSee($programado->numero_rt)
@@ -71,14 +71,14 @@ class ItemEntregaTelaTest extends TestCase
         $vencido = $this->item(['prazo_item' => now()->subDays(2)]);
 
         $this->actingAs(User::factory()->create())
-            ->get(route('itens-entrega.index'))
+            ->get(route('itens-entrega.trecho'))
             ->assertOk()
             ->assertSee($vence_amanha->numero_rt)
             ->assertSee($vencido->numero_rt)
             ->assertDontSee($vence_em_10_dias->numero_rt);
 
         $this->actingAs(User::factory()->create())
-            ->get(route('itens-entrega.index', ['dias' => 15]))
+            ->get(route('itens-entrega.trecho', ['dias' => 15]))
             ->assertOk()
             ->assertSee($vence_em_10_dias->numero_rt);
     }
@@ -91,16 +91,77 @@ class ItemEntregaTelaTest extends TestCase
         $usuario = User::factory()->create();
 
         $this->actingAs($usuario)
-            ->get(route('itens-entrega.index', ['aba' => 'suspenso_externo']))
+            ->get(route('itens-entrega.trecho', ['aba' => 'suspenso_externo']))
             ->assertOk()
             ->assertSee($doCliente->numero_rt)
             ->assertDontSee($nosso->numero_rt);
 
         $this->actingAs($usuario)
-            ->get(route('itens-entrega.index', ['aba' => 'suspenso_interno']))
+            ->get(route('itens-entrega.trecho', ['aba' => 'suspenso_interno']))
             ->assertOk()
             ->assertSee($nosso->numero_rt)
             ->assertDontSee($doCliente->numero_rt);
+    }
+
+    /**
+     * A tela inicial mostra fluxos, não itens soltos: é olhando o trecho que a
+     * operação decide a previsão.
+     */
+    public function test_index_agrupa_por_trecho_com_somatorios(): void
+    {
+        $this->item(['local_origem' => 'PACU', 'local_destino' => 'ARM-MACAE', 'peso_total' => 1000]);
+        $this->item(['local_origem' => 'PACU', 'local_destino' => 'ARM-MACAÉ', 'peso_total' => 500]);
+        $this->item(['local_origem' => 'PBG', 'local_destino' => 'ARM-MACAE', 'peso_total' => 200]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index'))
+            ->assertOk()
+            ->assertViewHas('trechos', function ($trechos) {
+                // As grafias ARM-MACAE e ARM-MACAÉ são o mesmo destino.
+                $this->assertCount(2, $trechos);
+
+                $pacu = $trechos->firstWhere('local_origem_norm', 'PACU');
+                $this->assertSame('ARM MACAE', $pacu->local_destino_norm);
+                $this->assertSame(2, (int) $pacu->total);
+                $this->assertSame(1500.0, (float) $pacu->peso);
+                $this->assertSame(2, (int) $pacu->sem_previsao);
+
+                return true;
+            });
+    }
+
+    public function test_trecho_filtra_pelos_locais_normalizados(): void
+    {
+        $doTrecho = $this->item(['local_origem' => 'PACU', 'local_destino' => 'ARM-MACAÉ']);
+        $outro = $this->item(['local_origem' => 'PBG', 'local_destino' => 'ARM-MACAE']);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.trecho', ['origem_norm' => 'PACU', 'destino_norm' => 'ARM MACAE']))
+            ->assertOk()
+            ->assertSee($doTrecho->numero_rt)
+            ->assertDontSee($outro->numero_rt);
+    }
+
+    public function test_item_atendido_nao_aparece_em_lugar_nenhum(): void
+    {
+        $atendido = $this->item(['status_sap' => StatusSap::Atendido]);
+        $cancelado = $this->item(['status_sap' => StatusSap::Cancelado]);
+        $emCobranca = $this->item();
+
+        $usuario = User::factory()->create();
+
+        $this->actingAs($usuario)
+            ->get(route('itens-entrega.trecho'))
+            ->assertOk()
+            ->assertSee($emCobranca->numero_rt)
+            ->assertDontSee($atendido->numero_rt)
+            ->assertDontSee($cancelado->numero_rt);
+
+        // Nem por uma aba inventada na URL.
+        $this->actingAs($usuario)
+            ->get(route('itens-entrega.trecho', ['aba' => 'encerrados']))
+            ->assertOk()
+            ->assertDontSee($atendido->numero_rt);
     }
 
     public function test_semaforo_conta_cada_situacao(): void
@@ -134,7 +195,7 @@ class ItemEntregaTelaTest extends TestCase
         $semPrevisao = $this->item();
 
         $this->actingAs(User::factory()->create())
-            ->get(route('itens-entrega.index', ['situacao' => 'fora_do_prazo']))
+            ->get(route('itens-entrega.trecho', ['situacao' => 'fora_do_prazo']))
             ->assertOk()
             ->assertSee($atrasado->numero_rt)
             ->assertDontSee($semPrevisao->numero_rt);
@@ -148,13 +209,13 @@ class ItemEntregaTelaTest extends TestCase
         $usuario = User::factory()->create();
 
         $this->actingAs($usuario)
-            ->get(route('itens-entrega.index', ['doc_unitizacao' => '4803478']))
+            ->get(route('itens-entrega.trecho', ['doc_unitizacao' => '4803478']))
             ->assertOk()
             ->assertSee($doContentor->numero_rt)
             ->assertDontSee($outro->numero_rt);
 
         $this->actingAs($usuario)
-            ->get(route('itens-entrega.index', ['destino' => 'ARM-RIO']))
+            ->get(route('itens-entrega.trecho', ['destino_norm' => 'ARM RIO']))
             ->assertOk()
             ->assertSee($outro->numero_rt)
             ->assertDontSee($doContentor->numero_rt);
@@ -166,7 +227,7 @@ class ItemEntregaTelaTest extends TestCase
         $presente = $this->item();
 
         $this->actingAs(User::factory()->create())
-            ->get(route('itens-entrega.index', ['ausentes' => 1]))
+            ->get(route('itens-entrega.trecho', ['ausentes' => 1]))
             ->assertOk()
             ->assertSee($sumiu->numero_rt)
             ->assertDontSee($presente->numero_rt);
@@ -384,6 +445,58 @@ class ItemEntregaTelaTest extends TestCase
             ->post(route('itens-entrega.importar'), [
                 'arquivo' => UploadedFile::fake()->create('lista.pdf', 10, 'application/pdf'),
             ])->assertSessionHasErrors('arquivo');
+    }
+
+    /**
+     * A normalização só resolve grafia. Quando o SAP manda o local errado, quem
+     * corrige é a operação — e a correção não pode ser desfeita na importação
+     * seguinte.
+     */
+    public function test_ajusta_a_rota_e_protege_do_sap(): void
+    {
+        $item = $this->item(['local_origem' => 'BASE VITORIA', 'local_destino' => 'ARM-MACAE (SUCATA)']);
+
+        $this->actingAs(User::factory()->create())
+            ->post(route('itens-entrega.rota'), [
+                'itens' => [$item->id],
+                'local_destino' => 'ARM-MACAE',
+            ])->assertRedirect()->assertSessionHas('success');
+
+        $item->refresh();
+        $this->assertSame('ARM-MACAE', $item->local_destino);
+        $this->assertSame('ARM MACAE', $item->local_destino_norm);
+        $this->assertTrue($item->campoEditadoPeloOperador('local_destino'));
+        // A origem não foi informada, então continua como estava e livre.
+        $this->assertSame('BASE VITORIA', $item->local_origem);
+        $this->assertFalse($item->campoEditadoPeloOperador('local_origem'));
+    }
+
+    public function test_ajuste_de_rota_exige_origem_ou_destino(): void
+    {
+        $item = $this->item();
+
+        $this->actingAs(User::factory()->create())
+            ->post(route('itens-entrega.rota'), ['itens' => [$item->id]])
+            ->assertSessionHasErrors(['local_origem', 'local_destino']);
+    }
+
+    public function test_ajuste_de_rota_em_lote(): void
+    {
+        $a = $this->item(['local_destino' => 'ARM MACAÉ']);
+        $b = $this->item(['local_destino' => 'ARM-MACAE (AL-17)']);
+
+        $this->actingAs(User::factory()->create())
+            ->post(route('itens-entrega.rota'), [
+                'itens' => [$a->id, $b->id],
+                'local_origem' => 'PACU',
+                'local_destino' => 'ARM-MACAE',
+            ])->assertRedirect();
+
+        foreach ([$a, $b] as $item) {
+            $item->refresh();
+            $this->assertSame('PACU', $item->local_origem);
+            $this->assertSame('ARM MACAE', $item->local_destino_norm);
+        }
     }
 
     public function test_baixa_o_modelo_de_importacao(): void
