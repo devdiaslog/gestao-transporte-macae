@@ -30,8 +30,8 @@ enum StatusSap: string
             self::Programado => 'Programado',
             self::Atendido => 'Atendido',
             self::Cancelado => 'Cancelado',
-            self::SuspensoInterno => 'Suspenso',
-            self::SuspensoExterno => 'Suspenso — Fator Externo',
+            self::SuspensoInterno => 'Suspenso interno',
+            self::SuspensoExterno => 'Suspenso cliente',
         };
     }
 

@@ -37,46 +37,9 @@
         </a>
     </div>
 
-    @include('itens-entrega._cabecalho', ['contadoresAba' => null])
+    @include('itens-entrega._cabecalho')
 
-    {{-- Filtros --}}
-    <form method="GET" action="{{ route('itens-entrega.trecho') }}" class="mt-6 flex flex-wrap items-end gap-3">
-        <input type="hidden" name="aba" value="{{ $aba }}">
-        <input type="hidden" name="origem_norm" value="{{ $origemTrecho }}">
-        <input type="hidden" name="destino_norm" value="{{ $destinoTrecho }}">
-        @if(request('situacao'))<input type="hidden" name="situacao" value="{{ request('situacao') }}">@endif
-
-        <div class="flex min-w-56 flex-1 overflow-hidden rounded-lg border border-slate-300 bg-white shadow-xs focus-within:border-zinc-900 dark:border-zinc-800 dark:bg-zinc-950">
-            <span class="flex items-center pl-3.5 text-zinc-400">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
-                </svg>
-            </span>
-            <input type="text" name="busca" value="{{ $filtros['busca'] ?? '' }}" placeholder="RT, carga ou contentor…" autocomplete="off"
-                   class="flex-1 bg-transparent px-3 py-2.5 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100">
-        </div>
-
-        @if($aba === 'cobranca')
-        <div>
-            <label class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Vencem em até</label>
-            <select name="dias" class="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100">
-                @foreach([1 => 'D+1', 3 => 'D+3', 7 => 'D+7', 15 => 'D+15', 30 => 'D+30', 0 => 'Todos'] as $valor => $rotulo)
-                    <option value="{{ $valor }}" @selected($dias === $valor)>{{ $rotulo }}</option>
-                @endforeach
-            </select>
-        </div>
-        @endif
-
-        <label class="flex items-center gap-2 pb-2.5 text-sm text-zinc-700 dark:text-zinc-300">
-            <input type="checkbox" name="ausentes" value="1" @checked(request()->boolean('ausentes'))
-                   class="h-4 w-4 rounded border-slate-300 text-zinc-900 dark:border-zinc-700">
-            Sumiram do SAP
-        </label>
-
-        <button type="submit" class="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
-            Filtrar
-        </button>
-    </form>
+    @include('itens-entrega._filtros', ['rota' => 'itens-entrega.trecho'])
 
     {{-- Barra de ações em lote, revelada quando há seleção --}}
     @if($podePrever || $podeEscopo)

@@ -34,15 +34,29 @@ class ItemEntregaController extends Controller
     private const DIAS_PADRAO = 3;
 
     /**
-     * Abas da tela, cada uma com o recorte de status que representa.
+     * Status que a tela permite filtrar, na ordem do ciclo de vida.
      *
-     * Item atendido não aparece: ele deixou de ser cobrado no momento em que
-     * chegou. Cancelado idem — o cliente não quer mais aquele transporte.
+     * Atendido fica de fora: item entregue deixou de ser cobrado e não tem o
+     * que replanejar.
      */
-    private const ABAS = [
-        'cobranca' => 'Em cobrança',
-        'suspenso_externo' => 'Suspensos — cliente',
-        'suspenso_interno' => 'Suspensos — interno',
+    private const STATUS_FILTRAVEIS = [
+        StatusSap::Liberado,
+        StatusSap::Programado,
+        StatusSap::SuspensoInterno,
+        StatusSap::SuspensoExterno,
+        StatusSap::Cancelado,
+    ];
+
+    /** Status considerados quando o usuário não escolhe nenhum. */
+    private const STATUS_PADRAO = [StatusSap::Liberado, StatusSap::Programado];
+
+    /**
+     * Recortes de previsão — o que o operador busca quando vai replanejar.
+     */
+    private const FILTROS_PREVISAO = [
+        'sem_previsao' => 'Sem previsão',
+        'vencida' => 'Previsão vencida',
+        'proxima' => 'Previsão vence em até',
     ];
 
     /**
@@ -52,12 +66,15 @@ class ItemEntregaController extends Controller
      * mesmo vocabulário — o cliente lê "Fora do prazo" no CSV e na tela.
      */
     private const CORES_SITUACAO = [
-        'no_prazo' => ['label' => 'No prazo', 'dot' => 'bg-emerald-500', 'chip' => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'],
-        'fora_do_prazo' => ['label' => 'Fora do prazo', 'dot' => 'bg-red-500', 'chip' => 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400'],
+        'no_prazo' => ['label' => 'Previsto no prazo', 'dot' => 'bg-emerald-500', 'chip' => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'],
+        'fora_do_prazo' => ['label' => 'Previsto fora do prazo', 'dot' => 'bg-red-500', 'chip' => 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400'],
         'sem_previsao' => ['label' => 'Sem previsão', 'dot' => 'bg-zinc-400', 'chip' => 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'],
         'sem_prazo' => ['label' => 'Sem prazo', 'dot' => 'bg-sky-400', 'chip' => 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-400'],
         'fora_escopo' => ['label' => 'Fora do escopo', 'dot' => 'bg-zinc-700', 'chip' => 'bg-zinc-800 text-zinc-100 dark:bg-zinc-700 dark:text-zinc-200'],
     ];
+
+    /** Situações que viram card no topo — fora do escopo não é gerido aqui. */
+    private const SITUACOES_RESUMO = ['no_prazo', 'fora_do_prazo', 'sem_previsao'];
 
     /**
      * Lista os trechos (origem→destino) com os totais de cada um.
@@ -67,13 +84,13 @@ class ItemEntregaController extends Controller
      */
     public function index(Request $request): View
     {
-        $aba = $this->abaDe($request);
+        $status = $this->statusDe($request);
         $dias = $this->diasDe($request);
 
         // Área de piso: item solto vale pelas próprias medidas; dentro de
         // contentor vale a área do contentor, somada à parte para contar cada
         // um uma vez só.
-        $trechos = $this->queryFiltrada($request, $aba, $dias)
+        $trechos = $this->queryFiltrada($request, $status, $dias)
             ->selectRaw('
                 local_origem_norm,
                 local_destino_norm,
@@ -98,7 +115,7 @@ class ItemEntregaController extends Controller
             ->orderByDesc('total')
             ->get();
 
-        $areaPorTrecho = $this->areaDosContentoresPorTrecho($request, $aba, $dias);
+        $areaPorTrecho = $this->areaDosContentoresPorTrecho($request, $status, $dias);
 
         $trechos->each(function ($trecho) use ($areaPorTrecho) {
             $chave = $trecho->local_origem_norm.'|'.$trecho->local_destino_norm;
@@ -107,13 +124,15 @@ class ItemEntregaController extends Controller
 
         return view('itens-entrega.index', [
             'trechos' => $trechos,
-            'aba' => $aba,
-            'abas' => self::ABAS,
+            'statusSelecionados' => array_map(fn (StatusSap $s) => $s->value, $status),
+            'statusDisponiveis' => self::STATUS_FILTRAVEIS,
+            'filtrosPrevisao' => self::FILTROS_PREVISAO,
+            'situacoesResumo' => self::SITUACOES_RESUMO,
             'dias' => $dias,
-            'resumo' => $this->resumo($request, $aba, $dias),
-            'contadoresAba' => $this->contadoresPorAba($request, $dias),
+            'diasPrevisao' => $this->diasPrevisaoDe($request),
+            'resumo' => $this->resumo($request, $status, $dias),
             'cores' => self::CORES_SITUACAO,
-            'filtros' => $request->only(['busca', 'situacao', 'ausentes']),
+            'filtros' => $request->only(['busca', 'situacao', 'ausentes', 'previsao']),
         ]);
     }
 
@@ -122,10 +141,10 @@ class ItemEntregaController extends Controller
      */
     public function trecho(Request $request): View
     {
-        $aba = $this->abaDe($request);
+        $status = $this->statusDe($request);
         $dias = $this->diasDe($request);
 
-        $itens = $this->queryFiltrada($request, $aba, $dias)
+        $itens = $this->queryFiltrada($request, $status, $dias)
             ->with(['demanda.equipamento', 'previsaoAtual.autor', 'marcadoForaDoEscopoPor'])
             // Itens da mesma embalagem ficam juntos: eles viajam juntos.
             ->orderByRaw('coalesce(doc_unitizacao_superior, numero_contentor) is null')
@@ -139,23 +158,36 @@ class ItemEntregaController extends Controller
             'itens' => $itens,
             'embalagens' => $this->embalagensDaPagina($itens->getCollection()),
             'areaDePiso' => ContentorSap::areaDePiso($itens->getCollection()),
-            'aba' => $aba,
-            'abas' => self::ABAS,
+            'statusSelecionados' => array_map(fn (StatusSap $s) => $s->value, $status),
+            'statusDisponiveis' => self::STATUS_FILTRAVEIS,
+            'filtrosPrevisao' => self::FILTROS_PREVISAO,
+            'situacoesResumo' => self::SITUACOES_RESUMO,
             'dias' => $dias,
+            'diasPrevisao' => $this->diasPrevisaoDe($request),
             'origemTrecho' => $request->input('origem_norm'),
             'destinoTrecho' => $request->input('destino_norm'),
-            'resumo' => $this->resumo($request, $aba, $dias),
+            'resumo' => $this->resumo($request, $status, $dias),
             'locais' => $this->locaisConhecidos(),
             'cores' => self::CORES_SITUACAO,
-            'filtros' => $request->only(['busca', 'situacao', 'doc_unitizacao', 'ausentes', 'origem_norm', 'destino_norm']),
+            'filtros' => $request->only(['busca', 'situacao', 'doc_unitizacao', 'ausentes', 'origem_norm', 'destino_norm', 'previsao']),
         ]);
     }
 
-    private function abaDe(Request $request): string
+    /**
+     * Status escolhidos no filtro; sem escolha, os que o cliente cobra.
+     *
+     * @return array<int, StatusSap>
+     */
+    private function statusDe(Request $request): array
     {
-        return array_key_exists((string) $request->input('aba'), self::ABAS)
-            ? (string) $request->input('aba')
-            : 'cobranca';
+        $escolhidos = collect((array) $request->input('status', []))
+            ->map(fn ($codigo) => StatusSap::fromCodigo($codigo))
+            ->filter()
+            ->filter(fn (StatusSap $s) => in_array($s, self::STATUS_FILTRAVEIS, true))
+            ->values()
+            ->all();
+
+        return $escolhidos !== [] ? $escolhidos : self::STATUS_PADRAO;
     }
 
     private function diasDe(Request $request): int
@@ -163,6 +195,16 @@ class ItemEntregaController extends Controller
         return $request->has('dias') && $request->input('dias') !== ''
             ? max(0, (int) $request->input('dias'))
             : self::DIAS_PADRAO;
+    }
+
+    /**
+     * Horizonte do filtro "previsão vence em até N dias".
+     */
+    private function diasPrevisaoDe(Request $request): int
+    {
+        return $request->has('dias_previsao') && $request->input('dias_previsao') !== ''
+            ? max(0, (int) $request->input('dias_previsao'))
+            : 1;
     }
 
     /**
@@ -332,7 +374,7 @@ class ItemEntregaController extends Controller
      */
     public function export(Request $request): Response
     {
-        $itens = $this->queryFiltrada($request, $this->abaDe($request), $this->diasDe($request))
+        $itens = $this->queryFiltrada($request, $this->statusDe($request), $this->diasDe($request))
             ->with(['demanda.equipamento', 'previsaoAtual.autor'])
             ->orderByRaw('prazo_item is null')
             ->orderBy('prazo_item')
@@ -392,13 +434,13 @@ class ItemEntregaController extends Controller
     /**
      * @return Builder<DemandaItem>
      */
-    private function queryFiltrada(Request $request, string $aba, int $dias): Builder
+    private function queryFiltrada(Request $request, array $status, int $dias): Builder
     {
         return DemandaItem::query()
-            ->tap(fn (Builder $q) => $this->aplicarAba($q, $aba))
+            ->whereIn('status_sap', array_map(fn (StatusSap $s) => $s->value, $status))
             // Horizonte: o cliente pede a visão antecipada (D+3 por padrão).
             // Itens já vencidos entram sempre — são os mais urgentes.
-            ->when($dias > 0 && $aba === 'cobranca', fn (Builder $q) => $q
+            ->when($dias > 0, fn (Builder $q) => $q
                 ->where(fn (Builder $s) => $s
                     ->whereNull('prazo_item')
                     ->orWhere('prazo_item', '<=', now()->addDays($dias)->endOfDay())))
@@ -418,19 +460,12 @@ class ItemEntregaController extends Controller
                 ->where('doc_unitizacao_superior', $request->input('contentor'))
                 ->orWhere('numero_contentor', $request->input('contentor'))))
             ->when($request->boolean('ausentes'), fn (Builder $q) => $q->whereNotNull('ausente_no_sap_em'))
-            ->when($request->filled('situacao'), fn (Builder $q) => $this->aplicarSituacao($q, (string) $request->input('situacao')));
-    }
-
-    /**
-     * @param  Builder<DemandaItem>  $query
-     */
-    private function aplicarAba(Builder $query, string $aba): void
-    {
-        match ($aba) {
-            'suspenso_externo' => $query->where('status_sap', StatusSap::SuspensoExterno),
-            'suspenso_interno' => $query->where('status_sap', StatusSap::SuspensoInterno),
-            default => $query->whereIn('status_sap', [StatusSap::Liberado, StatusSap::Programado]),
-        };
+            ->when($request->filled('situacao'), fn (Builder $q) => $this->aplicarSituacao($q, (string) $request->input('situacao')))
+            ->when($request->filled('previsao'), fn (Builder $q) => $this->aplicarFiltroPrevisao(
+                $q,
+                (string) $request->input('previsao'),
+                $this->diasPrevisaoDe($request),
+            ));
     }
 
     /**
@@ -456,40 +491,42 @@ class ItemEntregaController extends Controller
     }
 
     /**
+     * Recortes usados para replanejar a previsão.
+     *
+     * @param  Builder<DemandaItem>  $query
+     */
+    private function aplicarFiltroPrevisao(Builder $query, string $filtro, int $dias): void
+    {
+        match ($filtro) {
+            'sem_previsao' => $query->whereNull('data_hora_previsao_entrega'),
+            // Prometido e não cumprido: a data passou e o item continua aqui.
+            'vencida' => $query->whereNotNull('data_hora_previsao_entrega')
+                ->where('data_hora_previsao_entrega', '<', now()),
+            // Vence logo: dá tempo de confirmar ou remarcar antes de falhar.
+            'proxima' => $query->whereNotNull('data_hora_previsao_entrega')
+                ->whereBetween('data_hora_previsao_entrega', [now(), now()->addDays($dias)->endOfDay()]),
+            default => null,
+        };
+    }
+
+    /**
      * Contadores do semáforo, respeitando os demais filtros da tela.
      *
      * @return array<string, int>
      */
-    private function resumo(Request $request, string $aba, int $dias): array
+    private function resumo(Request $request, array $status, int $dias): array
     {
         $resumo = [];
 
-        foreach (['no_prazo', 'fora_do_prazo', 'sem_previsao', 'fora_escopo'] as $situacao) {
-            $resumo[$situacao] = $this->queryFiltrada($request, $aba, $dias)
+        foreach (self::SITUACOES_RESUMO as $situacao) {
+            $resumo[$situacao] = $this->queryFiltrada($request, $status, $dias)
                 ->tap(fn (Builder $q) => $this->aplicarSituacao($q, $situacao))
                 ->count();
         }
 
-        $resumo['total'] = $this->queryFiltrada($request, $aba, $dias)->count();
+        $resumo['total'] = $this->queryFiltrada($request, $status, $dias)->count();
 
         return $resumo;
-    }
-
-    /**
-     * Quantos itens há em cada aba — é o número que o gerente leva ao cliente
-     * ("estes N estão parados esperando você").
-     *
-     * @return array<string, int>
-     */
-    private function contadoresPorAba(Request $request, int $dias): array
-    {
-        $contadores = [];
-
-        foreach (array_keys(self::ABAS) as $aba) {
-            $contadores[$aba] = $this->queryFiltrada($request, $aba, $dias)->count();
-        }
-
-        return $contadores;
     }
 
     /**
@@ -505,9 +542,9 @@ class ItemEntregaController extends Controller
      *
      * @return array<string, float> chave "origem|destino"
      */
-    private function areaDosContentoresPorTrecho(Request $request, string $aba, int $dias): array
+    private function areaDosContentoresPorTrecho(Request $request, array $status, int $dias): array
     {
-        return $this->queryFiltrada($request, $aba, $dias)
+        return $this->queryFiltrada($request, $status, $dias)
             ->where(fn (Builder $q) => $q->whereNotNull('doc_unitizacao_superior')->orWhereNotNull('numero_contentor'))
             ->get(['local_origem_norm', 'local_destino_norm', 'doc_unitizacao_superior', 'numero_contentor', 'area_embalagem', 'comprimento', 'largura'])
             ->groupBy(fn (DemandaItem $i) => $i->local_origem_norm.'|'.$i->local_destino_norm)

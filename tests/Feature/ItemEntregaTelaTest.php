@@ -84,24 +84,122 @@ class ItemEntregaTelaTest extends TestCase
             ->assertSee($vence_em_10_dias->numero_rt);
     }
 
-    public function test_aba_de_suspensos_separa_a_responsabilidade(): void
+    /**
+     * O filtro de status aceita vários de uma vez — 13 e 18 separam de quem é a
+     * responsabilidade pela suspensão.
+     */
+    public function test_filtro_de_status_aceita_varios(): void
     {
         $doCliente = $this->item(['status_sap' => StatusSap::SuspensoExterno]);
         $nosso = $this->item(['status_sap' => StatusSap::SuspensoInterno]);
+        $liberado = $this->item();
 
         $usuario = User::factory()->create();
 
         $this->actingAs($usuario)
-            ->get(route('itens-entrega.trecho', ['aba' => 'suspenso_externo']))
+            ->get(route('itens-entrega.trecho', ['status' => ['18']]))
             ->assertOk()
             ->assertSee($doCliente->numero_rt)
-            ->assertDontSee($nosso->numero_rt);
+            ->assertDontSee($nosso->numero_rt)
+            ->assertDontSee($liberado->numero_rt);
 
         $this->actingAs($usuario)
-            ->get(route('itens-entrega.trecho', ['aba' => 'suspenso_interno']))
+            ->get(route('itens-entrega.trecho', ['status' => ['13', '18']]))
             ->assertOk()
+            ->assertSee($doCliente->numero_rt)
             ->assertSee($nosso->numero_rt)
-            ->assertDontSee($doCliente->numero_rt);
+            ->assertDontSee($liberado->numero_rt);
+    }
+
+    /**
+     * Sem escolha, valem os status que o cliente cobra.
+     */
+    public function test_status_padrao_sao_liberado_e_programado(): void
+    {
+        $liberado = $this->item();
+        $programado = $this->item(['status_sap' => StatusSap::Programado]);
+        $cancelado = $this->item(['status_sap' => StatusSap::Cancelado]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.trecho'))
+            ->assertOk()
+            ->assertSee($liberado->numero_rt)
+            ->assertSee($programado->numero_rt)
+            ->assertDontSee($cancelado->numero_rt);
+    }
+
+    public function test_status_invalido_cai_no_padrao(): void
+    {
+        $liberado = $this->item();
+        $atendido = $this->item(['status_sap' => StatusSap::Atendido]);
+
+        $this->actingAs(User::factory()->create())
+            // 07 não é filtrável e "xx" não existe.
+            ->get(route('itens-entrega.trecho', ['status' => ['07', 'xx']]))
+            ->assertOk()
+            ->assertSee($liberado->numero_rt)
+            ->assertDontSee($atendido->numero_rt);
+    }
+
+    /**
+     * Os recortes que o operador usa para replanejar: o que nunca teve
+     * previsão, o que foi prometido e não cumprido, e o que vence logo.
+     */
+    public function test_filtro_de_previsao_sem_previsao(): void
+    {
+        $semPrevisao = $this->item();
+        $comPrevisao = $this->item();
+        $comPrevisao->registrarPrevisao(now()->addDay());
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.trecho', ['previsao' => 'sem_previsao']))
+            ->assertOk()
+            ->assertSee($semPrevisao->numero_rt)
+            ->assertDontSee($comPrevisao->numero_rt);
+    }
+
+    public function test_filtro_de_previsao_vencida(): void
+    {
+        $vencida = $this->item();
+        $vencida->registrarPrevisao(now()->subDays(2));
+
+        $futura = $this->item();
+        $futura->registrarPrevisao(now()->addDays(2));
+
+        $semPrevisao = $this->item();
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.trecho', ['previsao' => 'vencida']))
+            ->assertOk()
+            ->assertSee($vencida->numero_rt)
+            ->assertDontSee($futura->numero_rt)
+            ->assertDontSee($semPrevisao->numero_rt);
+    }
+
+    /**
+     * O horizonte é dinâmico: o padrão é o dia seguinte, mas o operador escolhe.
+     */
+    public function test_filtro_de_previsao_proxima_com_horizonte_dinamico(): void
+    {
+        $amanha = $this->item();
+        $amanha->registrarPrevisao(now()->addDay());
+
+        $emCincoDias = $this->item();
+        $emCincoDias->registrarPrevisao(now()->addDays(5));
+
+        $usuario = User::factory()->create();
+
+        $this->actingAs($usuario)
+            ->get(route('itens-entrega.trecho', ['previsao' => 'proxima']))
+            ->assertOk()
+            ->assertSee($amanha->numero_rt)
+            ->assertDontSee($emCincoDias->numero_rt);
+
+        $this->actingAs($usuario)
+            ->get(route('itens-entrega.trecho', ['previsao' => 'proxima', 'dias_previsao' => 7]))
+            ->assertOk()
+            ->assertSee($amanha->numero_rt)
+            ->assertSee($emCincoDias->numero_rt);
     }
 
     /**
@@ -464,10 +562,11 @@ class ItemEntregaTelaTest extends TestCase
             ->assertOk()
             // O item fora do escopo não entra em "sem previsão": ele saiu da
             // fila de trabalho, então cobrar previsão dele seria ruído.
+            // Fora do escopo não vira card: não é gerido por esta tela.
             ->assertViewHas('resumo', fn (array $r) => $r['no_prazo'] === 1
                 && $r['fora_do_prazo'] === 1
                 && $r['sem_previsao'] === 1
-                && $r['fora_escopo'] === 1
+                && ! array_key_exists('fora_escopo', $r)
                 && $r['total'] === 4);
     }
 
@@ -640,7 +739,8 @@ class ItemEntregaTelaTest extends TestCase
         $this->assertStringContainsString($item->numero_rt, $csv);
         $this->assertStringContainsString('SKID P/PROTEÇÃO', $csv);
         $this->assertStringContainsString('4803478', $csv);
-        $this->assertStringContainsString('No prazo', $csv);
+        // O CSV usa o mesmo vocabulário da tela.
+        $this->assertStringContainsString('Previsto no prazo', $csv);
     }
 
     /**
@@ -790,13 +890,13 @@ class ItemEntregaTelaTest extends TestCase
             ->assertDownload('modelo-importacao-itens-entrega.xlsx');
     }
 
-    public function test_export_respeita_a_aba_selecionada(): void
+    public function test_export_respeita_o_status_selecionado(): void
     {
         $emCobranca = $this->item();
         $suspenso = $this->item(['status_sap' => StatusSap::SuspensoExterno]);
 
         $csv = $this->actingAs(User::factory()->create())
-            ->get(route('itens-entrega.export', ['aba' => 'suspenso_externo']))
+            ->get(route('itens-entrega.export', ['status' => ['18']]))
             ->assertOk()
             ->getContent();
 

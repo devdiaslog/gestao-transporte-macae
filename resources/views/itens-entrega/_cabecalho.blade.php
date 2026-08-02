@@ -1,8 +1,3 @@
-@php
-    /** @var string $aba, array $abas, array $contadoresAba, array $resumo — recebidos via @include */
-    $contadoresAba = $contadoresAba ?? null;
-@endphp
-
 @if(session('success'))
     <div class="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">
         {{ session('success') }}
@@ -23,37 +18,16 @@
     </div>
 @endif
 
-{{-- Abas: o cliente cobra os liberados e programados; os suspensos separam de quem é a responsabilidade --}}
-<div class="mt-6 flex flex-wrap gap-1 border-b border-slate-200 dark:border-zinc-800">
-    @foreach($abas as $chave => $rotulo)
-        <a href="{{ route('itens-entrega.index', array_merge(request()->except(['aba', 'page', 'origem_norm', 'destino_norm']), ['aba' => $chave])) }}"
-           class="flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors
-                  {{ $aba === $chave
-                      ? 'border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100'
-                      : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200' }}">
-            {{ $rotulo }}
-            @if($contadoresAba !== null)
-                <span class="rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums
-                             {{ $chave === 'suspenso_externo' && ($contadoresAba[$chave] ?? 0) > 0
-                                 ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400'
-                                 : 'bg-slate-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400' }}">
-                    {{ $contadoresAba[$chave] ?? 0 }}
-                </span>
-            @endif
-        </a>
-    @endforeach
-</div>
-
-@if($aba === 'suspenso_externo')
+@if(in_array(\App\Enums\StatusSap::SuspensoExterno->value, $statusSelecionados, true))
     <p class="mt-4 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800 dark:border-orange-900/50 dark:bg-orange-950/30 dark:text-orange-300">
-        Itens parados por fator do cliente — material indisponível, unitização inadequada, dados incorretos.
-        Cada um permanece suspenso como base de cobrança; quando o cliente resolve, um subitem novo é criado no SAP.
+        Suspenso por fator do cliente — material indisponível, unitização inadequada, dados incorretos.
+        Cada item permanece suspenso como base de cobrança; quando o cliente resolve, um subitem novo é criado no SAP.
     </p>
 @endif
 
-{{-- Semáforo: os quatro números que resumem a situação --}}
-<div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-    @foreach(['no_prazo', 'fora_do_prazo', 'sem_previsao', 'fora_escopo'] as $situacao)
+{{-- Semáforo da previsão: os três números que dizem o que falta replanejar --}}
+<div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+    @foreach($situacoesResumo as $situacao)
         @php $ativo = request('situacao') === $situacao; @endphp
         <a href="{{ request()->fullUrlWithQuery(['situacao' => $ativo ? null : $situacao, 'page' => null]) }}"
            class="rounded-xl border px-4 py-3 transition-all
