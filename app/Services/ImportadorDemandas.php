@@ -10,11 +10,9 @@ use App\Enums\TipoDemanda;
 use App\Models\Demanda;
 use App\Models\DemandaItem;
 use App\Models\Equipamento;
-use Carbon\Carbon;
+use App\Traits\LeituraPlanilhaSap;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use OpenSpout\Common\Entity\Row;
-use OpenSpout\Reader\XLSX\Reader as XlsxReader;
 use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
 
 /**
@@ -25,6 +23,8 @@ use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
  */
 class ImportadorDemandas
 {
+    use LeituraPlanilhaSap;
+
     /**
      * Rótulos aceitos por campo. O primeiro é o nome genérico (usado no modelo);
      * os demais são aliases mantidos para compatibilidade com o export do SAP.
@@ -357,76 +357,7 @@ class ImportadorDemandas
      */
     private function lerPlanilha(string $caminho): array
     {
-        $reader = new XlsxReader;
-        $reader->open($caminho);
-
-        $mapa = [];
-        $linhas = [];
-
-        foreach ($reader->getSheetIterator() as $sheet) {
-            foreach ($sheet->getRowIterator() as $indice => $row) {
-                $celulas = $row->toArray();
-
-                if ($indice === 1) {
-                    $mapa = $this->mapearCabecalho($celulas);
-
-                    continue;
-                }
-
-                $linha = [];
-                foreach ($mapa as $campo => $posicao) {
-                    $valor = $celulas[$posicao] ?? null;
-                    $linha[$campo] = $valor instanceof \DateTimeInterface
-                        ? $valor->format('d.m.Y H:i:s')
-                        : $valor;
-                }
-
-                $linhas[$indice] = $linha;
-            }
-
-            break; // apenas a primeira aba
-        }
-
-        $reader->close();
-
-        return $linhas;
-    }
-
-    /**
-     * Casa cada campo interno com a posição da coluna no cabeçalho, por
-     * igualdade exata do rótulo (ignorando caixa e acentos).
-     *
-     * @param  array<int, mixed>  $cabecalho
-     * @return array<string, int>
-     */
-    private function mapearCabecalho(array $cabecalho): array
-    {
-        $normalizado = [];
-        foreach ($cabecalho as $posicao => $valor) {
-            $n = $this->normalizar((string) $valor);
-            if ($n !== '') {
-                $normalizado[$posicao] = $n;
-            }
-        }
-
-        $mapa = [];
-
-        // A prioridade é a ordem dos aliases (o mais específico primeiro), não a
-        // ordem das colunas: o export do SAP tem "Descrição" (agendamento) antes
-        // de "Descrição da carga", e a carga é quem deve vencer.
-        foreach (self::COLUNAS as $campo => $rotulos) {
-            foreach ($rotulos as $rotulo) {
-                $posicao = array_search($this->normalizar($rotulo), $normalizado, true);
-
-                if ($posicao !== false) {
-                    $mapa[$campo] = $posicao;
-
-                    break;
-                }
-            }
-        }
-
-        return $mapa;
+        return $this->lerPlanilhaSap($caminho, self::COLUNAS);
     }
 
     /**
@@ -441,16 +372,6 @@ class ImportadorDemandas
             'transferencia' => TipoDemanda::Transferencia,
             default => null,
         };
-    }
-
-    /**
-     * Normaliza um rótulo para comparação: sem acentos, minúsculo, sem espaços extras.
-     */
-    private function normalizar(string $texto): string
-    {
-        $texto = mb_strtolower(trim(Str::ascii($texto)));
-
-        return preg_replace('/\s+/', ' ', $texto) ?? $texto;
     }
 
     /**
@@ -479,74 +400,5 @@ class ImportadorDemandas
         }
 
         return null;
-    }
-
-    /**
-     * Combina data (dd.mm.aaaa) e hora do SAP num datetime.
-     * Tolera hora com ou sem segundos e data já com hora embutida.
-     */
-    private function montarDataHora(?string $data, ?string $hora): ?Carbon
-    {
-        $data = $this->limpar($data);
-
-        if ($data === null) {
-            return null;
-        }
-
-        // O SAP pode exportar a data já com hora embutida.
-        $data = explode(' ', $data)[0];
-
-        $hora = $this->limpar($hora) ?? '00:00:00';
-        $hora = explode(' ', $hora)[0];
-
-        // Normaliza para H:i:s ("10:00" → "10:00:00", "10" → "10:00:00").
-        $partes = array_pad(explode(':', $hora), 3, '00');
-        $hora = implode(':', array_map(
-            fn ($p) => str_pad(substr(trim($p), 0, 2), 2, '0', STR_PAD_LEFT),
-            array_slice($partes, 0, 3)
-        ));
-
-        foreach (['d.m.Y H:i:s', 'd/m/Y H:i:s', 'Y-m-d H:i:s'] as $formato) {
-            try {
-                $parsed = Carbon::createFromFormat($formato, "{$data} {$hora}");
-            } catch (\Throwable) {
-                continue;
-            }
-
-            $erros = Carbon::getLastErrors();
-
-            if ($parsed !== false && (! is_array($erros) || $erros['error_count'] === 0)) {
-                return $parsed;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Converte números no formato do SAP ("2.500,50" ou "2500.5") para float.
-     */
-    private function numero(?string $valor): ?float
-    {
-        $valor = $this->limpar($valor);
-
-        if ($valor === null) {
-            return null;
-        }
-
-        // Formato brasileiro: remove separador de milhar e troca a vírgula decimal.
-        if (str_contains($valor, ',')) {
-            $valor = str_replace('.', '', $valor);
-            $valor = str_replace(',', '.', $valor);
-        }
-
-        return is_numeric($valor) ? (float) $valor : null;
-    }
-
-    private function limpar(?string $valor): ?string
-    {
-        $valor = trim((string) $valor);
-
-        return $valor === '' ? null : $valor;
     }
 }

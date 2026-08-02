@@ -1,0 +1,331 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Enums\StatusItemDemanda;
+use App\Enums\StatusSap;
+use App\Models\Demanda;
+use App\Models\DemandaItem;
+use App\Services\ImportadorItensLiberados;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Writer\XLSX\Writer;
+use Tests\TestCase;
+
+class ImportadorItensLiberadosTest extends TestCase
+{
+    use RefreshDatabase;
+
+    /** Cabeçalho do modelo gerado pelo sistema. */
+    private const CABECALHO = [
+        'Nota', 'Item', 'Subitem', 'Data Criação RT', 'Hora Criação RT',
+        'Data Liberação', 'Hora Liberação', 'Data Prazo', 'Hora Prazo',
+        'Origem', 'Local de Retirada', 'Destino', 'Descrição da Carga',
+        'Peso Total', 'Comprimento', 'Largura', 'Altura',
+        'Documento Unitização', 'Grupo Planejamento', 'Status',
+    ];
+
+    /**
+     * @param  array<int, array<int, string>>  $linhas
+     * @param  array<int, string>|null  $cabecalho
+     * @param  array<int, array<int, string>>  $antesDoCabecalho  linhas de topo do export do SAP
+     */
+    private function planilha(array $linhas, ?array $cabecalho = null, array $antesDoCabecalho = []): string
+    {
+        $caminho = tempnam(sys_get_temp_dir(), 'itens_liberados_').'.xlsx';
+        $writer = new Writer;
+        $writer->openToFile($caminho);
+
+        foreach ($antesDoCabecalho as $topo) {
+            $writer->addRow(Row::fromValues($topo));
+        }
+
+        $writer->addRow(Row::fromValues($cabecalho ?? self::CABECALHO));
+
+        foreach ($linhas as $linha) {
+            $writer->addRow(Row::fromValues($linha));
+        }
+
+        $writer->close();
+
+        return $caminho;
+    }
+
+    /**
+     * @param  array<string, string>  $sobrescreve
+     * @return array<int, string>
+     */
+    private function linha(array $sobrescreve = []): array
+    {
+        $valores = array_merge([
+            'Nota' => '326213060',
+            'Item' => '5',
+            'Subitem' => '2',
+            'Data Criação RT' => '03.07.2026',
+            'Hora Criação RT' => '13:56:13',
+            'Data Liberação' => '03.07.2026',
+            'Hora Liberação' => '13:56:46',
+            'Data Prazo' => '10.07.2026',
+            'Hora Prazo' => '14:00:00',
+            'Origem' => 'BASE VITORIA',
+            'Local de Retirada' => 'AL-06',
+            'Destino' => 'ARM-MACAE',
+            'Descrição da Carga' => 'SKID P/PROTEÇÃO',
+            'Peso Total' => '2.408,000',
+            'Comprimento' => '3,1000',
+            'Largura' => '3,3000',
+            'Altura' => '3,6000',
+            'Documento Unitização' => '4803478',
+            'Grupo Planejamento' => 'T44',
+            'Status' => '03',
+        ], $sobrescreve);
+
+        return array_values($valores);
+    }
+
+    public function test_cria_item_sem_demanda_com_os_dados_da_rt(): void
+    {
+        $resultado = app(ImportadorItensLiberados::class)->importar($this->planilha([$this->linha()]));
+
+        $this->assertSame(1, $resultado['itens_criados']);
+        $this->assertSame(0, $resultado['itens_atualizados']);
+
+        $item = DemandaItem::firstOrFail();
+
+        $this->assertNull($item->demanda_id);
+        $this->assertSame('326213060', $item->numero_rt);
+        $this->assertSame('5', $item->numero_item);
+        $this->assertSame('2', $item->subitem);
+        $this->assertSame(StatusSap::Liberado, $item->status_sap);
+        $this->assertSame(StatusItemDemanda::Pendente, $item->status_item);
+
+        $this->assertSame('03/07/2026 13:56', $item->data_hora_criacao_rt->format('d/m/Y H:i'));
+        $this->assertSame('03/07/2026 13:56:46', $item->data_hora_liberacao_rt->format('d/m/Y H:i:s'));
+        $this->assertSame('4803478', $item->doc_unitizacao_superior);
+        $this->assertSame('T44', $item->grupo_planejamento);
+        $this->assertSame('BASE VITORIA', $item->local_origem);
+        $this->assertSame('ARM-MACAE', $item->local_destino);
+        $this->assertSame(2408.0, (float) $item->peso_total);
+        $this->assertSame(3.6, (float) $item->altura);
+    }
+
+    public function test_prazo_com_hora_preenchida_usa_a_hora_do_sap(): void
+    {
+        app(ImportadorItensLiberados::class)->importar($this->planilha([
+            $this->linha(['Data Prazo' => '10.07.2026', 'Hora Prazo' => '14:00:00']),
+        ]));
+
+        $this->assertSame('10/07/2026 14:00:00', DemandaItem::firstOrFail()->prazo_item->format('d/m/Y H:i:s'));
+    }
+
+    /**
+     * Hora zerada é o instante em que o item já está atrasado: o limite real é
+     * o fim do dia anterior.
+     */
+    public function test_prazo_com_hora_zerada_vira_fim_do_dia_anterior(): void
+    {
+        app(ImportadorItensLiberados::class)->importar($this->planilha([
+            $this->linha(['Data Prazo' => '10.07.2026', 'Hora Prazo' => '00:00:00']),
+        ]));
+
+        $this->assertSame('09/07/2026 23:59:59', DemandaItem::firstOrFail()->prazo_item->format('d/m/Y H:i:s'));
+    }
+
+    public function test_reimportacao_atualiza_em_vez_de_duplicar(): void
+    {
+        $importador = app(ImportadorItensLiberados::class);
+
+        $importador->importar($this->planilha([$this->linha()]));
+        $resultado = $importador->importar($this->planilha([
+            $this->linha(['Destino' => 'ARM-RIO', 'Peso Total' => '3.000,000']),
+        ]));
+
+        $this->assertSame(0, $resultado['itens_criados']);
+        $this->assertSame(1, $resultado['itens_atualizados']);
+        $this->assertSame(1, DemandaItem::count());
+
+        $item = DemandaItem::firstOrFail();
+        $this->assertSame('ARM-RIO', $item->local_destino);
+        $this->assertSame(3000.0, (float) $item->peso_total);
+    }
+
+    public function test_nao_sobrescreve_campo_assumido_pelo_operador(): void
+    {
+        $importador = app(ImportadorItensLiberados::class);
+        $importador->importar($this->planilha([$this->linha()]));
+
+        DemandaItem::firstOrFail()->update([
+            'local_destino' => 'PÁTIO INTERNO',
+            'prazo_item' => '2026-07-15 08:00:00',
+            'campos_editados' => ['local_destino', 'prazo_item'],
+        ]);
+
+        $importador->importar($this->planilha([
+            $this->linha(['Destino' => 'ARM-RIO', 'Data Prazo' => '20.07.2026', 'Hora Prazo' => '09:00:00']),
+        ]));
+
+        $item = DemandaItem::firstOrFail();
+        $this->assertSame('PÁTIO INTERNO', $item->local_destino);
+        $this->assertSame('15/07/2026 08:00', $item->prazo_item->format('d/m/Y H:i'));
+        // Campos não assumidos pelo operador seguem sincronizando.
+        $this->assertSame('BASE VITORIA', $item->local_origem);
+    }
+
+    /**
+     * O item pode já ter sido programado (status 04) e ganhado uma demanda; o
+     * export de liberados atualiza os dados da RT sem desvinculá-lo.
+     */
+    public function test_item_ja_vinculado_a_demanda_mantem_o_vinculo(): void
+    {
+        $demanda = Demanda::factory()->create();
+        $item = DemandaItem::create([
+            'demanda_id' => $demanda->id,
+            'numero_rt' => '326213060',
+            'numero_item' => '5',
+            'subitem' => '2',
+            'status_sap' => StatusSap::Programado,
+        ]);
+
+        app(ImportadorItensLiberados::class)->importar($this->planilha([$this->linha()]));
+
+        $item->refresh();
+        $this->assertSame($demanda->id, $item->demanda_id);
+        $this->assertSame('4803478', $item->doc_unitizacao_superior);
+        $this->assertSame(1, DemandaItem::count());
+    }
+
+    public function test_item_que_sumiu_do_export_e_marcado_para_conferencia(): void
+    {
+        $importador = app(ImportadorItensLiberados::class);
+
+        $importador->importar($this->planilha([
+            $this->linha(),
+            $this->linha(['Nota' => '326340468', 'Item' => '1']),
+        ]));
+
+        $resultado = $importador->importar($this->planilha([$this->linha()]));
+
+        $this->assertSame(1, $resultado['itens_ausentes']);
+
+        $sumiu = DemandaItem::where('numero_rt', '326340468')->firstOrFail();
+        $this->assertNotNull($sumiu->ausente_no_sap_em);
+        // O status não é alterado sozinho: quem decide o desfecho é o operador.
+        $this->assertSame(StatusSap::Liberado, $sumiu->status_sap);
+
+        $presente = DemandaItem::where('numero_rt', '326213060')->firstOrFail();
+        $this->assertNull($presente->ausente_no_sap_em);
+    }
+
+    public function test_item_que_reaparece_deixa_de_estar_ausente(): void
+    {
+        $importador = app(ImportadorItensLiberados::class);
+
+        $importador->importar($this->planilha([$this->linha()]));
+        $importador->importar($this->planilha([$this->linha(['Nota' => '326340468'])]));
+
+        $this->assertNotNull(DemandaItem::where('numero_rt', '326213060')->firstOrFail()->ausente_no_sap_em);
+
+        $importador->importar($this->planilha([$this->linha()]), null, false);
+
+        $this->assertNull(DemandaItem::where('numero_rt', '326213060')->firstOrFail()->ausente_no_sap_em);
+    }
+
+    public function test_marcar_ausentes_pode_ser_desligado_para_importacao_parcial(): void
+    {
+        $importador = app(ImportadorItensLiberados::class);
+
+        $importador->importar($this->planilha([$this->linha(), $this->linha(['Nota' => '326340468'])]));
+        $resultado = $importador->importar($this->planilha([$this->linha()]), null, false);
+
+        $this->assertSame(0, $resultado['itens_ausentes']);
+        $this->assertNull(DemandaItem::where('numero_rt', '326340468')->firstOrFail()->ausente_no_sap_em);
+    }
+
+    /**
+     * O export padrão do SAP reserva as quatro primeiras linhas para a data e o
+     * título do relatório — o cabeçalho começa na quinta.
+     */
+    public function test_le_o_export_do_sap_com_linhas_de_topo(): void
+    {
+        $vazia = array_fill(0, count(self::CABECALHO), '');
+        $dataRelatorio = array_merge(['01.08.2026'], array_slice($vazia, 1));
+
+        $resultado = app(ImportadorItensLiberados::class)->importar($this->planilha(
+            [$this->linha()],
+            null,
+            [$vazia, $dataRelatorio, $vazia, $vazia],
+        ));
+
+        $this->assertSame(1, $resultado['itens_criados']);
+        $this->assertSame('326213060', DemandaItem::firstOrFail()->numero_rt);
+    }
+
+    /**
+     * Os nomes vêm truncados pela largura da coluna no ALV do SAP.
+     */
+    public function test_aceita_o_cabecalho_truncado_do_sap(): void
+    {
+        $cabecalho = [
+            'Nota', 'Item', 'Subitem', 'Data de cr', 'HoraCr.',
+            'Data Liber', 'Hora Liber', 'Data+Tarde', 'Hr+Tarde',
+            'Origem', 'LocRetir', 'Destino', 'Descrição carga',
+            'Peso Total', 'Compriment', 'Largura RT', 'Altura RT(',
+            'DocUnitSup', 'Grupo plan', 'Status do',
+        ];
+
+        $resultado = app(ImportadorItensLiberados::class)->importar(
+            $this->planilha([$this->linha()], $cabecalho)
+        );
+
+        $this->assertSame(1, $resultado['itens_criados']);
+
+        $item = DemandaItem::firstOrFail();
+        $this->assertSame('4803478', $item->doc_unitizacao_superior);
+        $this->assertSame('SKID P/PROTEÇÃO', $item->descricao_item);
+        $this->assertSame(3.6, (float) $item->altura);
+    }
+
+    public function test_linha_sem_rt_valida_e_ignorada(): void
+    {
+        $resultado = app(ImportadorItensLiberados::class)->importar($this->planilha([
+            $this->linha(['Nota' => '']),
+            $this->linha(['Nota' => 'ABC']),
+            $this->linha(),
+        ]));
+
+        $this->assertSame(2, $resultado['linhas_ignoradas']);
+        $this->assertSame(1, $resultado['itens_criados']);
+    }
+
+    public function test_status_desconhecido_vira_aviso_sem_derrubar_a_importacao(): void
+    {
+        $resultado = app(ImportadorItensLiberados::class)->importar($this->planilha([
+            $this->linha(['Status' => '99']),
+        ]));
+
+        $this->assertSame(1, $resultado['itens_criados']);
+        $this->assertCount(1, $resultado['avisos']);
+        $this->assertStringContainsString('99', $resultado['avisos'][0]);
+        $this->assertNull(DemandaItem::firstOrFail()->status_sap);
+    }
+
+    public function test_planilha_sem_dados_devolve_erro(): void
+    {
+        $resultado = app(ImportadorItensLiberados::class)->importar($this->planilha([]));
+
+        $this->assertSame(['Nenhuma linha de dados encontrada na planilha.'], $resultado['erros']);
+        $this->assertSame(0, DemandaItem::count());
+    }
+
+    public function test_modelo_de_importacao_traz_o_cabecalho_esperado(): void
+    {
+        $caminho = app(ImportadorItensLiberados::class)->gerarModelo();
+
+        $this->assertFileExists($caminho);
+
+        $resultado = app(ImportadorItensLiberados::class)->importar($caminho);
+
+        // As duas linhas de exemplo do modelo são importáveis.
+        $this->assertSame(2, $resultado['itens_criados']);
+    }
+}
