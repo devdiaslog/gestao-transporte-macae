@@ -7,6 +7,9 @@ use App\Enums\StatusSap;
 use App\Models\DemandaItem;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Writer\XLSX\Writer;
 use Tests\TestCase;
 
 class ItemEntregaTelaTest extends TestCase
@@ -294,6 +297,101 @@ class ItemEntregaTelaTest extends TestCase
         $this->assertStringContainsString('SKID P/PROTEÇÃO', $csv);
         $this->assertStringContainsString('4803478', $csv);
         $this->assertStringContainsString('No prazo', $csv);
+    }
+
+    /**
+     * @param  array<int, array<int, string>>  $linhas
+     */
+    private function planilha(array $linhas): UploadedFile
+    {
+        $caminho = tempnam(sys_get_temp_dir(), 'itens_tela_').'.xlsx';
+        $writer = new Writer;
+        $writer->openToFile($caminho);
+        $writer->addRow(Row::fromValues([
+            'Nota', 'Item', 'Subitem', 'Data Prazo', 'Hora Prazo', 'Origem', 'Destino', 'Descrição da Carga', 'Status',
+        ]));
+        foreach ($linhas as $linha) {
+            $writer->addRow(Row::fromValues($linha));
+        }
+        $writer->close();
+
+        return new UploadedFile($caminho, 'itens.xlsx', null, null, true);
+    }
+
+    public function test_importa_planilha_pela_tela(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->post(route('itens-entrega.importar'), [
+                'arquivo' => $this->planilha([
+                    ['326900001', '1', '1', '10.08.2026', '14:00:00', 'BASE VITORIA', 'ARM-MACAE', 'Carga A', '03'],
+                    ['326900002', '1', '1', '11.08.2026', '00:00:00', 'BASE VITORIA', 'ARM-MACAE', 'Carga B', '04'],
+                ]),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame(2, DemandaItem::count());
+        $this->assertSame(StatusSap::Programado, DemandaItem::where('numero_rt', '326900002')->firstOrFail()->status_sap);
+        // Hora zerada: o limite é o fim do dia anterior.
+        $this->assertSame(
+            '10/08/2026 23:59:59',
+            DemandaItem::where('numero_rt', '326900002')->firstOrFail()->prazo_item->format('d/m/Y H:i:s')
+        );
+    }
+
+    /**
+     * Marcar ausentes só é seguro quando a planilha é a carga completa; por isso
+     * é uma escolha explícita, desligada por padrão.
+     */
+    public function test_importacao_parcial_nao_marca_ausentes_por_padrao(): void
+    {
+        $existente = $this->item();
+        $usuario = User::factory()->create();
+
+        $this->actingAs($usuario)
+            ->post(route('itens-entrega.importar'), [
+                'arquivo' => $this->planilha([
+                    ['326900001', '1', '1', '10.08.2026', '14:00:00', 'BASE VITORIA', 'ARM-MACAE', 'Carga A', '03'],
+                ]),
+            ])->assertRedirect();
+
+        $this->assertNull($existente->fresh()->ausente_no_sap_em);
+
+        $this->actingAs($usuario)
+            ->post(route('itens-entrega.importar'), [
+                'arquivo' => $this->planilha([
+                    ['326900001', '1', '1', '10.08.2026', '14:00:00', 'BASE VITORIA', 'ARM-MACAE', 'Carga A', '03'],
+                ]),
+                'marcar_ausentes' => '1',
+            ])->assertRedirect();
+
+        $this->assertNotNull($existente->fresh()->ausente_no_sap_em);
+    }
+
+    public function test_importacao_exige_permissao_propria(): void
+    {
+        $this->actingAs(User::factory()->comPerfil('Visualizador')->create())
+            ->post(route('itens-entrega.importar'), [
+                'arquivo' => $this->planilha([['326900001', '1', '1', '10.08.2026', '14:00:00', 'A', 'B', 'C', '03']]),
+            ])->assertForbidden();
+
+        $this->assertSame(0, DemandaItem::count());
+    }
+
+    public function test_importacao_recusa_arquivo_invalido(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->post(route('itens-entrega.importar'), [
+                'arquivo' => UploadedFile::fake()->create('lista.pdf', 10, 'application/pdf'),
+            ])->assertSessionHasErrors('arquivo');
+    }
+
+    public function test_baixa_o_modelo_de_importacao(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.modelo'))
+            ->assertOk()
+            ->assertDownload('modelo-importacao-itens-entrega.xlsx');
     }
 
     public function test_export_respeita_a_aba_selecionada(): void

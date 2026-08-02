@@ -5,14 +5,17 @@ namespace App\Http\Controllers;
 use App\Enums\OrigemPrevisao;
 use App\Enums\StatusSap;
 use App\Http\Requests\DefinirPrevisaoRequest;
+use App\Http\Requests\ImportarItensLiberadosRequest;
 use App\Http\Requests\MarcarForaEscopoRequest;
 use App\Models\DemandaItem;
+use App\Services\ImportadorItensLiberados;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Visão do item de entrega — a ótica do cliente.
@@ -130,6 +133,48 @@ class ItemEntregaController extends Controller
             $total === 1 ? 'item' : 'itens',
             $fora ? 'marcado(s)' : 'devolvido(s) ao escopo',
         ));
+    }
+
+    /**
+     * Importa a planilha de itens em cobrança exportada do SAP.
+     */
+    public function importar(ImportarItensLiberadosRequest $request, ImportadorItensLiberados $importador): RedirectResponse
+    {
+        $resultado = $importador->importar(
+            $request->file('arquivo')->getRealPath(),
+            $request->user()->id,
+            $request->boolean('marcar_ausentes'),
+        );
+
+        if ($resultado['erros'] !== []) {
+            return back()->with('error', 'Importação não concluída: '.implode(' · ', array_slice($resultado['erros'], 0, 3)));
+        }
+
+        $msg = sprintf(
+            '%d item(ns) importado(s), %d atualizado(s).',
+            $resultado['itens_criados'],
+            $resultado['itens_atualizados'],
+        );
+
+        if ($resultado['itens_ausentes'] > 0) {
+            $msg .= sprintf(' %d não constava(m) na planilha e foi(ram) marcado(s) para conferência.', $resultado['itens_ausentes']);
+        }
+
+        if ($resultado['avisos'] !== []) {
+            $msg .= ' '.implode(' · ', array_slice($resultado['avisos'], 0, 3));
+        }
+
+        return back()->with('success', $msg);
+    }
+
+    /**
+     * Planilha modelo com o cabeçalho aceito e duas linhas de exemplo.
+     */
+    public function modeloImportacao(ImportadorItensLiberados $importador): BinaryFileResponse
+    {
+        return response()
+            ->download($importador->gerarModelo(), 'modelo-importacao-itens-entrega.xlsx')
+            ->deleteFileAfterSend();
     }
 
     /**

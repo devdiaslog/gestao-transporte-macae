@@ -144,6 +144,8 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
     Route::get('itens-entrega-export', [ItemEntregaController::class, 'export'])->name('itens-entrega.export')->middleware('can:itens-entrega.ver');
     Route::post('itens-entrega/previsao', [ItemEntregaController::class, 'definirPrevisao'])->name('itens-entrega.previsao')->middleware('can:itens-entrega.prever');
     Route::post('itens-entrega/escopo', [ItemEntregaController::class, 'marcarForaEscopo'])->name('itens-entrega.escopo')->middleware('can:itens-entrega.escopo');
+    Route::get('itens-entrega-modelo', [ItemEntregaController::class, 'modeloImportacao'])->name('itens-entrega.modelo')->middleware('can:itens-entrega.importar');
+    Route::post('itens-entrega-importar', [ItemEntregaController::class, 'importar'])->name('itens-entrega.importar')->middleware('can:itens-entrega.importar');
 
     Route::post('demandas', [DemandaController::class, 'store'])->name('demandas.store')->middleware('can:demandas.criar');
     Route::put('demandas/{demanda}', [DemandaController::class, 'update'])->name('demandas.update')->middleware('can:demandas.editar');
