@@ -44,6 +44,15 @@ class ImportarDemandasApiRequest extends FormRequest
             'itens.*.entrega_hora' => ['nullable', 'string'],
             'itens.*.observacao' => ['nullable', 'string', 'max:5000'],
             'itens.*.equipamento' => ['nullable', 'string', 'max:255'],
+
+            // Dados da RT, para o item que entra direto como programado sem
+            // ter passado pela importação de itens liberados.
+            'itens.*.criacao_rt_data' => ['nullable', 'string'],
+            'itens.*.criacao_rt_hora' => ['nullable', 'string'],
+            'itens.*.liberacao_data' => ['nullable', 'string'],
+            'itens.*.liberacao_hora' => ['nullable', 'string'],
+            'itens.*.doc_unitizacao_superior' => ['nullable', 'string', 'max:255'],
+            'itens.*.grupo_planejamento' => ['nullable', 'string', 'max:255'],
         ];
     }
 

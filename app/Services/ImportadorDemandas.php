@@ -57,6 +57,18 @@ class ImportadorDemandas
         'entrega_hora' => ['Hora Entrega', 'Hr entregu'],
         'observacao' => ['Observação', 'Observacao'],
         'equipamento' => ['Descrição Veiculo', 'Descrição equipamento'],
+
+        // Dados da RT. Normalmente chegam antes, pela importação de itens
+        // liberados (status 03), mas vêm aqui também para o item que entra
+        // direto como programado sem ter passado por aquela tela.
+        // Os rótulos são distintos dos de "criacao_data"/"criacao_hora", que
+        // se referem à criação da demanda (viagem) e não da RT.
+        'criacao_rt_data' => ['Data Criação RT', 'Data de cr'],
+        'criacao_rt_hora' => ['Hora Criação RT', 'HoraCr.'],
+        'liberacao_data' => ['Data Liberação', 'Data Liber'],
+        'liberacao_hora' => ['Hora Liberação', 'Hora Liber'],
+        'doc_unitizacao_superior' => ['Documento Unitização', 'DocUnitSup'],
+        'grupo_planejamento' => ['Grupo Planejamento', 'Grupo plan'],
     ];
 
     /**
@@ -88,6 +100,12 @@ class ImportadorDemandas
         'Data Entrega',
         'Hora Entrega',
         'Observação',
+        'Data Criação RT',
+        'Hora Criação RT',
+        'Data Liberação',
+        'Hora Liberação',
+        'Documento Unitização',
+        'Grupo Planejamento',
     ];
 
     /**
@@ -96,8 +114,8 @@ class ImportadorDemandas
      * @var array<int, array<int, string>>
      */
     private const EXEMPLOS_MODELO = [
-        ['509538496', '23.07.2026', '08:00:00', 'Backload', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Tubos de perfuração', '2.500,50', '2,60', '2,40', '12,00', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00', '', '', ''],
-        ['619012345', '24.07.2026', '09:15:00', '', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', '800', '1,20', '1,00', '2,40', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00', '25.07.2026', '13:45:00', 'Insight da análise'],
+        ['509538496', '23.07.2026', '08:00:00', 'Backload', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Tubos de perfuração', '2.500,50', '2,60', '2,40', '12,00', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00', '', '', '', '20.07.2026', '07:15:00', '21.07.2026', '09:30:00', '4803478', 'T44'],
+        ['619012345', '24.07.2026', '09:15:00', '', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', '800', '1,20', '1,00', '2,40', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00', '25.07.2026', '13:45:00', 'Insight da análise', '', '', '', '', '', 'T44'],
     ];
 
     public function __construct(private DemandaCalculadora $calculadora) {}
@@ -277,6 +295,8 @@ class ImportadorDemandas
                     }
                 }
 
+                $this->aplicarDadosDaRt($item, $linha);
+
                 // Status no SAP: sempre re-sincroniza — mesmo com o status do sistema
                 // assumido pelo operador, ele enxerga o estado real do SAP ao
                 // finalizar o item. Código fora do ciclo de vida conhecido é ignorado
@@ -373,6 +393,34 @@ class ImportadorDemandas
     private function lerPlanilha(string $caminho): array
     {
         return $this->lerPlanilhaSap($caminho, self::COLUNAS);
+    }
+
+    /**
+     * Dados do documento da RT, quando a planilha os traz.
+     *
+     * Descrevem o documento no SAP e não são editáveis pelo operador, então
+     * sempre re-sincronizam. Coluna ausente não altera nada: o item que já veio
+     * pela importação de liberados mantém o que tinha.
+     *
+     * @param  array<string, string|null>  $linha
+     */
+    private function aplicarDadosDaRt(DemandaItem $item, array $linha): void
+    {
+        $criacao = $this->montarDataHora($linha['criacao_rt_data'] ?? null, $linha['criacao_rt_hora'] ?? null);
+        if ($criacao !== null) {
+            $item->data_hora_criacao_rt = $criacao;
+        }
+
+        $liberacao = $this->montarDataHora($linha['liberacao_data'] ?? null, $linha['liberacao_hora'] ?? null);
+        if ($liberacao !== null) {
+            $item->data_hora_liberacao_rt = $liberacao;
+        }
+
+        foreach (['doc_unitizacao_superior', 'grupo_planejamento'] as $campo) {
+            if (array_key_exists($campo, $linha) && ($valor = $this->limpar($linha[$campo])) !== null) {
+                $item->{$campo} = $valor;
+            }
+        }
     }
 
     /**

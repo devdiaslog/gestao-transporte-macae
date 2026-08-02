@@ -400,6 +400,61 @@ class ImportadorItensLiberadosTest extends TestCase
         $this->assertNotNull($item->data_hora_liberacao_rt);
     }
 
+    /**
+     * O item pode nascer direto como programado, sem ter passado pela
+     * importação de liberados — o export de viagem também traz os dados da RT.
+     */
+    public function test_importador_de_demandas_grava_os_dados_da_rt(): void
+    {
+        app(ImportadorDemandas::class)->importarLinhas([
+            1 => [
+                'nota' => '509538496',
+                'numero_rt' => '326741968',
+                'numero_item' => '1',
+                'subitem' => '5',
+                'status_item' => '04',
+                'criacao_rt_data' => '20.07.2026',
+                'criacao_rt_hora' => '07:15:00',
+                'liberacao_data' => '21.07.2026',
+                'liberacao_hora' => '09:30:00',
+                'doc_unitizacao_superior' => '4803478',
+                'grupo_planejamento' => 'T44',
+            ],
+        ]);
+
+        $item = DemandaItem::firstOrFail();
+
+        $this->assertSame('20/07/2026 07:15:00', $item->data_hora_criacao_rt->format('d/m/Y H:i:s'));
+        $this->assertSame('21/07/2026 09:30:00', $item->data_hora_liberacao_rt->format('d/m/Y H:i:s'));
+        $this->assertSame('4803478', $item->doc_unitizacao_superior);
+        $this->assertSame('T44', $item->grupo_planejamento);
+        $this->assertNotNull($item->demanda_id);
+    }
+
+    /**
+     * Coluna ausente no export de viagem não apaga o que veio do status 03.
+     */
+    public function test_importador_de_demandas_preserva_dados_da_rt_ja_conhecidos(): void
+    {
+        app(ImportadorItensLiberados::class)->importar($this->planilha([$this->linha()]));
+
+        app(ImportadorDemandas::class)->importarLinhas([
+            1 => [
+                'nota' => '509538496',
+                'numero_rt' => '326213060',
+                'numero_item' => '5',
+                'subitem' => '2',
+                'status_item' => '04',
+            ],
+        ]);
+
+        $item = DemandaItem::firstOrFail();
+
+        $this->assertSame('4803478', $item->doc_unitizacao_superior);
+        $this->assertSame('T44', $item->grupo_planejamento);
+        $this->assertSame('03/07/2026 13:56:46', $item->data_hora_liberacao_rt->format('d/m/Y H:i:s'));
+    }
+
     public function test_modelo_de_importacao_traz_o_cabecalho_esperado(): void
     {
         $caminho = app(ImportadorItensLiberados::class)->gerarModelo();
