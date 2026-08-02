@@ -111,52 +111,6 @@
     </div>
     @endif
 
-    {{-- Embalagens superiores: o que de fato ocupa o piso do veículo --}}
-    @if($embalagens->isNotEmpty())
-        <div class="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
-            <div class="flex items-center justify-between gap-3">
-                <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    {{ $embalagens->count() }} {{ $embalagens->count() === 1 ? 'embalagem superior' : 'embalagens superiores' }} nesta página
-                </h3>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                    Os itens dentro de um contentor ocupam o espaço dele, não a soma das próprias medidas.
-                </p>
-            </div>
-
-            <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                @foreach($embalagens as $numero => $e)
-                    <a href="{{ request()->fullUrlWithQuery(['contentor' => $numero, 'page' => null]) }}"
-                       class="rounded-lg border px-3 py-2 transition-colors
-                              {{ request('contentor') === (string) $numero
-                                  ? 'border-zinc-900 bg-zinc-50 dark:border-zinc-100 dark:bg-zinc-800'
-                                  : 'border-slate-200 hover:border-slate-300 dark:border-zinc-800 dark:hover:border-zinc-700' }}">
-                        <p class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">📦 {{ $numero }}</p>
-                        @if($e['descricao'])
-                            <p class="mt-0.5 truncate text-[11px] text-zinc-500 dark:text-zinc-400" title="{{ $e['descricao'] }}">{{ $e['descricao'] }}</p>
-                        @endif
-                        <p class="mt-1 text-[11px] tabular-nums text-zinc-600 dark:text-zinc-400">
-                            {{ $e['itens'] }} {{ $e['itens'] === 1 ? 'item' : 'itens' }}
-                            @if($e['peso'] > 0) · {{ number_format($e['peso'], 0, ',', '.') }} kg @endif
-                            @if($e['area']) · {{ number_format($e['area'], 2, ',', '.') }} m² @endif
-                        </p>
-                        @if($e['sem_previsao'] > 0)
-                            <p class="mt-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
-                                {{ $e['sem_previsao'] }} sem previsão
-                            </p>
-                        @endif
-                    </a>
-                @endforeach
-            </div>
-
-            @if(request('contentor'))
-                <a href="{{ request()->fullUrlWithQuery(['contentor' => null, 'page' => null]) }}"
-                   class="mt-3 inline-block text-xs text-zinc-500 hover:text-zinc-800 dark:text-zinc-400">
-                    Mostrar todos os itens do trecho
-                </a>
-            @endif
-        </div>
-    @endif
-
     <div class="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
         @if($itens->isEmpty())
             <div class="flex flex-col items-center justify-center px-6 py-20 text-center">
@@ -187,12 +141,47 @@
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">SAP</th>
                         </tr>
                     </thead>
+                    @php $colunas = ($podePrever || $podeEscopo ? 1 : 0) + (($origemTrecho || $destinoTrecho) ? 7 : 8); @endphp
                     <tbody class="divide-y divide-slate-100 dark:divide-zinc-800/70">
+                        @php $embalagemAnterior = false; @endphp
                         @foreach($itens as $item)
                             @php
                                 $situacao = $item->fora_escopo ? 'fora_escopo' : $item->situacaoPrevisao();
                                 $vencido = $item->prazo_item && $item->prazo_item->isPast();
+                                $embalagem = $item->embalagemSuperior();
+                                $abreGrupo = $embalagem !== null && $embalagem !== $embalagemAnterior;
+                                $embalagemAnterior = $embalagem;
                             @endphp
+
+                            {{-- Cabeçalho da embalagem: o que de fato ocupa o piso --}}
+                            @if($abreGrupo)
+                                @php $grupo = $embalagens[$embalagem] ?? null; @endphp
+                                <tr class="bg-slate-50/80 dark:bg-zinc-800/40">
+                                    @if($podePrever || $podeEscopo)
+                                        <td class="px-4 py-2">
+                                            <input type="checkbox" title="Selecionar todos os itens desta embalagem"
+                                                   class="chk-embalagem h-4 w-4 rounded border-slate-300 text-zinc-900 dark:border-zinc-700"
+                                                   onclick="alternarEmbalagem(this, '{{ $embalagem }}')">
+                                        </td>
+                                    @endif
+                                    <td colspan="{{ $colunas - ($podePrever || $podeEscopo ? 1 : 0) }}" class="px-4 py-2">
+                                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                            <span class="text-xs font-bold text-zinc-800 dark:text-zinc-200">📦 {{ $embalagem }}</span>
+                                            @if($grupo && $grupo['descricao'])
+                                                <span class="text-[11px] text-zinc-500 dark:text-zinc-400">{{ $grupo['descricao'] }}</span>
+                                            @endif
+                                            @if($grupo)
+                                                <span class="text-[11px] tabular-nums text-zinc-500 dark:text-zinc-400">
+                                                    {{ $grupo['itens'] }} {{ $grupo['itens'] === 1 ? 'item' : 'itens' }}
+                                                    @if($grupo['peso'] > 0) · {{ number_format($grupo['peso'], 0, ',', '.') }} kg @endif
+                                                    @if($grupo['area']) · <span class="font-semibold">{{ number_format($grupo['area'], 2, ',', '.') }} m² de piso</span> @endif
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endif
+
                             <tr class="transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/40">
                                 @if($podePrever || $podeEscopo)
                                 <td class="px-4 py-3">
@@ -200,33 +189,26 @@
                                            value="{{ $item->id }}"
                                            data-origem="{{ $item->local_origem }}"
                                            data-destino="{{ $item->local_destino }}"
-                                           data-contentor="{{ $item->doc_unitizacao_superior }}"
+                                           data-contentor="{{ $embalagem }}"
                                            onclick="atualizarSelecao()">
                                 </td>
                                 @endif
 
-                                <td class="px-4 py-3">
+                                <td class="px-4 py-3 {{ $embalagem ? 'border-l-2 border-slate-300 pl-6 dark:border-zinc-600' : '' }}">
                                     <p class="font-semibold text-zinc-900 dark:text-zinc-100">
                                         {{ $item->numero_rt }}<span class="text-zinc-400">/{{ $item->numero_item }}@if($item->subitem)/{{ $item->subitem }}@endif</span>
                                     </p>
                                     <p class="mt-0.5 max-w-72 truncate text-xs text-zinc-500 dark:text-zinc-400" title="{{ $item->descricao_item }}">
                                         {{ $item->descricao_item ?? '—' }}
                                     </p>
-                                    <div class="mt-1 flex flex-wrap items-center gap-1.5">
-                                        @if($item->doc_unitizacao_superior)
-                                            <a href="{{ route('itens-entrega.index', ['aba' => $aba, 'doc_unitizacao' => $item->doc_unitizacao_superior]) }}"
-                                               title="Ver todos os itens deste contentor"
-                                               class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400">
-                                                📦 {{ $item->doc_unitizacao_superior }}
-                                            </a>
-                                        @endif
-                                        @if($item->ausente_no_sap_em)
+                                    @if($item->ausente_no_sap_em)
+                                        <div class="mt-1">
                                             <span title="Não veio na última importação — confira o que aconteceu no SAP"
                                                   class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
                                                 sumiu do SAP
                                             </span>
-                                        @endif
-                                    </div>
+                                        </div>
+                                    @endif
                                 </td>
 
                                 {{-- Carga: o que a operação precisa saber para dimensionar o veículo --}}
@@ -239,19 +221,18 @@
                                         <p class="text-xs text-zinc-400">sem peso</p>
                                     @endif
                                     @if($item->dimensoes())
-                                        <p class="mt-0.5 text-[11px] tabular-nums text-zinc-500 dark:text-zinc-400"
-                                           title="Comprimento × Largura × Altura, em metros">
+                                        <p class="mt-0.5 text-[11px] tabular-nums {{ $item->medidaSuspeita() ? 'text-amber-700 dark:text-amber-400' : 'text-zinc-500 dark:text-zinc-400' }}"
+                                           title="{{ $item->medidaSuspeita()
+                                                ? 'Medida fora de escala para transporte rodoviário — o SAP deve ter enviado em centímetros ou milímetros. Não entra nos totais.'
+                                                : 'Comprimento × Largura × Altura, em metros' }}">
                                             {{ $item->dimensoes() }} m
+                                            @if($item->medidaSuspeita()) ⚠ @endif
                                         </p>
                                     @endif
-                                    @if($item->dentroDeContentor())
-                                        <p class="text-[10px] tabular-nums text-zinc-400"
-                                           title="Vai dentro do contentor {{ $item->numero_contentor }} — quem ocupa o piso é ele">
-                                            @if($item->area_embalagem)
-                                                {{ number_format((float) $item->area_embalagem, 2, ',', '.') }} m² (contentor)
-                                            @else
-                                                dentro de contentor
-                                            @endif
+                                    @if($embalagem)
+                                        <p class="text-[10px] text-zinc-400"
+                                           title="Vai dentro da embalagem {{ $embalagem }} — quem ocupa o piso é ela">
+                                            área contada na embalagem
                                         </p>
                                     @elseif($item->area())
                                         <p class="text-[10px] tabular-nums text-zinc-400"
@@ -530,11 +511,22 @@
 
             window.alternarTodos = function (origem) {
                 document.querySelectorAll('.chk-item').forEach(function (c) { c.checked = origem.checked; });
+                document.querySelectorAll('.chk-embalagem').forEach(function (c) { c.checked = origem.checked; });
+                window.atualizarSelecao();
+            };
+
+            /**
+             * Seleciona de uma vez todos os itens da embalagem: a previsão
+             * costuma valer para o contentor inteiro, não item a item.
+             */
+            window.alternarEmbalagem = function (origem, embalagem) {
+                document.querySelectorAll('.chk-item[data-contentor="' + embalagem + '"]')
+                    .forEach(function (c) { c.checked = origem.checked; });
                 window.atualizarSelecao();
             };
 
             window.limparSelecao = function () {
-                document.querySelectorAll('.chk-item').forEach(function (c) { c.checked = false; });
+                document.querySelectorAll('.chk-item, .chk-embalagem').forEach(function (c) { c.checked = false; });
                 var todos = document.getElementById('marcar-todos');
                 if (todos) { todos.checked = false; }
                 window.atualizarSelecao();

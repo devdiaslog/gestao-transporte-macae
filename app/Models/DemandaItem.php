@@ -174,6 +174,13 @@ class DemandaItem extends Model
     }
 
     /**
+     * Acima disto a medida não é de transporte rodoviário: uma carreta tem
+     * cerca de 30 m² de piso, então um item sozinho passando de 100 m² veio
+     * do SAP em outra unidade — centímetros ou milímetros em vez de metros.
+     */
+    private const AREA_MAXIMA_PLAUSIVEL = 100.0;
+
+    /**
      * Área ocupada no piso da carreta pelas medidas do próprio item, em m².
      *
      * Só comprimento × largura: a altura não disputa espaço de piso, ela entra
@@ -186,6 +193,22 @@ class DemandaItem extends Model
         }
 
         return round((float) $this->comprimento * (float) $this->largura, 2);
+    }
+
+    /**
+     * Medida que não pode estar em metros.
+     *
+     * O item continua aparecendo com o valor que o SAP mandou — o dado não é
+     * corrigido por adivinhação — mas fica de fora dos somatórios, que de
+     * outro modo ficariam inutilizáveis, e é sinalizado para conferência.
+     */
+    public function medidaSuspeita(): bool
+    {
+        $area = $this->dentroDeContentor()
+            ? ($this->area_embalagem !== null ? (float) $this->area_embalagem : null)
+            : $this->area();
+
+        return $area !== null && $area > self::AREA_MAXIMA_PLAUSIVEL;
     }
 
     /**
@@ -204,9 +227,27 @@ class DemandaItem extends Model
         return $this->area();
     }
 
+    /**
+     * Identificação da embalagem superior em que o item viaja.
+     *
+     * O documento de unitização é o que agrupa os itens no status 03 — é ele
+     * que a operação enxerga. O número do contentor só aparece no export de
+     * viagem e serve de reserva para o item que não passou pela liberação.
+     */
+    public function embalagemSuperior(): ?string
+    {
+        foreach ([$this->doc_unitizacao_superior, $this->numero_contentor] as $identificacao) {
+            if ($identificacao !== null && $identificacao !== '') {
+                return (string) $identificacao;
+            }
+        }
+
+        return null;
+    }
+
     public function dentroDeContentor(): bool
     {
-        return $this->numero_contentor !== null && $this->numero_contentor !== '';
+        return $this->embalagemSuperior() !== null;
     }
 
     /**

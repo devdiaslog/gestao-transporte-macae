@@ -134,8 +134,14 @@
                                         {{ $t->peso > 0 ? number_format((float) $t->peso, 0, ',', '.').' kg' : '—' }}
                                     </p>
                                     @if($t->area > 0)
-                                        <p class="text-[10px] tabular-nums text-zinc-400" title="Área de piso somada: comprimento × largura de cada item">
+                                        <p class="text-[10px] tabular-nums text-zinc-400" title="Área de piso somada, contando cada embalagem uma vez">
                                             {{ number_format((float) $t->area, 2, ',', '.') }} m²
+                                        </p>
+                                    @endif
+                                    @if($t->medidas_suspeitas > 0)
+                                        <p class="text-[10px] text-amber-600 dark:text-amber-500"
+                                           title="Medidas fora de escala para transporte rodoviário, provavelmente enviadas pelo SAP em centímetros ou milímetros. Ficam de fora do total.">
+                                            {{ $t->medidas_suspeitas }} fora de escala
                                         </p>
                                     @endif
                                 </td>

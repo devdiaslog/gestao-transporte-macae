@@ -79,9 +79,12 @@ class ItemEntregaController extends Controller
                 local_destino_norm,
                 count(*) as total,
                 sum(coalesce(peso_total, 0)) as peso,
-                sum(case when numero_contentor is null
+                sum(case when doc_unitizacao_superior is null and numero_contentor is null
+                              and coalesce(comprimento, 0) * coalesce(largura, 0) <= 100
                          then coalesce(comprimento, 0) * coalesce(largura, 0)
                          else 0 end) as area_solta,
+                sum(case when coalesce(comprimento, 0) * coalesce(largura, 0) > 100
+                         then 1 else 0 end) as medidas_suspeitas,
                 sum(case when fora_escopo = 0 and data_hora_previsao_entrega is null then 1 else 0 end) as sem_previsao,
                 sum(case when fora_escopo = 0 and data_hora_previsao_entrega is not null
                           and prazo_item is not null
@@ -125,8 +128,8 @@ class ItemEntregaController extends Controller
         $itens = $this->queryFiltrada($request, $aba, $dias)
             ->with(['demanda.equipamento', 'previsaoAtual.autor', 'marcadoForaDoEscopoPor'])
             // Itens da mesma embalagem ficam juntos: eles viajam juntos.
-            ->orderByRaw('numero_contentor is null')
-            ->orderBy('numero_contentor')
+            ->orderByRaw('coalesce(doc_unitizacao_superior, numero_contentor) is null')
+            ->orderByRaw('coalesce(doc_unitizacao_superior, numero_contentor)')
             ->orderByRaw('prazo_item is null')
             ->orderBy('prazo_item')
             ->paginate(50)
@@ -220,12 +223,15 @@ class ItemEntregaController extends Controller
         });
 
         $total = count($ids);
+        $um = $total === 1;
 
         return back()->with('success', sprintf(
-            '%d %s %s como fora do nosso escopo.',
+            '%d %s %s.',
             $total,
-            $total === 1 ? 'item' : 'itens',
-            $fora ? 'marcado(s)' : 'devolvido(s) ao escopo',
+            $um ? 'item' : 'itens',
+            $fora
+                ? ($um ? 'marcado como fora do nosso escopo' : 'marcados como fora do nosso escopo')
+                : ($um ? 'devolvido ao nosso escopo' : 'devolvidos ao nosso escopo'),
         ));
     }
 
@@ -263,16 +269,18 @@ class ItemEntregaController extends Controller
         });
 
         $total = count($ids);
+        $um = $total === 1;
 
         return back()->with('success', sprintf(
-            'Rota ajustada em %d %s. O SAP não vai mais sobrescrever %s destes itens.',
+            'Rota ajustada em %d %s. O SAP não vai mais sobrescrever %s %s.',
             $total,
-            $total === 1 ? 'item' : 'itens',
+            $um ? 'item' : 'itens',
             match (true) {
                 $origem !== null && $destino !== null => 'a origem e o destino',
                 $origem !== null => 'a origem',
                 default => 'o destino',
             },
+            $um ? 'deste item' : 'destes itens',
         ));
     }
 
@@ -406,7 +414,9 @@ class ItemEntregaController extends Controller
             ->when($request->filled('origem_norm'), fn (Builder $q) => $q->where('local_origem_norm', $request->input('origem_norm')))
             ->when($request->filled('destino_norm'), fn (Builder $q) => $q->where('local_destino_norm', $request->input('destino_norm')))
             ->when($request->filled('doc_unitizacao'), fn (Builder $q) => $q->where('doc_unitizacao_superior', $request->input('doc_unitizacao')))
-            ->when($request->filled('contentor'), fn (Builder $q) => $q->where('numero_contentor', $request->input('contentor')))
+            ->when($request->filled('contentor'), fn (Builder $q) => $q->where(fn (Builder $s) => $s
+                ->where('doc_unitizacao_superior', $request->input('contentor'))
+                ->orWhere('numero_contentor', $request->input('contentor'))))
             ->when($request->boolean('ausentes'), fn (Builder $q) => $q->whereNotNull('ausente_no_sap_em'))
             ->when($request->filled('situacao'), fn (Builder $q) => $this->aplicarSituacao($q, (string) $request->input('situacao')));
     }
@@ -498,13 +508,10 @@ class ItemEntregaController extends Controller
     private function areaDosContentoresPorTrecho(Request $request, string $aba, int $dias): array
     {
         return $this->queryFiltrada($request, $aba, $dias)
-            ->whereNotNull('numero_contentor')
-            ->whereNotNull('area_embalagem')
-            ->select('local_origem_norm', 'local_destino_norm', 'numero_contentor', 'area_embalagem')
-            ->distinct()
-            ->get()
-            ->groupBy(fn ($linha) => $linha->local_origem_norm.'|'.$linha->local_destino_norm)
-            ->map(fn ($contentores) => (float) $contentores->sum('area_embalagem'))
+            ->where(fn (Builder $q) => $q->whereNotNull('doc_unitizacao_superior')->orWhereNotNull('numero_contentor'))
+            ->get(['local_origem_norm', 'local_destino_norm', 'doc_unitizacao_superior', 'numero_contentor', 'area_embalagem', 'comprimento', 'largura'])
+            ->groupBy(fn (DemandaItem $i) => $i->local_origem_norm.'|'.$i->local_destino_norm)
+            ->map(fn ($doTrecho) => ContentorSap::areaDePiso($doTrecho))
             ->all();
     }
 
@@ -520,17 +527,17 @@ class ItemEntregaController extends Controller
     private function embalagensDaPagina(Collection $itens): Collection
     {
         return $itens
-            ->filter(fn (DemandaItem $i) => $i->dentroDeContentor())
-            ->groupBy('numero_contentor')
-            ->map(fn ($doContentor) => [
-                'descricao' => $doContentor->first()->descricao_contentor,
-                'itens' => $doContentor->count(),
-                'peso' => (float) $doContentor->sum('peso_total'),
-                // A área é do contentor, não a soma do que está dentro dele.
-                'area' => $doContentor->first()->area_embalagem !== null
-                    ? (float) $doContentor->first()->area_embalagem
+            ->filter(fn (DemandaItem $i) => $i->embalagemSuperior() !== null)
+            ->groupBy(fn (DemandaItem $i) => $i->embalagemSuperior())
+            ->map(fn ($daEmbalagem) => [
+                'descricao' => $daEmbalagem->first()->descricao_contentor,
+                'itens' => $daEmbalagem->count(),
+                'peso' => (float) $daEmbalagem->sum('peso_total'),
+                // A área é da embalagem, não a soma do que está dentro dela.
+                'area' => $daEmbalagem->first()->area_embalagem !== null
+                    ? (float) $daEmbalagem->first()->area_embalagem
                     : null,
-                'sem_previsao' => $doContentor->whereNull('data_hora_previsao_entrega')->count(),
+                'sem_previsao' => $daEmbalagem->whereNull('data_hora_previsao_entrega')->count(),
             ])
             ->sortByDesc('itens');
     }

@@ -88,18 +88,30 @@ class ContentorSap
         $contentoresContados = [];
 
         foreach ($itens as $item) {
-            if (! $item->dentroDeContentor()) {
+            // Medida que veio do SAP em outra unidade estragaria o total.
+            if ($item->medidaSuspeita()) {
+                continue;
+            }
+
+            $embalagem = $item->embalagemSuperior();
+
+            if ($embalagem === null) {
                 $total += $item->area() ?? 0;
 
                 continue;
             }
 
-            if (isset($contentoresContados[$item->numero_contentor])) {
+            if (isset($contentoresContados[$embalagem])) {
                 continue;
             }
 
-            $contentoresContados[$item->numero_contentor] = true;
-            $total += $item->area_embalagem !== null ? (float) $item->area_embalagem : 0;
+            $contentoresContados[$embalagem] = true;
+
+            // Embalagem sem medidas conhecidas: vale o que o item ocupa, para
+            // não zerar a área do grupo inteiro.
+            $total += $item->area_embalagem !== null
+                ? (float) $item->area_embalagem
+                : ($item->area() ?? 0);
         }
 
         return round($total, 2);

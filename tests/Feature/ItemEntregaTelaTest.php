@@ -168,7 +168,7 @@ class ItemEntregaTelaTest extends TestCase
         $noContentor = collect(range(1, 3))->map(fn ($n) => $this->item([
             'comprimento' => 1.0,
             'largura' => 1.0,
-            'numero_contentor' => '30112162',
+            'doc_unitizacao_superior' => '4810768',
             'descricao_contentor' => 'CISA1010093 Container 3MDry(3,0x2,4x2,4)',
             'comprimento_embalagem' => 3.0,
             'largura_embalagem' => 2.4,
@@ -182,6 +182,48 @@ class ItemEntregaTelaTest extends TestCase
 
         // 7,2 do contentor (uma vez) + 3,0 do item solto.
         $this->assertSame(10.2, ContentorSap::areaDePiso($noContentor->push($solto)->map->fresh()));
+    }
+
+    /**
+     * O SAP às vezes manda a medida em centímetros ou milímetros. Um item de
+     * 2200 × 600 somaria 1.320.000 m² e tornaria o total inutilizável.
+     */
+    public function test_medida_fora_de_escala_nao_entra_nos_totais(): void
+    {
+        $normal = $this->item(['local_origem' => 'PACU', 'comprimento' => 2.0, 'largura' => 1.5]);
+        $emMilimetros = $this->item(['local_origem' => 'PACU', 'comprimento' => 2200, 'largura' => 600]);
+
+        $this->assertFalse($normal->medidaSuspeita());
+        $this->assertTrue($emMilimetros->medidaSuspeita());
+
+        // Só os 3 m² do item plausível entram.
+        $this->assertSame(3.0, ContentorSap::areaDePiso([$normal, $emMilimetros]));
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index'))
+            ->assertOk()
+            ->assertViewHas('trechos', function ($trechos) {
+                $pacu = $trechos->firstWhere('local_origem_norm', 'PACU');
+                $this->assertSame(3.0, $pacu->area);
+                $this->assertSame(1, (int) $pacu->medidas_suspeitas);
+
+                return true;
+            });
+    }
+
+    /**
+     * O valor original continua visível: o dado do SAP não é corrigido por
+     * adivinhação, só sinalizado.
+     */
+    public function test_item_fora_de_escala_e_sinalizado_na_tela(): void
+    {
+        $this->item(['comprimento' => 2200, 'largura' => 600, 'altura' => 600]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.trecho'))
+            ->assertOk()
+            ->assertSee('2.200,00 × 600,00 × 600,00 m')
+            ->assertSee('Medida fora de escala', false);
     }
 
     public function test_area_da_embalagem_vem_das_colunas_do_sap(): void
@@ -211,29 +253,31 @@ class ItemEntregaTelaTest extends TestCase
         $this->assertSame(1.21, (float) $item->fresh()->area_embalagem);
     }
 
+    /**
+     * A tela agrupa os itens sob a embalagem que os carrega — é a embalagem
+     * que viaja, e o piso que ela ocupa aparece uma vez no cabeçalho do grupo.
+     */
     public function test_tela_agrupa_por_embalagem_superior(): void
     {
-        $this->item([
-            'numero_contentor' => '30112162',
+        $embalagem = [
+            'doc_unitizacao_superior' => '4810768',
             'descricao_contentor' => 'CISA1010093 Container 3MDry(3,0x2,4x2,4)',
             'comprimento_embalagem' => 3.0,
             'largura_embalagem' => 2.4,
-            'peso_total' => 100,
-        ]);
-        $this->item([
-            'numero_contentor' => '30112162',
-            'descricao_contentor' => 'CISA1010093 Container 3MDry(3,0x2,4x2,4)',
-            'comprimento_embalagem' => 3.0,
-            'largura_embalagem' => 2.4,
-            'peso_total' => 250,
-        ]);
-        $this->item(); // solto
+        ];
+
+        $this->item(array_merge($embalagem, ['peso_total' => 100]));
+        $this->item(array_merge($embalagem, ['peso_total' => 250]));
+        $solto = $this->item();
 
         $this->actingAs(User::factory()->create())
             ->get(route('itens-entrega.trecho'))
             ->assertOk()
-            ->assertSee('30112162')
-            ->assertSee('1 embalagem superior')
+            ->assertSee('4810768')
+            // Cabeçalho do grupo traz os totais da embalagem.
+            ->assertSee('350 kg')
+            ->assertSee('7,20 m² de piso')
+            ->assertSee($solto->numero_rt)
             ->assertViewHas('embalagens', function ($embalagens) {
                 $this->assertCount(1, $embalagens);
                 $e = $embalagens->first();
@@ -243,6 +287,37 @@ class ItemEntregaTelaTest extends TestCase
 
                 return true;
             });
+    }
+
+    /**
+     * O documento de unitização é o que agrupa; o número do contentor só
+     * aparece no export de viagem e serve para o item que não passou pela
+     * liberação.
+     */
+    public function test_embalagem_prefere_o_documento_de_unitizacao(): void
+    {
+        $comDoc = $this->item(['doc_unitizacao_superior' => '4810768', 'numero_contentor' => '30112162']);
+        $soContentor = $this->item(['numero_contentor' => '30112163']);
+        $solto = $this->item();
+
+        $this->assertSame('4810768', $comDoc->embalagemSuperior());
+        $this->assertSame('30112163', $soContentor->embalagemSuperior());
+        $this->assertNull($solto->embalagemSuperior());
+    }
+
+    /**
+     * Embalagem sem medidas conhecidas não pode zerar a área do grupo.
+     */
+    public function test_embalagem_sem_medidas_vale_o_que_o_item_ocupa(): void
+    {
+        $item = $this->item([
+            'doc_unitizacao_superior' => '4810768',
+            'comprimento' => 2.0,
+            'largura' => 1.5,
+        ]);
+
+        $this->assertNull($item->fresh()->area_embalagem);
+        $this->assertSame(3.0, ContentorSap::areaDePiso([$item->fresh()]));
     }
 
     public function test_filtra_os_itens_de_uma_embalagem(): void
