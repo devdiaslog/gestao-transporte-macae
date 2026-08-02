@@ -25,7 +25,19 @@
     {{-- Cards e status dividem a mesma linha: cada centímetro de altura conta
          numa tela cuja função é mostrar tabela. --}}
     <div class="grid gap-3 xl:grid-cols-2">
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {{-- Total primeiro: é o universo do recorte; os demais explicam
+                 como ele se divide. Clicar tira o filtro de situação. --}}
+            @php $semSituacao = ! request('situacao'); @endphp
+            <a href="{{ request()->fullUrlWithQuery(['situacao' => null, 'page' => null]) }}"
+               class="flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5 transition-all
+                      {{ $semSituacao
+                          ? 'border-zinc-900 bg-zinc-50 dark:border-zinc-100 dark:bg-zinc-800'
+                          : 'border-slate-200 bg-white hover:border-slate-300 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-zinc-700' }}">
+                <span class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Total de itens</span>
+                <span class="text-xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $resumo['total'] }}</span>
+            </a>
+
             @foreach($situacoesResumo as $situacao)
                 @php $ativo = request('situacao') === $situacao; @endphp
                 <a href="{{ request()->fullUrlWithQuery(['situacao' => $ativo ? null : $situacao, 'page' => null]) }}"
