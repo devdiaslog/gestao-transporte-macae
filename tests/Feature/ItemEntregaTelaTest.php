@@ -1085,4 +1085,18 @@ class ItemEntregaTelaTest extends TestCase
             $resposta->assertSee('Importando a planilha');
         }
     }
+
+    /**
+     * form.submit() por código não dispara o evento 'submit', entao a tela que
+     * envia a planilha ao escolher o arquivo ficaria sem sinal nenhum.
+     */
+    public function test_tela_que_envia_ao_escolher_o_arquivo_aciona_o_sinal(): void
+    {
+        $resposta = $this->actingAs(User::factory()->create())
+            ->get(route('demandas.index'))
+            ->assertOk();
+
+        $resposta->assertSee("iniciarImportacao('form-importar')", escape: false);
+        $resposta->assertDontSee("getElementById('form-importar').submit()", escape: false);
+    }
 }

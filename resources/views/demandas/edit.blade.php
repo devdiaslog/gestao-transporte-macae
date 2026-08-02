@@ -273,7 +273,7 @@
                               enctype="multipart/form-data" id="form-importar-itens" data-importacao class="contents">
                             @csrf
                             <input type="file" name="arquivo" id="input-importar-itens" accept=".xlsx,.xls" class="hidden"
-                                   onchange="if (this.files.length) { document.getElementById('form-importar-itens').submit(); }">
+                                   onchange="if (this.files.length) { iniciarImportacao('form-importar-itens'); }">
                             <button type="button" onclick="document.getElementById('input-importar-itens').click()"
                                     title="Importar itens da planilha apenas para esta demanda"
                                     class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium

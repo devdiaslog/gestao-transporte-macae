@@ -982,6 +982,18 @@
         }, 1000);
     }
 
+    // form.submit() por codigo nao dispara o evento 'submit'. Quem envia a
+    // planilha ao escolher o arquivo chama esta funcao no lugar.
+    window.iniciarImportacao = function (id) {
+        var form = document.getElementById(id);
+
+        if (!form || enviando) { return; }
+
+        enviando = true;
+        mostrar(form);
+        form.submit();
+    };
+
     document.querySelectorAll('form[data-importacao]').forEach(function (form) {
         form.addEventListener('submit', function (e) {
             // Segundo clique nao dispara uma segunda importacao do mesmo arquivo.
