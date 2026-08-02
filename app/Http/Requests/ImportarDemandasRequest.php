@@ -18,7 +18,19 @@ class ImportarDemandasRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'arquivo' => ['required', 'file', 'mimes:xlsx,xls', 'max:10240'],
+            /**
+             * O .xlsx é um zip por dentro, e o export do SAP faz o fileinfo
+             * devolver "application/zip" genérico. Por isso a extensão é quem
+             * define o formato aceito, e o mimetype só barra arquivo que não
+             * tem cara de planilha.
+             */
+            'arquivo' => [
+                'required',
+                'file',
+                'extensions:xlsx,xls',
+                'mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/zip,application/octet-stream',
+                'max:10240',
+            ],
         ];
     }
 
@@ -30,7 +42,8 @@ class ImportarDemandasRequest extends FormRequest
         return [
             'arquivo.required' => 'Selecione a planilha para importar.',
             'arquivo.file' => 'O envio não é um arquivo válido.',
-            'arquivo.mimes' => 'A planilha deve estar em formato .xlsx ou .xls.',
+            'arquivo.extensions' => 'A planilha deve estar em formato .xlsx ou .xls.',
+            'arquivo.mimetypes' => 'O arquivo enviado não é uma planilha.',
             'arquivo.max' => 'A planilha não pode ultrapassar 10 MB.',
         ];
     }

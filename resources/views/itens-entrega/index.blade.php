@@ -42,7 +42,6 @@
         </div>
     </div>
 
-    @include('itens-entrega._cabecalho')
 
     @include('itens-entrega._filtros', ['rota' => 'itens-entrega.index'])
 
