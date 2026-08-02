@@ -1067,4 +1067,22 @@ class ItemEntregaTelaTest extends TestCase
         $this->assertSame(TipoDemanda::Backload, $item->tipo_item);
         $this->assertFalse($item->tipo_item_manual);
     }
+
+    /**
+     * A planilha do SAP leva minutos para processar. Sem sinal na tela o
+     * usuário nao sabe se o clique valeu, e um segundo clique dispararia outra
+     * importacao do mesmo arquivo.
+     */
+    public function test_telas_de_importacao_sinalizam_o_processamento(): void
+    {
+        $usuario = User::factory()->create();
+
+        foreach ([route('itens-entrega.index'), route('demandas.index')] as $url) {
+            $resposta = $this->actingAs($usuario)->get($url)->assertOk();
+
+            $resposta->assertSee('overlay-importacao', escape: false);
+            $resposta->assertSee('data-importacao', escape: false);
+            $resposta->assertSee('Importando a planilha');
+        }
+    }
 }

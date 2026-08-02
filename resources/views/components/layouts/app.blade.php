@@ -930,6 +930,74 @@
 </script>
 @endunless
 
+{{-- Importação em andamento: a planilha do SAP pode levar minutos, e sem sinal
+     o usuário fica sem saber se a página travou ou se o clique valeu. --}}
+<div id="overlay-importacao" class="fixed inset-0 z-[60] hidden items-center justify-center bg-white/80 backdrop-blur-sm dark:bg-zinc-950/80">
+    <div class="flex max-w-sm flex-col items-center gap-4 px-6 text-center">
+        <svg class="h-10 w-10 animate-spin text-zinc-900 dark:text-zinc-100" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"></path>
+        </svg>
+
+        <div>
+            <p class="text-base font-semibold text-zinc-900 dark:text-zinc-100">Importando a planilha</p>
+            <p id="overlay-importacao-arquivo" class="mt-1 truncate text-xs text-zinc-500 dark:text-zinc-400"></p>
+        </div>
+
+        <p class="text-xs text-zinc-500 dark:text-zinc-400">
+            Planilhas grandes levam alguns minutos. Não feche nem atualize esta página.
+        </p>
+
+        <p id="overlay-importacao-tempo" class="text-xs font-medium tabular-nums text-zinc-400 dark:text-zinc-500"></p>
+    </div>
+</div>
+
+<script>
+(function () {
+    var overlay = document.getElementById('overlay-importacao');
+
+    if (!overlay) { return; }
+
+    var nome = document.getElementById('overlay-importacao-arquivo');
+    var tempo = document.getElementById('overlay-importacao-tempo');
+    var enviando = false;
+
+    function nomeDoArquivo(form) {
+        var campo = form.querySelector('input[type="file"]');
+        return campo && campo.files.length ? campo.files[0].name : '';
+    }
+
+    function mostrar(form) {
+        nome.textContent = nomeDoArquivo(form);
+        overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
+
+        var inicio = Date.now();
+        tempo.textContent = '0s';
+        setInterval(function () {
+            var s = Math.floor((Date.now() - inicio) / 1000);
+            tempo.textContent = s < 60
+                ? s + 's'
+                : Math.floor(s / 60) + 'min ' + (s % 60) + 's';
+        }, 1000);
+    }
+
+    document.querySelectorAll('form[data-importacao]').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            // Segundo clique nao dispara uma segunda importacao do mesmo arquivo.
+            if (enviando) {
+                e.preventDefault();
+                return;
+            }
+
+            enviando = true;
+            form.querySelectorAll('button[type="submit"]').forEach(function (b) { b.disabled = true; });
+            mostrar(form);
+        });
+    });
+})();
+</script>
+
 @stack('scripts')
 
 </body>

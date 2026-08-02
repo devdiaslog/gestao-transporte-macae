@@ -25,7 +25,7 @@
             Baixar modelo
         </a>
         <form method="POST" action="{{ route('demandas.importar') }}" enctype="multipart/form-data"
-              id="form-importar" class="contents">
+              id="form-importar" data-importacao class="contents">
             @csrf
             <input type="file" name="arquivo" id="input-importar" accept=".xlsx,.xls" class="hidden"
                    onchange="if (this.files.length) { document.getElementById('form-importar').submit(); }">

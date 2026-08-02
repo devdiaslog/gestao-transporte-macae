@@ -270,7 +270,7 @@
                     <div class="flex items-center gap-2">
                         {{-- Importar itens (escopado a esta demanda) --}}
                         <form method="POST" action="{{ route('demandas.itens.importar', $demanda) }}"
-                              enctype="multipart/form-data" id="form-importar-itens" class="contents">
+                              enctype="multipart/form-data" id="form-importar-itens" data-importacao class="contents">
                             @csrf
                             <input type="file" name="arquivo" id="input-importar-itens" accept=".xlsx,.xls" class="hidden"
                                    onchange="if (this.files.length) { document.getElementById('form-importar-itens').submit(); }">

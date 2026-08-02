@@ -185,14 +185,6 @@
             if (m) {
                 m.addEventListener('click', function (e) { if (e.target === m) { window.fecharModal('modal-importar'); } });
             }
-            var form = document.getElementById('form-importar');
-            if (form) {
-                form.addEventListener('submit', function () {
-                    var btn = document.getElementById('btn-importar');
-                    btn.disabled = true;
-                    btn.textContent = 'Importando…';
-                });
-            }
         })();
     </script>
     @endpush

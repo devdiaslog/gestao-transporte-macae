@@ -1,6 +1,6 @@
 <div id="modal-importar" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
     <form method="POST" action="{{ route('itens-entrega.importar') }}" enctype="multipart/form-data"
-          id="form-importar" class="w-full max-w-md rounded-xl bg-white p-5 shadow-xl dark:bg-zinc-900">
+          id="form-importar" data-importacao class="w-full max-w-md rounded-xl bg-white p-5 shadow-xl dark:bg-zinc-900">
         @csrf
         <h3 class="text-base font-semibold text-zinc-900 dark:text-zinc-100">Importar itens do SAP</h3>
         <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
