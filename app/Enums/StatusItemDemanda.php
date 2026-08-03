@@ -8,6 +8,9 @@ namespace App\Enums;
  * O valor interno é canônico (não é o código do SAP), porque um mesmo status
  * pode vir de mais de um código — Suspenso corresponde tanto a 13 quanto a 18.
  * A tradução do código bruto do SAP é feita em {@see self::fromCodigo()}.
+ *
+ * Quando a distinção entre os códigos importar (13 é responsabilidade nossa,
+ * 18 é do cliente), use {@see StatusSap}, que preserva o código original.
  */
 enum StatusItemDemanda: string
 {
@@ -49,6 +52,19 @@ enum StatusItemDemanda: string
     }
 
     /**
+     * Status que pode ser registrado antes de a demanda começar.
+     *
+     * Uma demanda pode nascer, ser importada e ser cancelada antes de a torre
+     * tomar conhecimento dela — nesse caso não houve início, e exigir um seria
+     * inventar uma execução que não aconteceu. Os demais status descrevem o
+     * desfecho de uma execução e continuam dependendo do início.
+     */
+    public function dispensaInicioDaDemanda(): bool
+    {
+        return $this === self::Cancelado;
+    }
+
+    /**
      * Traduz o código bruto do SAP para o status interno.
      * Tolera valores de 1 dígito ("4" vira "04") e códigos desconhecidos (null).
      */
@@ -59,7 +75,9 @@ enum StatusItemDemanda: string
         }
 
         return match (str_pad((string) $codigo, 2, '0', STR_PAD_LEFT)) {
-            '04' => self::Pendente,
+            // 03 (liberado pelo cliente) e 04 (programado) são itens que ainda
+            // aguardam entrega — do ponto de vista operacional, ambos pendentes.
+            '03', '04' => self::Pendente,
             '07' => self::Entregue,
             '09' => self::Cancelado,
             '13', '18' => self::Suspenso,

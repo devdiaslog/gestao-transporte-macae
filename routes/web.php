@@ -10,6 +10,7 @@ use App\Http\Controllers\DemandaController;
 use App\Http\Controllers\DemandaItemController;
 use App\Http\Controllers\DivisaoController;
 use App\Http\Controllers\EquipamentoController;
+use App\Http\Controllers\ItemEntregaController;
 use App\Http\Controllers\JustificativaController;
 use App\Http\Controllers\MedicaoController;
 use App\Http\Controllers\MetricasController;
@@ -138,6 +139,18 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
     Route::post('demandas/{demanda}/itens-importar', [DemandaItemController::class, 'importar'])->name('demandas.itens.importar')->middleware('can:demandas.importar');
     Route::put('demanda-itens/{item}', [DemandaItemController::class, 'update'])->name('demanda-itens.update')->middleware('can:demandas.editar')->whereNumber('item');
     Route::delete('demanda-itens/{item}', [DemandaItemController::class, 'destroy'])->name('demanda-itens.destroy')->middleware('can:demandas.excluir')->whereNumber('item');
+    // Itens de entrega: a visão do cliente, do item liberado no SAP até ser atendido.
+    Route::get('itens-entrega', [ItemEntregaController::class, 'index'])->name('itens-entrega.index')->middleware('can:itens-entrega.ver');
+    Route::get('itens-entrega/trecho', [ItemEntregaController::class, 'trecho'])->name('itens-entrega.trecho')->middleware('can:itens-entrega.ver');
+    Route::post('itens-entrega/rota', [ItemEntregaController::class, 'ajustarRota'])->name('itens-entrega.rota')->middleware('can:itens-entrega.prever');
+    Route::post('itens-entrega/tipo', [ItemEntregaController::class, 'definirTipo'])->name('itens-entrega.tipo')->middleware('can:itens-entrega.prever');
+    Route::post('itens-entrega/prazo', [ItemEntregaController::class, 'renegociarPrazo'])->name('itens-entrega.prazo')->middleware('can:itens-entrega.prazo');
+    Route::get('itens-entrega-export', [ItemEntregaController::class, 'export'])->name('itens-entrega.export')->middleware('can:itens-entrega.ver');
+    Route::post('itens-entrega/previsao', [ItemEntregaController::class, 'definirPrevisao'])->name('itens-entrega.previsao')->middleware('can:itens-entrega.prever');
+    Route::post('itens-entrega/escopo', [ItemEntregaController::class, 'marcarForaEscopo'])->name('itens-entrega.escopo')->middleware('can:itens-entrega.escopo');
+    Route::get('itens-entrega-modelo', [ItemEntregaController::class, 'modeloImportacao'])->name('itens-entrega.modelo')->middleware('can:itens-entrega.importar');
+    Route::post('itens-entrega-importar', [ItemEntregaController::class, 'importar'])->name('itens-entrega.importar')->middleware('can:itens-entrega.importar');
+
     Route::post('demandas', [DemandaController::class, 'store'])->name('demandas.store')->middleware('can:demandas.criar');
     Route::put('demandas/{demanda}', [DemandaController::class, 'update'])->name('demandas.update')->middleware('can:demandas.editar');
     Route::patch('demandas/{demanda}/auditar', [DemandaController::class, 'auditar'])->name('demandas.auditar')->middleware('can:demandas.auditar');

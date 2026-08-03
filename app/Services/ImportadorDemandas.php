@@ -4,16 +4,15 @@ namespace App\Services;
 
 use App\Enums\StatusDemanda;
 use App\Enums\StatusItemDemanda;
+use App\Enums\StatusSap;
 use App\Enums\TipoCadastro;
 use App\Enums\TipoDemanda;
 use App\Models\Demanda;
 use App\Models\DemandaItem;
 use App\Models\Equipamento;
-use Carbon\Carbon;
+use App\Traits\LeituraPlanilhaSap;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use OpenSpout\Common\Entity\Row;
-use OpenSpout\Reader\XLSX\Reader as XlsxReader;
 use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
 
 /**
@@ -24,6 +23,8 @@ use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
  */
 class ImportadorDemandas
 {
+    use LeituraPlanilhaSap;
+
     /**
      * Rótulos aceitos por campo. O primeiro é o nome genérico (usado no modelo);
      * os demais são aliases mantidos para compatibilidade com o export do SAP.
@@ -56,6 +57,25 @@ class ImportadorDemandas
         'entrega_hora' => ['Hora Entrega', 'Hr entregu'],
         'observacao' => ['Observação', 'Observacao'],
         'equipamento' => ['Descrição Veiculo', 'Descrição equipamento'],
+
+        // Dados da RT. Normalmente chegam antes, pela importação de itens
+        // liberados (status 03), mas vêm aqui também para o item que entra
+        // direto como programado sem ter passado por aquela tela.
+        // Os rótulos são distintos dos de "criacao_data"/"criacao_hora", que
+        // se referem à criação da demanda (viagem) e não da RT.
+        'criacao_rt_data' => ['Data Criação RT', 'Data de cr'],
+        'criacao_rt_hora' => ['Hora Criação RT', 'HoraCr.'],
+        'liberacao_data' => ['Data Liberação', 'Data Liber'],
+        'liberacao_hora' => ['Hora Liberação', 'Hora Liber'],
+        'doc_unitizacao_superior' => ['Documento Unitização', 'DocUnitSup'],
+        'numero_contentor' => ['Numero Contentor', 'Numero Con', 'Número Contentor'],
+        'descricao_contentor' => ['Descrição Contentor', 'Descricao Contentor'],
+        // Medidas da embalagem superior. O SAP as entrega como
+        // "Comprimento EmbSup(m)"; os demais rótulos são os truncados do ALV.
+        'comprimento_embalagem' => ['Comprimento Embalagem', 'Comprimento EmbSup(m)', 'Comprimento EmbSup', 'Compriment Emb', 'Comprimento Emb', 'Compriment'],
+        'largura_embalagem' => ['Largura Embalagem', 'Largura EmbSup(m)', 'Largura EmbSup', 'Largura  E', 'Largura Emb', 'Largura Em'],
+        'altura_embalagem' => ['Altura Embalagem', 'Altura EmbSup(m)', 'Altura EmbSup', 'Altura Emb'],
+        'grupo_planejamento' => ['Grupo Planejamento', 'Grupo plan'],
     ];
 
     /**
@@ -87,6 +107,17 @@ class ImportadorDemandas
         'Data Entrega',
         'Hora Entrega',
         'Observação',
+        'Data Criação RT',
+        'Hora Criação RT',
+        'Data Liberação',
+        'Hora Liberação',
+        'Documento Unitização',
+        'Numero Contentor',
+        'Descrição Contentor',
+        'Comprimento EmbSup(m)',
+        'Largura EmbSup(m)',
+        'Altura EmbSup(m)',
+        'Grupo Planejamento',
     ];
 
     /**
@@ -95,8 +126,8 @@ class ImportadorDemandas
      * @var array<int, array<int, string>>
      */
     private const EXEMPLOS_MODELO = [
-        ['509538496', '23.07.2026', '08:00:00', 'Backload', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Tubos de perfuração', '2.500,50', '2,60', '2,40', '12,00', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00', '', '', ''],
-        ['619012345', '24.07.2026', '09:15:00', '', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', '800', '1,20', '1,00', '2,40', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00', '25.07.2026', '13:45:00', 'Insight da análise'],
+        ['509538496', '23.07.2026', '08:00:00', 'Backload', '326741968', '1', '5', 'PACU', 'PACU-CAIS 2', 'ARM-MACAE', 'Tubos de perfuração', '2.500,50', '2,60', '2,40', '12,00', 'VIX 1993 - AXOR 1933 S 2P T44', '04', '24.07.2026', '10:00:00', '', '', '', '20.07.2026', '07:15:00', '21.07.2026', '09:30:00', '4803478', '30112162', 'CISA1010093 Container 3MDry(3,0x2,4x2,4)', '3,0000', '2,4000', '2,4000', 'T44'],
+        ['619012345', '24.07.2026', '09:15:00', '', '326800000', '1', '1', 'ARM-MACAE', 'AL-50', 'BMAC', 'Outra carga', '800', '1,20', '1,00', '2,40', 'VIX 1994 - AXOR 1933 S 2P T44', '07', '25.07.2026', '14:30:00', '25.07.2026', '13:45:00', 'Insight da análise', '', '', '', '', '', '', '', '', '', '', 'T44'],
     ];
 
     public function __construct(private DemandaCalculadora $calculadora) {}
@@ -124,7 +155,7 @@ class ImportadorDemandas
     /**
      * @param  int|null  $somenteNota  Quando informado, processa apenas as linhas
      *                                 dessa Nota (importação escopada a 1 demanda).
-     * @return array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, itens_remanejados: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
+     * @return array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, itens_adotados: int, itens_remanejados: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
      */
     public function importar(string $caminho, ?int $usuarioId = null, ?int $somenteNota = null): array
     {
@@ -135,6 +166,7 @@ class ImportadorDemandas
                 'demandas_criadas' => 0,
                 'itens_criados' => 0,
                 'itens_atualizados' => 0,
+                'itens_adotados' => 0,
                 'itens_remanejados' => 0,
                 'linhas_ignoradas' => 0,
                 'avisos' => [],
@@ -151,7 +183,7 @@ class ImportadorDemandas
      * campos mestres sincronizados, remanejo de RT e recálculo dos derivados.
      *
      * @param  array<int|string, array<string, string|null>>  $linhas
-     * @return array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, itens_remanejados: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
+     * @return array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, itens_adotados: int, itens_remanejados: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
      */
     public function importarLinhas(array $linhas, ?int $usuarioId = null, ?int $somenteNota = null): array
     {
@@ -159,6 +191,7 @@ class ImportadorDemandas
             'demandas_criadas' => 0,
             'itens_criados' => 0,
             'itens_atualizados' => 0,
+            'itens_adotados' => 0,
             'itens_remanejados' => 0,
             'linhas_ignoradas' => 0,
             'avisos' => [],
@@ -237,7 +270,20 @@ class ImportadorDemandas
                 $novo = ! $item->exists;
 
                 if ($novo) {
-                    $this->cancelarRemanejados($chave, $demanda, $resultado, $demandasTocadas);
+                    // O item pode já existir sem demanda, vindo da importação de
+                    // liberados (status 03). Como a chave RT + item + subitem é
+                    // única no SAP, é o mesmo item ganhando atendimento: a demanda
+                    // o adota, preservando a previsão e o histórico já registrados.
+                    $liberado = $this->itemLiberadoSemDemanda($chave);
+
+                    if ($liberado !== null) {
+                        $item = $liberado;
+                        $item->demanda_id = $demanda->id;
+                        $novo = false;
+                        $resultado['itens_adotados']++;
+                    } else {
+                        $this->cancelarRemanejados($chave, $demanda, $resultado, $demandasTocadas);
+                    }
                 }
 
                 // Campos mestres do SAP: re-sincronizam quando a coluna existe na
@@ -248,24 +294,42 @@ class ImportadorDemandas
                         $item->{$campoMestre} = $this->limpar($linha[$campoMestre]);
                     }
                 }
-                if ((array_key_exists('prazo_data', $linha) || array_key_exists('prazo_hora', $linha))
-                    && ! $item->campoEditadoPeloOperador('prazo_item')) {
-                    $item->prazo_item = $this->montarDataHora($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null);
+                if (array_key_exists('prazo_data', $linha) || array_key_exists('prazo_hora', $linha)) {
+                    $prazo = $this->montarDataHora($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null);
+
+                    // O prazo do SAP fica registrado mesmo quando o vigente foi
+                    // renegociado com o cliente: é o que torna a renegociação
+                    // visível em vez de o dado original sumir.
+                    $item->prazo_sap = $prazo;
+
+                    if (! $item->campoEditadoPeloOperador('prazo_item')) {
+                        $item->prazo_item = $prazo;
+                    }
                 }
 
                 // Peso e dimensões da carga: dados do SAP, re-sincronizam quando a
                 // coluna existe na planilha.
-                foreach (['peso_total', 'altura', 'largura', 'comprimento'] as $campoMedida) {
+                foreach (['peso_total', 'altura', 'largura', 'comprimento', 'comprimento_embalagem', 'largura_embalagem', 'altura_embalagem'] as $campoMedida) {
                     if (array_key_exists($campoMedida, $linha)) {
                         $item->{$campoMedida} = $this->numero($linha[$campoMedida]);
                     }
                 }
 
-                // Código bruto do status no SAP: sempre re-sincroniza — mesmo com o
-                // status do sistema assumido pelo operador, ele enxerga o estado real
-                // do SAP ao finalizar o item.
+                $this->aplicarDadosDaRt($item, $linha);
+
+                // Status no SAP: sempre re-sincroniza — mesmo com o status do sistema
+                // assumido pelo operador, ele enxerga o estado real do SAP ao
+                // finalizar o item. Código fora do ciclo de vida conhecido é ignorado
+                // (fica registrado na observação) para não derrubar a importação
+                // inteira caso o SAP passe a emitir um status novo.
                 if (array_key_exists('status_item', $linha) && ($codigoSap = $this->limpar($linha['status_item'])) !== null) {
-                    $item->status_sap = str_pad($codigoSap, 2, '0', STR_PAD_LEFT);
+                    $statusSap = StatusSap::fromCodigo($codigoSap);
+
+                    if ($statusSap !== null) {
+                        $item->status_sap = $statusSap;
+                    } else {
+                        $item->acrescentarObservacao("Status do SAP não reconhecido na importação: {$codigoSap}.");
+                    }
                 }
 
                 // Status e entrega: o SAP atualiza livremente (itens podem ser
@@ -310,7 +374,7 @@ class ImportadorDemandas
      * operador na antiga não são alterados.
      *
      * @param  array{demanda_id: int, numero_rt: string, numero_item: string, subitem: string|null}  $chave
-     * @param  array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, itens_remanejados: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}  $resultado
+     * @param  array{demandas_criadas: int, itens_criados: int, itens_atualizados: int, itens_adotados: int, itens_remanejados: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}  $resultado
      * @param  array<int, bool>  $demandasTocadas
      */
     private function cancelarRemanejados(array $chave, Demanda $demanda, array &$resultado, array &$demandasTocadas): void
@@ -348,76 +412,60 @@ class ImportadorDemandas
      */
     private function lerPlanilha(string $caminho): array
     {
-        $reader = new XlsxReader;
-        $reader->open($caminho);
+        // O export do SAP reserva as primeiras linhas para data e título; o
+        // modelo do sistema começa no cabeçalho. A nota e a RT identificam a
+        // linha certa nos dois casos.
+        $cabecalho = $this->localizarCabecalhoSap($caminho, self::COLUNAS, ['nota', 'numero_rt']);
 
-        $mapa = [];
-        $linhas = [];
-
-        foreach ($reader->getSheetIterator() as $sheet) {
-            foreach ($sheet->getRowIterator() as $indice => $row) {
-                $celulas = $row->toArray();
-
-                if ($indice === 1) {
-                    $mapa = $this->mapearCabecalho($celulas);
-
-                    continue;
-                }
-
-                $linha = [];
-                foreach ($mapa as $campo => $posicao) {
-                    $valor = $celulas[$posicao] ?? null;
-                    $linha[$campo] = $valor instanceof \DateTimeInterface
-                        ? $valor->format('d.m.Y H:i:s')
-                        : $valor;
-                }
-
-                $linhas[$indice] = $linha;
-            }
-
-            break; // apenas a primeira aba
-        }
-
-        $reader->close();
-
-        return $linhas;
+        return $this->lerPlanilhaSap($caminho, self::COLUNAS, $cabecalho);
     }
 
     /**
-     * Casa cada campo interno com a posição da coluna no cabeçalho, por
-     * igualdade exata do rótulo (ignorando caixa e acentos).
+     * Dados do documento da RT, quando a planilha os traz.
      *
-     * @param  array<int, mixed>  $cabecalho
-     * @return array<string, int>
+     * Descrevem o documento no SAP e não são editáveis pelo operador, então
+     * sempre re-sincronizam. Coluna ausente não altera nada: o item que já veio
+     * pela importação de liberados mantém o que tinha.
+     *
+     * @param  array<string, string|null>  $linha
      */
-    private function mapearCabecalho(array $cabecalho): array
+    private function aplicarDadosDaRt(DemandaItem $item, array $linha): void
     {
-        $normalizado = [];
-        foreach ($cabecalho as $posicao => $valor) {
-            $n = $this->normalizar((string) $valor);
-            if ($n !== '') {
-                $normalizado[$posicao] = $n;
-            }
+        $criacao = $this->montarDataHora($linha['criacao_rt_data'] ?? null, $linha['criacao_rt_hora'] ?? null);
+        if ($criacao !== null) {
+            $item->data_hora_criacao_rt = $criacao;
         }
 
-        $mapa = [];
-
-        // A prioridade é a ordem dos aliases (o mais específico primeiro), não a
-        // ordem das colunas: o export do SAP tem "Descrição" (agendamento) antes
-        // de "Descrição da carga", e a carga é quem deve vencer.
-        foreach (self::COLUNAS as $campo => $rotulos) {
-            foreach ($rotulos as $rotulo) {
-                $posicao = array_search($this->normalizar($rotulo), $normalizado, true);
-
-                if ($posicao !== false) {
-                    $mapa[$campo] = $posicao;
-
-                    break;
-                }
-            }
+        $liberacao = $this->montarDataHora($linha['liberacao_data'] ?? null, $linha['liberacao_hora'] ?? null);
+        if ($liberacao !== null) {
+            $item->data_hora_liberacao_rt = $liberacao;
         }
 
-        return $mapa;
+        foreach (['doc_unitizacao_superior', 'grupo_planejamento', 'numero_contentor', 'descricao_contentor'] as $campo) {
+            if (array_key_exists($campo, $linha) && ($valor = $this->limpar($linha[$campo])) !== null) {
+                $item->{$campo} = $valor;
+            }
+        }
+    }
+
+    /**
+     * Item já cadastrado pela importação de liberados (status 03), que ainda
+     * não tem atendimento e portanto pode ser adotado por esta demanda.
+     *
+     * @param  array{demanda_id: int, numero_rt: string, numero_item: string, subitem: string|null}  $chave
+     */
+    private function itemLiberadoSemDemanda(array $chave): ?DemandaItem
+    {
+        return DemandaItem::query()
+            ->whereNull('demanda_id')
+            ->where('numero_rt', $chave['numero_rt'])
+            ->where('numero_item', $chave['numero_item'])
+            ->when(
+                $chave['subitem'] === null,
+                fn ($q) => $q->whereNull('subitem'),
+                fn ($q) => $q->where('subitem', $chave['subitem']),
+            )
+            ->first();
     }
 
     /**
@@ -432,16 +480,6 @@ class ImportadorDemandas
             'transferencia' => TipoDemanda::Transferencia,
             default => null,
         };
-    }
-
-    /**
-     * Normaliza um rótulo para comparação: sem acentos, minúsculo, sem espaços extras.
-     */
-    private function normalizar(string $texto): string
-    {
-        $texto = mb_strtolower(trim(Str::ascii($texto)));
-
-        return preg_replace('/\s+/', ' ', $texto) ?? $texto;
     }
 
     /**
@@ -470,74 +508,5 @@ class ImportadorDemandas
         }
 
         return null;
-    }
-
-    /**
-     * Combina data (dd.mm.aaaa) e hora do SAP num datetime.
-     * Tolera hora com ou sem segundos e data já com hora embutida.
-     */
-    private function montarDataHora(?string $data, ?string $hora): ?Carbon
-    {
-        $data = $this->limpar($data);
-
-        if ($data === null) {
-            return null;
-        }
-
-        // O SAP pode exportar a data já com hora embutida.
-        $data = explode(' ', $data)[0];
-
-        $hora = $this->limpar($hora) ?? '00:00:00';
-        $hora = explode(' ', $hora)[0];
-
-        // Normaliza para H:i:s ("10:00" → "10:00:00", "10" → "10:00:00").
-        $partes = array_pad(explode(':', $hora), 3, '00');
-        $hora = implode(':', array_map(
-            fn ($p) => str_pad(substr(trim($p), 0, 2), 2, '0', STR_PAD_LEFT),
-            array_slice($partes, 0, 3)
-        ));
-
-        foreach (['d.m.Y H:i:s', 'd/m/Y H:i:s', 'Y-m-d H:i:s'] as $formato) {
-            try {
-                $parsed = Carbon::createFromFormat($formato, "{$data} {$hora}");
-            } catch (\Throwable) {
-                continue;
-            }
-
-            $erros = Carbon::getLastErrors();
-
-            if ($parsed !== false && (! is_array($erros) || $erros['error_count'] === 0)) {
-                return $parsed;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Converte números no formato do SAP ("2.500,50" ou "2500.5") para float.
-     */
-    private function numero(?string $valor): ?float
-    {
-        $valor = $this->limpar($valor);
-
-        if ($valor === null) {
-            return null;
-        }
-
-        // Formato brasileiro: remove separador de milhar e troca a vírgula decimal.
-        if (str_contains($valor, ',')) {
-            $valor = str_replace('.', '', $valor);
-            $valor = str_replace(',', '.', $valor);
-        }
-
-        return is_numeric($valor) ? (float) $valor : null;
-    }
-
-    private function limpar(?string $valor): ?string
-    {
-        $valor = trim((string) $valor);
-
-        return $valor === '' ? null : $valor;
     }
 }

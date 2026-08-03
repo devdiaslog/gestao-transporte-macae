@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class ImportarDemandasRequest extends FormRequest
+class ImportarItensLiberadosRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -31,6 +31,12 @@ class ImportarDemandasRequest extends FormRequest
                 'mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/zip,application/octet-stream',
                 'max:10240',
             ],
+
+            /**
+             * Marcado quando a planilha é o export completo dos itens em
+             * cobrança: os que não constam nela vão para conferência.
+             */
+            'marcar_ausentes' => ['sometimes', 'boolean'],
         ];
     }
 

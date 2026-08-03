@@ -280,6 +280,24 @@
             @endcan
             @endunless
 
+            {{-- Itens de Entrega — a ótica do cliente, do item liberado ao atendido --}}
+            @unless($isVisualizador)
+            @can('itens-entrega.ver')
+            <a href="{{ route('itens-entrega.index') }}"
+               title="Itens de Entrega"
+               class="nav-link flex items-center justify-center rounded-lg py-2.5 text-sm font-medium
+                      transition-all duration-200
+                      {{ request()->routeIs('itens-entrega.*')
+                          ? 'bg-zinc-900 text-white dark:bg-zinc-800 dark:text-zinc-100'
+                          : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/>
+                </svg>
+                <span class="nav-label hidden whitespace-nowrap">Itens de Entrega</span>
+            </a>
+            @endcan
+            @endunless
+
         </nav>
 
         {{-- User footer --}}
@@ -911,6 +929,59 @@
 })();
 </script>
 @endunless
+
+{{-- Importação em andamento: a planilha do SAP leva minutos. O botão fica
+     desabilitado para o usuário não importar o mesmo arquivo de novo, e o
+     texto avisa que o processamento está em curso. --}}
+<script>
+(function () {
+    var enviando = false;
+
+    function marcarImportando(form) {
+        enviando = true;
+
+        var botoes = form.querySelectorAll('button');
+        var principal = form.querySelector('[data-importacao-botao]')
+            || form.querySelector('button[type="submit"]')
+            || botoes[0];
+
+        botoes.forEach(function (b) { b.disabled = true; });
+
+        if (!principal) { return; }
+
+        principal.classList.add('cursor-not-allowed', 'opacity-60');
+        principal.innerHTML =
+            '<svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">'
+            + '<circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>'
+            + '<path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"></path>'
+            + '</svg> Importando…';
+    }
+
+    // form.submit() por codigo nao dispara o evento 'submit'. Quem envia a
+    // planilha ao escolher o arquivo chama esta funcao no lugar.
+    window.iniciarImportacao = function (id) {
+        var form = document.getElementById(id);
+
+        if (!form || enviando) { return; }
+
+        marcarImportando(form);
+        form.submit();
+    };
+
+    document.querySelectorAll('form[data-importacao]').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            // Segundo clique nao dispara uma segunda importacao do mesmo arquivo.
+            if (enviando) {
+                e.preventDefault();
+
+                return;
+            }
+
+            marcarImportando(form);
+        });
+    });
+})();
+</script>
 
 @stack('scripts')
 

@@ -270,10 +270,10 @@
                     <div class="flex items-center gap-2">
                         {{-- Importar itens (escopado a esta demanda) --}}
                         <form method="POST" action="{{ route('demandas.itens.importar', $demanda) }}"
-                              enctype="multipart/form-data" id="form-importar-itens" class="contents">
+                              enctype="multipart/form-data" id="form-importar-itens" data-importacao class="contents">
                             @csrf
                             <input type="file" name="arquivo" id="input-importar-itens" accept=".xlsx,.xls" class="hidden"
-                                   onchange="if (this.files.length) { document.getElementById('form-importar-itens').submit(); }">
+                                   onchange="if (this.files.length) { iniciarImportacao('form-importar-itens'); }">
                             <button type="button" onclick="document.getElementById('input-importar-itens').click()"
                                     title="Importar itens da planilha apenas para esta demanda"
                                     class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium
@@ -351,16 +351,21 @@
                                                 <input type="hidden" name="itens[]" value="{{ $item->id }}">
                                             @endforeach
                                             <span class="text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Status:</span>
-                                            <select name="status_item" required @disabled($edicaoBloqueada)
+                                            @php
+                                                // Sem início, a etapa só aceita os status que não pressupõem execução.
+                                                $statusDisponiveis = collect(\App\Enums\StatusItemDemanda::cases())
+                                                    ->filter(fn ($s) => ! $edicaoBloqueada || $s->dispensaInicioDaDemanda());
+                                            @endphp
+                                            <select name="status_item" required @disabled($statusDisponiveis->isEmpty())
                                                     class="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-zinc-900 shadow-xs outline-none
                                                            focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:opacity-50
                                                            dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800">
                                                 <option value="" disabled selected>Definir…</option>
-                                                @foreach(\App\Enums\StatusItemDemanda::cases() as $s)
+                                                @foreach($statusDisponiveis as $s)
                                                     <option value="{{ $s->value }}">{{ $s->label() }}</option>
                                                 @endforeach
                                             </select>
-                                            <button type="submit" @disabled($edicaoBloqueada)
+                                            <button type="submit" @disabled($statusDisponiveis->isEmpty())
                                                     class="h-8 shrink-0 rounded-lg bg-zinc-900 px-3 text-xs font-semibold text-white
                                                            transition-colors hover:bg-zinc-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-zinc-900
                                                            dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 dark:disabled:hover:bg-white">
@@ -447,7 +452,7 @@
                                                         'prazo_item' => $item->prazo_item?->format('Y-m-d\TH:i'),
                                                         'data_hora_entrega' => $item->data_hora_entrega?->format('Y-m-d\TH:i'),
                                                         'observacao' => $item->observacao,
-                                                        'status_sap' => $item->status_sap,
+                                                        'status_sap' => $item->status_sap?->value,
                                                         'peso_total' => $item->peso_total ? number_format((float) $item->peso_total, 0, ',', '.').' kg' : null,
                                                         'dimensoes' => ($item->comprimento || $item->largura || $item->altura)
                                                             ? sprintf('%s × %s × %s m',
@@ -491,8 +496,8 @@
                                                         </span>
                                                         @if($item->status_sap)
                                                             <div class="mt-0.5 text-[10px] text-zinc-400 dark:text-zinc-600"
-                                                                 title="Código bruto do status no SAP, sempre atualizado pela importação — confira antes de finalizar o item.">
-                                                                SAP: {{ $item->status_sap }}
+                                                                 title="{{ $item->status_sap->descricao() }} — status no SAP, sempre atualizado pela importação; confira antes de finalizar o item.">
+                                                                SAP {{ $item->status_sap->value }}: {{ $item->status_sap->label() }}
                                                             </div>
                                                         @endif
                                                     </td>

@@ -359,7 +359,7 @@ class DemandaController extends Controller
             $fmt($i->prazo_item),
             $fmt($i->data_hora_entrega),
             $i->status_item?->label() ?? '',
-            $i->status_sap ?? '',
+            $i->status_sap?->value ?? '',
             str_replace(["\r", "\n"], ' | ', (string) $i->observacao),
         ]);
 

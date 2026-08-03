@@ -88,9 +88,9 @@ class DemandaItemController extends Controller
     /**
      * Redireciona de volta com erro quando a demanda não permite alterar itens.
      */
-    private function bloqueio(Demanda $demanda): ?RedirectResponse
+    private function bloqueio(Demanda $demanda, ?StatusItemDemanda $destino = null): ?RedirectResponse
     {
-        if ($motivo = $demanda->loadMissing('itens')->motivoBloqueioItens()) {
+        if ($motivo = $demanda->loadMissing('itens')->motivoBloqueioItens($destino)) {
             return redirect()->route('demandas.edit', $demanda)->with('error', $motivo);
         }
 
@@ -102,11 +102,11 @@ class DemandaItemController extends Controller
      */
     public function atualizarStatusEtapa(AtualizarStatusEtapaRequest $request, Demanda $demanda): RedirectResponse
     {
-        if ($bloqueio = $this->bloqueio($demanda)) {
+        $status = StatusItemDemanda::from($request->input('status_item'));
+
+        if ($bloqueio = $this->bloqueio($demanda, $status)) {
             return $bloqueio;
         }
-
-        $status = StatusItemDemanda::from($request->input('status_item'));
 
         $afetados = 0;
         foreach ($demanda->itens()->whereIn('id', $request->input('itens'))->get() as $itemEtapa) {

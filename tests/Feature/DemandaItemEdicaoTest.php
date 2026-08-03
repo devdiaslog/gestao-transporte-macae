@@ -591,4 +591,45 @@ class DemandaItemEdicaoTest extends TestCase
         // Sem o item de origem BMAC, deixa de ser Backload.
         $this->assertSame(TipoDemanda::Transferencia, $demanda->fresh()->tipo_demanda);
     }
+
+    public function test_cancela_item_de_demanda_que_nunca_comecou(): void
+    {
+        // A demanda nasceu, foi importada e cancelada antes de a torre saber
+        // dela: não houve início a informar.
+        $demanda = $this->demandaCom([
+            ['local_origem' => 'A', 'local_destino' => 'B', 'status_item' => StatusItemDemanda::Pendente],
+        ]);
+        $this->assertNull($demanda->data_hora_inicio_demanda);
+
+        $this->actingAs($this->usuario())
+            ->put(route('demandas.status-etapa', $demanda), [
+                'itens' => [$demanda->itens->first()->id],
+                'status_item' => StatusItemDemanda::Cancelado->value,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $demanda->refresh()->load('itens');
+
+        $this->assertSame(StatusItemDemanda::Cancelado, $demanda->itens->first()->status_item);
+        $this->assertSame(StatusDemanda::Cancelada, $demanda->status_demanda);
+        $this->assertNull($demanda->data_hora_inicio_demanda);
+    }
+
+    public function test_demanda_sem_inicio_segue_sem_aceitar_entrega(): void
+    {
+        $demanda = $this->demandaCom([
+            ['local_origem' => 'A', 'local_destino' => 'B', 'status_item' => StatusItemDemanda::Pendente],
+        ]);
+
+        $this->actingAs($this->usuario())
+            ->put(route('demandas.status-etapa', $demanda), [
+                'itens' => [$demanda->itens->first()->id],
+                'status_item' => StatusItemDemanda::Entregue->value,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertSame(StatusItemDemanda::Pendente, $demanda->itens->first()->refresh()->status_item);
+    }
 }

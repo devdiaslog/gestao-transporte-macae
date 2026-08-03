@@ -30,6 +30,7 @@ class CatalogoPermissoes
             'Operação' => [
                 'dashboard' => ['label' => 'Dashboard', 'acoes' => ['ver', 'atualizar']],
                 'demandas' => ['label' => 'Demandas', 'acoes' => ['ver', 'criar', 'editar', 'excluir', 'importar', 'auditar']],
+                'itens-entrega' => ['label' => 'Itens de Entrega', 'acoes' => ['ver', 'prever', 'prazo', 'escopo', 'importar']],
                 'mapa-geral' => ['label' => 'Mapa Geral', 'acoes' => ['ver']],
                 'alertas' => ['label' => 'Alertas', 'acoes' => self::ACOES_CRUD],
                 'ocorrencias' => ['label' => 'Ocorrências', 'acoes' => ['ver', 'criar', 'editar', 'excluir', 'auditar']],
@@ -89,6 +90,9 @@ class CatalogoPermissoes
             'importar' => 'Importar',
             'auditar' => 'Auditar',
             'atualizar' => 'Atualizar',
+            'prever' => 'Definir previsão',
+            'prazo' => 'Renegociar prazo',
+            'escopo' => 'Marcar fora do escopo',
             'resetar-senha' => 'Resetar senha',
             default => ucfirst(str_replace('-', ' ', $acao)),
         };
@@ -117,6 +121,7 @@ class CatalogoPermissoes
                 'modulos' => [
                     'dashboard' => ['ver'],
                     'demandas' => ['ver', 'criar', 'editar', 'importar', 'auditar'],
+                    'itens-entrega' => ['ver', 'prever', 'prazo', 'escopo', 'importar'],
                     'mapa-geral' => ['ver'],
                     'alertas' => $crud,
                     'ocorrencias' => ['ver', 'criar', 'editar', 'auditar'],
@@ -141,6 +146,7 @@ class CatalogoPermissoes
                 'descricao' => 'Opera demandas, alertas, ocorrências e reportes do dia a dia.',
                 'modulos' => [
                     'demandas' => ['ver', 'criar', 'editar', 'importar'],
+                    'itens-entrega' => ['ver', 'prever', 'importar'],
                     'mapa-geral' => ['ver'],
                     'alertas' => ['ver', 'criar', 'editar'],
                     'ocorrencias' => ['ver', 'criar', 'editar'],
