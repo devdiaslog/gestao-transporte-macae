@@ -1080,9 +1080,9 @@ class ItemEntregaTelaTest extends TestCase
         foreach ([route('itens-entrega.index'), route('demandas.index')] as $url) {
             $resposta = $this->actingAs($usuario)->get($url)->assertOk();
 
-            $resposta->assertSee('overlay-importacao', escape: false);
             $resposta->assertSee('data-importacao', escape: false);
-            $resposta->assertSee('Importando a planilha');
+            $resposta->assertSee('data-importacao-botao', escape: false);
+            $resposta->assertSee('Importando…', escape: false);
         }
     }
 

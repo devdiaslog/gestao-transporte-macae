@@ -24,7 +24,7 @@
 
         <div class="mt-5 flex justify-end gap-2">
             <button type="button" onclick="fecharModal('modal-importar')" class="rounded-lg px-4 py-2 text-sm text-zinc-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800">Cancelar</button>
-            <button type="submit" id="btn-importar" class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900">Importar</button>
+            <button type="submit" id="btn-importar" data-importacao-botao class="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900">Importar</button>
         </div>
     </form>
 </div>

@@ -29,7 +29,7 @@
             @csrf
             <input type="file" name="arquivo" id="input-importar" accept=".xlsx,.xls" class="hidden"
                    onchange="if (this.files.length) { iniciarImportacao('form-importar'); }">
-            <button type="button" onclick="document.getElementById('input-importar').click()"
+            <button type="button" data-importacao-botao onclick="document.getElementById('input-importar').click()"
                     title="Importar itens de demanda a partir da planilha do SAP"
                     class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium
                            text-zinc-700 shadow-xs transition-colors hover:bg-slate-50
