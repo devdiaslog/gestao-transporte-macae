@@ -178,7 +178,7 @@
                                     <p class="mt-0.5 max-w-72 truncate text-xs text-zinc-500 dark:text-zinc-400" title="{{ $item->descricao_item }}">
                                         {{ $item->descricao_item ?? '—' }}
                                     </p>
-                                    @if($item->faltoso())
+                                    @if($item->temPendencia())
                                         <div class="mt-1">
                                             @if($item->esperaFaltosoVencida())
                                                 <span class="inline-flex items-center rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-950/50 dark:text-rose-400"

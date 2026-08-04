@@ -1504,4 +1504,68 @@ class ItemEntregaTelaTest extends TestCase
             ->assertOk()
             ->assertDontSee('um atendimento por vez', escape: false);
     }
+
+    /**
+     * A equipe registra a pendência assim que a identifica; o código 10 só
+     * chega na importação seguinte — quando chega. Filtrar por status
+     * esconderia exatamente o que acabou de ser registrado.
+     */
+    public function test_acha_a_pendencia_mesmo_com_o_sap_ainda_em_03(): void
+    {
+        $item = $this->item();
+        $item->marcarFaltoso('Falta informar o destino', now(), null);
+
+        // O SAP reimporta e devolve o item para liberado.
+        $item->update(['status_sap' => StatusSap::Liberado]);
+
+        $resposta = $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.trecho', ['pendencia' => 'com_pendencia']))
+            ->assertOk();
+
+        $resposta->assertSee($item->numero_rt);
+        $resposta->assertSee('Falta informar o destino');
+    }
+
+    public function test_filtra_apenas_a_espera_vencida(): void
+    {
+        $dentro = $this->item();
+        $dentro->marcarFaltoso('Ainda no prazo de resposta', now()->subHours(10), null);
+
+        $vencida = $this->item();
+        $vencida->marcarFaltoso('Solicitante não respondeu', now()->subHours(60), null);
+
+        $resposta = $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.trecho', ['pendencia' => 'espera_vencida']))
+            ->assertOk();
+
+        $resposta->assertSee($vencida->numero_rt);
+        $resposta->assertDontSee($dentro->numero_rt);
+    }
+
+    /**
+     * Pendência não é questão de prazo do item: o horizonte D+N não pode
+     * escondê-la, ou a equipe conclui que não há pendência aberta.
+     */
+    public function test_horizonte_de_prazo_nao_esconde_a_pendencia(): void
+    {
+        $item = $this->item(['prazo_item' => now()->addDays(30)]);
+        $item->marcarFaltoso('Pendência de item com prazo distante', now(), null);
+
+        $this->actingAs(User::factory()->create())
+            // D+3 é o padrão e deixaria este item de fora.
+            ->get(route('itens-entrega.trecho', ['pendencia' => 'com_pendencia', 'dias' => 3]))
+            ->assertOk()
+            ->assertSee($item->numero_rt);
+    }
+
+    public function test_select_de_pendencia_aparece_na_tela(): void
+    {
+        $this->item();
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index'))
+            ->assertOk()
+            ->assertSee('Com pendência registrada')
+            ->assertSee('Espera com o solicitante vencida');
+    }
 }

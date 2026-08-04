@@ -99,6 +99,18 @@
             </div>
         @endisset
 
+        {{-- Pendência registrada pela equipe. Não depende do status do SAP:
+             o item aparece aqui assim que a pendência é anotada. --}}
+        <div>
+            <label class="{{ $rotulo }}">Pendência</label>
+            <select name="pendencia" class="{{ $campo }}">
+                <option value="">Todas</option>
+                @foreach($filtrosPendencia as $valor => $texto)
+                    <option value="{{ $valor }}" @selected(request('pendencia') === $valor)>{{ $texto }}</option>
+                @endforeach
+            </select>
+        </div>
+
         {{-- Recorte de previsão: é por aqui que o operador acha o que replanejar --}}
         <div>
             <label class="{{ $rotulo }}">Previsão</label>

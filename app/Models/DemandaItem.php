@@ -189,9 +189,25 @@ class DemandaItem extends Model
      */
     public const HORAS_DE_ESPERA_FALTOSO = 48;
 
+    /**
+     * O SAP reconhece o item como faltoso (código 10).
+     */
     public function faltoso(): bool
     {
         return $this->status_sap?->faltoso() ?? false;
+    }
+
+    /**
+     * A equipe registrou uma pendência do solicitante neste item.
+     *
+     * Independe do status: a torre anota assim que identifica, e o SAP só
+     * reflete isso na importação seguinte — quando reflete. A importação
+     * devolve o status para 03 sem apagar o registro, então é por aqui que a
+     * tela sabe que há pendência aberta.
+     */
+    public function temPendencia(): bool
+    {
+        return $this->faltoso_desde !== null;
     }
 
     /**
@@ -211,7 +227,7 @@ class DemandaItem extends Model
     {
         $limite = $this->esperaFaltosoAte();
 
-        return $this->faltoso() && $limite !== null && $limite->isPast();
+        return $this->temPendencia() && $limite !== null && $limite->isPast();
     }
 
     /**

@@ -73,6 +73,19 @@ class ItemEntregaController extends Controller
     /**
      * Recortes de previsão — o que o operador busca quando vai replanejar.
      */
+    /**
+     * Recortes da pendência registrada pela equipe.
+     *
+     * Independem do status do SAP: a torre registra a pendência assim que a
+     * identifica, e o código 10 só chega na importação seguinte — quando
+     * chega. Filtrar por status esconderia justamente o que acabou de ser
+     * registrado.
+     */
+    private const FILTROS_PENDENCIA = [
+        'com_pendencia' => 'Com pendência registrada',
+        'espera_vencida' => 'Espera com o solicitante vencida',
+    ];
+
     private const FILTROS_PREVISAO = [
         'sem_previsao' => 'Sem previsão',
         'vencida' => 'Previsão vencida',
@@ -215,6 +228,7 @@ class ItemEntregaController extends Controller
             'statusSelecionados' => array_map(fn (StatusSap $s) => $s->value, $status),
             'statusDisponiveis' => self::STATUS_FILTRAVEIS,
             'filtrosPrevisao' => self::FILTROS_PREVISAO,
+            'filtrosPendencia' => self::FILTROS_PENDENCIA,
             'situacoesResumo' => self::SITUACOES_RESUMO,
             'dias' => $dias,
             'plano' => $plano,
@@ -253,6 +267,7 @@ class ItemEntregaController extends Controller
             'statusSelecionados' => array_map(fn (StatusSap $s) => $s->value, $status),
             'statusDisponiveis' => self::STATUS_FILTRAVEIS,
             'filtrosPrevisao' => self::FILTROS_PREVISAO,
+            'filtrosPendencia' => self::FILTROS_PENDENCIA,
             'situacoesResumo' => self::SITUACOES_RESUMO,
             'dias' => $dias,
             'diasPrevisao' => $this->diasPrevisaoDe($request),
@@ -287,6 +302,22 @@ class ItemEntregaController extends Controller
      * Horizonte do prazo. Além do D+N, aceita o recorte "vencidos", que isola
      * o que já passou do prazo — sinalizado por {@see self::DIAS_VENCIDOS}.
      */
+    /**
+     * A pendência é registro nosso, não do SAP: por isso o recorte olha
+     * faltoso_desde, e não o status. Item marcado hoje aparece aqui mesmo que
+     * o SAP ainda o mostre como liberado.
+     */
+    private function aplicarFiltroPendencia(Builder $query, string $filtro): Builder
+    {
+        return match ($filtro) {
+            'com_pendencia' => $query->whereNotNull('faltoso_desde'),
+            'espera_vencida' => $query
+                ->whereNotNull('faltoso_desde')
+                ->where('faltoso_desde', '<=', now()->subHours(DemandaItem::HORAS_DE_ESPERA_FALTOSO)),
+            default => $query,
+        };
+    }
+
     private function ordenacaoDe(Request $request): string
     {
         $escolhida = (string) $request->input('ordenar', '');
@@ -696,10 +727,13 @@ class ItemEntregaController extends Controller
     private function queryFiltrada(Request $request, array $status, int $dias): Builder
     {
         return DemandaItem::query()
-            ->whereIn('status_sap', array_map(fn (StatusSap $s) => $s->value, $status))
+            // Buscando por pendência, o status não restringe: o item pode estar
+            // em 03 (o SAP ainda não sabe) ou já em 10, e os dois interessam.
+            ->when(! $request->filled('pendencia'), fn (Builder $q) => $q
+                ->whereIn('status_sap', array_map(fn (StatusSap $s) => $s->value, $status)))
             // Horizonte: o cliente pede a visão antecipada (D+3 por padrão).
             // Itens já vencidos entram sempre — são os mais urgentes.
-            ->when($dias > 0, fn (Builder $q) => $q
+            ->when($dias > 0 && ! $request->filled('pendencia'), fn (Builder $q) => $q
                 ->where(fn (Builder $s) => $s
                     ->whereNull('prazo_item')
                     ->orWhere('prazo_item', '<=', now()->addDays($dias)->endOfDay())))
@@ -728,6 +762,7 @@ class ItemEntregaController extends Controller
                 ->where('doc_unitizacao_superior', $request->input('contentor'))
                 ->orWhere('numero_contentor', $request->input('contentor'))))
             ->when($request->boolean('ausentes'), fn (Builder $q) => $q->whereNotNull('ausente_no_sap_em'))
+            ->when($request->filled('pendencia'), fn (Builder $q) => $this->aplicarFiltroPendencia($q, (string) $request->input('pendencia')))
             ->when($request->filled('situacao'), fn (Builder $q) => $this->aplicarSituacao($q, (string) $request->input('situacao')))
             ->when($request->filled('previsao'), fn (Builder $q) => $this->aplicarFiltroPrevisao(
                 $q,
