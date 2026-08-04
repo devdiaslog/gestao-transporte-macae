@@ -1,7 +1,11 @@
 @php
     /** @var string $rota — nome da rota do formulário; os demais vêm do controller */
     $campo = 'h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-zinc-900 shadow-xs outline-none focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100';
-    $rotulo = 'mb-1 block text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400';
+    $rotulo = 'mb-1 flex items-center text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400';
+
+    // Mesmo "i" dos indicadores do dashboard: o texto explica o que a opção
+    // recorta e como o número por trás dela é obtido.
+    $info = fn (string $texto): string => '<span class="ml-1.5 inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-zinc-300 text-[10px] font-bold leading-none text-zinc-400 dark:border-zinc-600 dark:text-zinc-500" title="'.e($texto).'">i</span>';
     $temFiltro = array_filter($filtros) || request('situacao') || request('status') || $dias !== 3;
 
     // Cada status ganha a própria cor quando ligado: o operador reconhece o
@@ -35,7 +39,9 @@
                       {{ $semSituacao
                           ? 'border-zinc-900 bg-zinc-50 dark:border-zinc-100 dark:bg-zinc-800'
                           : 'border-slate-200 bg-white hover:border-slate-300 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-zinc-700' }}">
-                <span class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Total de itens</span>
+                <span class="flex items-center text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Total de itens{!! $info(
+                    'Itens do recorte atual, considerando todos os filtros aplicados. Clique para limpar o filtro de situação.'
+                ) !!}</span>
                 <span class="text-xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $resumo['total'] }}</span>
             </a>
 
@@ -57,6 +63,25 @@
 
         {{-- Status: cada um é um botão que liga e desliga --}}
         <div class="flex flex-wrap content-center items-center gap-1.5">
+            <span class="mr-1 flex items-center text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Status{!! $info(
+                'Código do item no SAP. Os botões acumulam: marque mais de um para ver os estados juntos. '
+                ."
+
+".'03 Liberado: o cliente liberou para transporte, ainda sem veículo. É o padrão da tela. '
+                ."
+".'04 Programado: veículo já selecionado pela programação. '
+                ."
+".'10 Faltoso: aguardando o solicitante acertar uma pendência do pedido. '
+                ."
+".'13 Suspenso interno: parado por fator do transporte. '
+                ."
+".'18 Suspenso cliente: parado por fator do cliente. '
+                ."
+".'09 Cancelado: transporte do item cancelado. '
+                ."
+
+".'Atendido (07) não aparece: item entregue deixa de ser cobrado.'
+            ) !!}</span>
             @foreach($statusDisponiveis as $s)
                 <label class="cursor-pointer">
                     <input type="checkbox" name="status[]" value="{{ $s->value }}" class="peer sr-only"
@@ -83,6 +108,7 @@
             </span>
             <input type="text" name="busca" value="{{ $filtros['busca'] ?? '' }}" autocomplete="off"
                    placeholder="RT, viagem, carga ou embalagem…"
+                   title="Busca por parte do texto no número da RT, na descrição da carga, no documento de unitização ou no número do atendimento (viagem)."
                    class="flex-1 bg-transparent px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100">
         </div>
 
@@ -91,7 +117,27 @@
              lista de rotas; a tela do trecho lista itens. --}}
         @isset($ordenacoes)
             <div>
-                <label class="{{ $rotulo }}">Ordenar por</label>
+                <label class="{{ $rotulo }}">Ordenar por{!! $info(
+                     'Define a ordem das rotas e o que a coluna Ordem numera. '
+                     ."
+
+".'Número de itens: rotas maiores primeiro. '
+                     ."
+".'Maior % no prazo: proporção dos itens cujo prazo ainda não venceu, maior primeiro. '
+                     ."
+".'Maior folga até o prazo: média de horas que restam nos itens ainda não vencidos, maior primeiro. '
+                     ."
+".'Prazo mais próximo: o primeiro item a vencer na rota. '
+                     ."
+".'Sem previsão: rotas com mais itens sem data prevista. '
+                     ."
+".'Área: maior área de piso ocupada. '
+                     ."
+".'Sugestão de atendimento: ordem que entrega o maior número de itens no prazo. '
+                     ."
+
+".'Em todos, o número de itens desempata: entre rotas iguais no critério, a maior vem primeiro.'
+                 ) !!}</label>
                 <select name="ordenar" class="{{ $campo }}">
                     @foreach($ordenacoes as $valor => $texto)
                         <option value="{{ $valor }}" @selected($ordenacao === $valor)>{{ $texto }}</option>
@@ -103,7 +149,18 @@
         {{-- Pendência registrada pela equipe. Não depende do status do SAP:
              o item aparece aqui assim que a pendência é anotada. --}}
         <div>
-            <label class="{{ $rotulo }}">Pendência</label>
+            <label class="{{ $rotulo }}">Pendência{!! $info(
+                 'Pendência do solicitante registrada pela equipe — falta detalhar itens, informar destino ou pessoa de contato. '
+                 .'Independe do status do SAP: aparece assim que é anotada, mesmo que o SAP ainda mostre o item como liberado. '
+                 ."
+
+".'Com pendência registrada: todos os itens com pendência anotada. '
+                 ."
+".'Espera com o solicitante vencida: passaram '.\App\Models\DemandaItem::HORAS_DE_ESPERA_FALTOSO.' h desde a abertura da pendência sem acerto. '
+                 ."
+
+".'Ao usar este filtro, o status e o horizonte de prazo deixam de restringir a lista.'
+             ) !!}</label>
             <select name="pendencia" class="{{ $campo }}">
                 <option value="">Todas</option>
                 @foreach($filtrosPendencia as $valor => $texto)
@@ -114,7 +171,16 @@
 
         {{-- Recorte de previsão: é por aqui que o operador acha o que replanejar --}}
         <div>
-            <label class="{{ $rotulo }}">Previsão</label>
+            <label class="{{ $rotulo }}">Previsão{!! $info(
+                 'Recorta pela data que a equipe prometeu para a entrega. '
+                 ."
+
+".'Sem previsão: nenhuma data foi definida ainda. '
+                 ."
+".'Previsão vencida: a data prometida já passou e o item não foi entregue. '
+                 ."
+".'Previsão vence em até: a data prometida cai dentro dos dias informados ao lado.'
+             ) !!}</label>
             <select name="previsao" class="{{ $campo }}" onchange="alternarDiasPrevisao(this)">
                 <option value="">Todas</option>
                 @foreach($filtrosPrevisao as $chave => $texto)
@@ -124,12 +190,21 @@
         </div>
 
         <div id="campo-dias-previsao" class="{{ ($filtros['previsao'] ?? '') === 'proxima' ? '' : 'hidden' }}">
-            <label class="{{ $rotulo }}">Dias</label>
+            <label class="{{ $rotulo }}">Dias{!! $info('Quantos dias à frente contam como "previsão vence em até". Conta a partir de agora.') !!}</label>
             <input type="number" name="dias_previsao" value="{{ $diasPrevisao }}" min="0" max="90" class="{{ $campo }} w-20">
         </div>
 
         <div>
-            <label class="{{ $rotulo }}">Prazo vence em até</label>
+            <label class="{{ $rotulo }}">Prazo vence em até{!! $info(
+                 'Horizonte do prazo acordado com o cliente, contado a partir de hoje. '
+                 .'D+3 traz o que vence até três dias à frente, e sempre inclui o que já venceu. '
+                 ."
+
+".'Já vencidos: só o que passou do prazo. Item sem prazo fica de fora — não há como afirmar que venceu. '
+                 ."
+
+".'O horizonte vale para os itens em cobrança (03 e 04). Cancelado, suspenso e faltoso aparecem por inteiro, independente do prazo.'
+             ) !!}</label>
             <select name="dias" class="{{ $campo }}">
                 <option value="vencidos" @selected($dias === -1)>Já vencidos</option>
                 @foreach([1 => 'D+1', 3 => 'D+3', 7 => 'D+7', 15 => 'D+15', 30 => 'D+30', 0 => 'Todos'] as $valor => $texto)

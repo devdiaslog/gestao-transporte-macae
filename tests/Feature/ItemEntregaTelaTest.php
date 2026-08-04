@@ -1290,7 +1290,7 @@ class ItemEntregaTelaTest extends TestCase
             ->assertOk();
 
         $resposta->assertSee('15,0 h', escape: false);
-        $resposta->assertSee('2 itens no prazo', escape: false);
+        $resposta->assertSee('2 itens em dia', escape: false);
     }
 
     public function test_media_acima_de_dois_dias_aparece_em_dias(): void
@@ -1310,7 +1310,7 @@ class ItemEntregaTelaTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get(route('itens-entrega.index', ['dias' => 0]))
             ->assertOk()
-            ->assertDontSee('itens no prazo', escape: false);
+            ->assertDontSee('itens em dia', escape: false);
     }
 
     public function test_estimativa_da_rota_e_gravada_e_muda_a_sugestao(): void
@@ -1712,5 +1712,31 @@ class ItemEntregaTelaTest extends TestCase
             ->getContent();
 
         $this->assertLessThan(mb_strpos($html, 'PEQUENA'), mb_strpos($html, 'GRANDE'));
+    }
+
+    /**
+     * Cada filtro explica o que recorta, no mesmo "i" usado nos indicadores do
+     * dashboard — sem isso, nem quem pediu a tela lembra o que cada opção faz.
+     */
+    public function test_filtros_explicam_o_que_fazem(): void
+    {
+        $this->item();
+
+        $resposta = $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index'))
+            ->assertOk();
+
+        // O "i" do dashboard, reaproveitado aqui.
+        $resposta->assertSee('cursor-help', escape: false);
+
+        foreach ([
+            'Define a ordem das rotas',
+            'Pendência do solicitante registrada pela equipe',
+            'Recorta pela data que a equipe prometeu',
+            'Horizonte do prazo acordado com o cliente',
+            'Código do item no SAP',
+        ] as $explicacao) {
+            $resposta->assertSee($explicacao, escape: false);
+        }
     }
 }

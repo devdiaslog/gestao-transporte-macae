@@ -212,7 +212,7 @@
                                             {{ $h < 48 ? number_format($h, 1, ',', '.').' h' : number_format($h / 24, 1, ',', '.').' d' }}
                                         </p>
                                         <p class="text-[10px] text-zinc-400 dark:text-zinc-500">
-                                            {{ $t->prazo_em_dia }} {{ $t->prazo_em_dia == 1 ? 'item' : 'itens' }} no prazo
+                                            {{ $t->prazo_em_dia }} {{ $t->prazo_em_dia == 1 ? 'item' : 'itens' }} em dia
                                         </p>
                                     @endif
                                 </td>
