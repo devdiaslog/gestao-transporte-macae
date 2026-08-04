@@ -350,15 +350,19 @@ class ItemEntregaController extends Controller
      */
     private function ordenar(Collection $trechos, string $ordenacao): Collection
     {
+        // O número de itens desempata todos os critérios: entre duas rotas
+        // igualmente boas pela medida escolhida, atender a maior rende mais.
+        // Nos critérios crescentes o total entra negativo, para continuar
+        // valendo "mais itens primeiro" numa ordenação ascendente.
         $ordenados = match ($ordenacao) {
-            'prazo_pct' => $trechos->sortByDesc(fn ($t) => $this->chanceNoPrazo($t)),
+            'prazo_pct' => $trechos->sortByDesc(fn ($t) => [$this->chanceNoPrazo($t), (int) $t->total]),
             // Mais folga primeiro: é onde ainda dá para planejar sem correr.
-            'media_prazo' => $trechos->sortByDesc(fn ($t) => $t->horas_ate_prazo ?? -1),
-            'prazo_proximo' => $trechos->sortBy(fn ($t) => $t->prazo_mais_proximo ?? '9999'),
-            'sem_previsao' => $trechos->sortByDesc('sem_previsao'),
-            'area' => $trechos->sortByDesc('area'),
+            'media_prazo' => $trechos->sortByDesc(fn ($t) => [$t->horas_ate_prazo ?? -1, (int) $t->total]),
+            'prazo_proximo' => $trechos->sortBy(fn ($t) => [$t->prazo_mais_proximo ?? '9999', -(int) $t->total]),
+            'sem_previsao' => $trechos->sortByDesc(fn ($t) => [(int) $t->sem_previsao, (int) $t->total]),
+            'area' => $trechos->sortByDesc(fn ($t) => [(float) $t->area, (int) $t->total]),
             // Fora do plano vai para o fim: não cabe no prazo de nenhum jeito.
-            'sugestao' => $trechos->sortBy(fn ($t) => $t->posicao_sugerida ?? PHP_INT_MAX),
+            'sugestao' => $trechos->sortBy(fn ($t) => [$t->posicao_sugerida ?? PHP_INT_MAX, -(int) $t->total]),
             // Mais itens primeiro e, entre rotas do mesmo tamanho, a que tem
             // mais chance de chegar no prazo.
             default => $trechos->sortByDesc(fn ($t) => [(int) $t->total, $this->chanceNoPrazo($t)]),

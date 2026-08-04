@@ -1656,4 +1656,61 @@ class ItemEntregaTelaTest extends TestCase
             ->assertOk()
             ->assertSee('peer-checked:border-rose-500', escape: false);
     }
+
+    /**
+     * Entre rotas empatadas no critério escolhido, atender a maior rende mais
+     * entregas — então o número de itens desempata todos eles.
+     */
+    public function test_numero_de_itens_desempata_o_percentual_no_prazo(): void
+    {
+        // Duas rotas com 100% no prazo, tamanhos diferentes.
+        $this->item(['local_origem' => 'PEQUENA', 'local_destino' => 'Z', 'prazo_item' => now()->addDays(2)]);
+        foreach (range(1, 4) as $i) {
+            $this->item(['local_origem' => 'GRANDE', 'local_destino' => 'Z', 'prazo_item' => now()->addDays(2)]);
+        }
+
+        $html = $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0, 'ordenar' => 'prazo_pct']))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertLessThan(mb_strpos($html, 'PEQUENA'), mb_strpos($html, 'GRANDE'));
+    }
+
+    public function test_numero_de_itens_desempata_a_folga_ate_o_prazo(): void
+    {
+        $prazo = now()->addDays(2);
+
+        $this->item(['local_origem' => 'PEQUENA', 'local_destino' => 'Z', 'prazo_item' => $prazo]);
+        foreach (range(1, 4) as $i) {
+            $this->item(['local_origem' => 'GRANDE', 'local_destino' => 'Z', 'prazo_item' => $prazo]);
+        }
+
+        $html = $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0, 'ordenar' => 'media_prazo']))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertLessThan(mb_strpos($html, 'PEQUENA'), mb_strpos($html, 'GRANDE'));
+    }
+
+    /**
+     * Em critério crescente o desempate continua sendo "mais itens primeiro".
+     */
+    public function test_numero_de_itens_desempata_o_prazo_mais_proximo(): void
+    {
+        $prazo = now()->addDays(2);
+
+        $this->item(['local_origem' => 'PEQUENA', 'local_destino' => 'Z', 'prazo_item' => $prazo]);
+        foreach (range(1, 4) as $i) {
+            $this->item(['local_origem' => 'GRANDE', 'local_destino' => 'Z', 'prazo_item' => $prazo]);
+        }
+
+        $html = $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0, 'ordenar' => 'prazo_proximo']))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertLessThan(mb_strpos($html, 'PEQUENA'), mb_strpos($html, 'GRANDE'));
+    }
 }
