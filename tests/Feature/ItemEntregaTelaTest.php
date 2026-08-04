@@ -1147,7 +1147,7 @@ class ItemEntregaTelaTest extends TestCase
                 'motivo' => 'Solicitante não informou o destino final',
                 'faltoso_desde' => $abertura->format('Y-m-d H:i:s'),
             ])
-            ->assertRedirect()
+            ->assertRedirect(route('itens-entrega.trecho', ['pendencia' => 'com_pendencia']))
             ->assertSessionHas('success');
 
         $item->refresh();
@@ -1567,5 +1567,34 @@ class ItemEntregaTelaTest extends TestCase
             ->assertOk()
             ->assertSee('Com pendência registrada')
             ->assertSee('Espera com o solicitante vencida');
+    }
+
+    /**
+     * O item marcado deixa o recorte em uso — some da tela se os filtros
+     * antigos forem mantidos. A marcação leva à lista de pendências, onde ele
+     * está visível.
+     */
+    public function test_marcar_faltoso_leva_para_a_lista_de_pendencias(): void
+    {
+        $item = $this->item();
+
+        $resposta = $this->actingAs(User::factory()->create())
+            ->from(route('itens-entrega.trecho', ['status' => ['03'], 'dias' => 3, 'busca' => 'algo']))
+            ->post(route('itens-entrega.faltoso'), [
+                'itens' => [$item->id],
+                'motivo' => 'Falta detalhar os itens',
+            ])
+            ->assertRedirect(route('itens-entrega.trecho', ['pendencia' => 'com_pendencia']));
+
+        // Os filtros que estavam em uso não voltam junto.
+        $destino = $resposta->headers->get('Location');
+        $this->assertStringNotContainsString('busca=', $destino);
+        $this->assertStringNotContainsString('status', $destino);
+
+        $this->actingAs(User::factory()->create())
+            ->get($destino)
+            ->assertOk()
+            ->assertSee($item->numero_rt)
+            ->assertSee('Falta detalhar os itens');
     }
 }

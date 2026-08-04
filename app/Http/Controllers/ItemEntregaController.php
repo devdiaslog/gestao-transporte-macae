@@ -543,12 +543,17 @@ class ItemEntregaController extends Controller
 
         $total = count($ids);
 
-        return back()->with('success', sprintf(
-            '%d %s marcado%s como faltoso.',
-            $total,
-            $total === 1 ? 'item' : 'itens',
-            $total === 1 ? '' : 's',
-        ));
+        // Sem limpar os filtros o item sumiria da tela: ele deixa o recorte que
+        // estava em uso no momento da marcação. A lista de pendências mostra o
+        // que acabou de ser registrado.
+        return redirect()
+            ->route('itens-entrega.trecho', ['pendencia' => 'com_pendencia'])
+            ->with('success', sprintf(
+                '%d %s marcado%s como faltoso.',
+                $total,
+                $total === 1 ? 'item' : 'itens',
+                $total === 1 ? '' : 's',
+            ));
     }
 
     /**
