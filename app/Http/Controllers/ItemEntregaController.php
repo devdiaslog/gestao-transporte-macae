@@ -154,10 +154,12 @@ class ItemEntregaController extends Controller
             ->get();
 
         $areaPorTrecho = $this->areaDasEmbalagensPorTrecho($request, $status, $dias);
+        $horasPorTrecho = $this->horasAtePrazoPorTrecho($request, $status, $dias);
 
-        $trechos->each(function ($trecho) use ($areaPorTrecho) {
+        $trechos->each(function ($trecho) use ($areaPorTrecho, $horasPorTrecho) {
             $chave = $trecho->local_origem_norm.'|'.$trecho->local_destino_norm;
             $trecho->area = round((float) $trecho->area_solta + ($areaPorTrecho[$chave] ?? 0), 2);
+            $trecho->horas_ate_prazo = $horasPorTrecho[$chave] ?? null;
         });
 
         return view('itens-entrega.index', [
@@ -685,6 +687,37 @@ class ItemEntregaController extends Controller
      *
      * @return array<string, float> chave "origem|destino"
      */
+    /**
+     * Horas que faltam, em média, até o prazo dos itens que ainda estão em dia.
+     *
+     * Serve para escolher o que atender primeiro: entre duas rotas com o mesmo
+     * número de itens, a de menor média é a que aperta antes. Só entram os
+     * itens no prazo — a média dos vencidos seria um número negativo sem uso
+     * para priorizar.
+     *
+     * O cálculo é feito aqui, e não no SQL, porque diferença entre datas muda
+     * de sintaxe entre SQLite (local) e MySQL (produção).
+     *
+     * @param  array<int, StatusSap>  $status
+     * @return array<string, float> horas médias por "origem|destino"
+     */
+    private function horasAtePrazoPorTrecho(Request $request, array $status, int $dias): array
+    {
+        $agora = now();
+
+        return $this->queryFiltrada($request, $status, $dias)
+            ->where('fora_escopo', false)
+            ->whereNotNull('prazo_item')
+            ->where('prazo_item', '>=', $agora)
+            ->get(['local_origem_norm', 'local_destino_norm', 'prazo_item'])
+            ->groupBy(fn (DemandaItem $i) => $i->local_origem_norm.'|'.$i->local_destino_norm)
+            ->map(fn ($doTrecho) => round(
+                $doTrecho->avg(fn (DemandaItem $i) => $agora->diffInMinutes($i->prazo_item)) / 60,
+                1,
+            ))
+            ->all();
+    }
+
     private function areaDasEmbalagensPorTrecho(Request $request, array $status, int $dias): array
     {
         return $this->queryFiltrada($request, $status, $dias)

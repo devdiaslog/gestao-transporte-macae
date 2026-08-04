@@ -1269,4 +1269,46 @@ class ItemEntregaTelaTest extends TestCase
             ->assertOk()
             ->assertDontSee('vencido de', escape: false);
     }
+
+    /**
+     * A média serve para priorizar: entre rotas com o mesmo número de itens, a
+     * de menor média é a que aperta antes. Só entram os itens ainda no prazo.
+     */
+    public function test_rota_mostra_a_media_de_horas_ate_o_prazo(): void
+    {
+        // 10h e 20h  ->  média 15h
+        $this->item(['prazo_item' => now()->addHours(10)]);
+        $this->item(['prazo_item' => now()->addHours(20)]);
+        // Vencido: a média dos vencidos seria negativa e não ajuda a priorizar.
+        $this->item(['prazo_item' => now()->subHours(30)]);
+        // Sem prazo: nada a medir.
+        $this->item(['prazo_item' => null]);
+
+        $resposta = $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->assertOk();
+
+        $resposta->assertSee('15,0 h', escape: false);
+        $resposta->assertSee('2 itens no prazo', escape: false);
+    }
+
+    public function test_media_acima_de_dois_dias_aparece_em_dias(): void
+    {
+        $this->item(['prazo_item' => now()->addHours(72)]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->assertOk()
+            ->assertSee('3,0 d', escape: false);
+    }
+
+    public function test_rota_so_com_vencidos_nao_tem_media(): void
+    {
+        $this->item(['prazo_item' => now()->subDay()]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->assertOk()
+            ->assertDontSee('itens no prazo', escape: false);
+    }
 }

@@ -68,6 +68,10 @@
                                 title="Proporção dos itens cujo prazo ainda não venceu, conforme a data e hora atuais. Itens sem prazo não entram na conta.">
                                 Prazo em dia
                             </th>
+                            <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600"
+                                title="Tempo que falta, em média, até o prazo dos itens que ainda estão em dia. Quanto menor, mais a rota aperta.">
+                                Média até o prazo
+                            </th>
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Prazo mais próximo</th>
                             <th class="w-10"></th>
                         </tr>
@@ -153,6 +157,23 @@
                                         </p>
                                     @endif
                                 </td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap">
+                                    @if($t->horas_ate_prazo === null)
+                                        <span class="text-xs text-zinc-400">—</span>
+                                    @else
+                                        @php
+                                            $h = $t->horas_ate_prazo;
+                                            // Abaixo de um dia a rota exige decisão hoje.
+                                            $urgente = $h < 24;
+                                        @endphp
+                                        <p class="text-xs font-semibold tabular-nums {{ $urgente ? 'text-red-600 dark:text-red-400' : 'text-zinc-700 dark:text-zinc-300' }}">
+                                            {{ $h < 48 ? number_format($h, 1, ',', '.').' h' : number_format($h / 24, 1, ',', '.').' d' }}
+                                        </p>
+                                        <p class="text-[10px] text-zinc-400 dark:text-zinc-500">
+                                            {{ $t->prazo_em_dia }} {{ $t->prazo_em_dia == 1 ? 'item' : 'itens' }} no prazo
+                                        </p>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3 whitespace-nowrap">
                                     @if($prazo)
                                         <p class="text-xs tabular-nums {{ $prazo->isPast() ? 'font-semibold text-red-600 dark:text-red-400' : 'text-zinc-700 dark:text-zinc-300' }}">
@@ -201,7 +222,7 @@
                                     </div>
                                 @endif
                             </td>
-                            <td colspan="2"></td>
+                            <td colspan="3"></td>
                         </tr>
                     </tfoot>
                 </table>
