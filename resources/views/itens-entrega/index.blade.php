@@ -55,21 +55,28 @@
             {{-- Resultado do sequenciamento: quantos itens o plano salva e
                  quantos não cabem, para a decisão ser tomada com o número à
                  vista e não pela impressão de cada rota isolada. --}}
-            @if($ordenacao === 'sugestao' && ($plano['itens_no_prazo'] > 0 || $plano['itens_perdidos'] > 0))
-                <div class="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
-                    <div class="flex items-baseline gap-1.5">
-                        <span class="text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{{ $plano['itens_no_prazo'] }}</span>
-                        <span class="text-xs text-zinc-500 dark:text-zinc-400">itens cabem no prazo nesta ordem</span>
-                    </div>
-                    @if($plano['itens_perdidos'] > 0)
-                        <div class="flex items-baseline gap-1.5">
-                            <span class="text-lg font-bold tabular-nums text-red-600 dark:text-red-400">{{ $plano['itens_perdidos'] }}</span>
-                            <span class="text-xs text-zinc-500 dark:text-zinc-400">não cabem</span>
+            @if($ordenacao === 'sugestao')
+                <div class="border-b border-slate-100 bg-slate-50 px-5 py-4 dark:border-zinc-800 dark:bg-zinc-800/30">
+                    <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Sugestão de atendimento</p>
+                    <p class="mt-1 max-w-2xl text-xs text-zinc-600 dark:text-zinc-400">
+                        Ordem que entrega o <span class="font-semibold">maior número de itens no prazo</span>.
+                        Supõe um atendimento por vez, de {{ number_format(\App\Models\DuracaoRota::HORAS_PADRAO, 0) }} h.
+                    </p>
+
+                    @if($plano['itens_no_prazo'] > 0 || $plano['itens_perdidos'] > 0)
+                        <div class="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+                            <div class="flex items-baseline gap-1.5">
+                                <span class="text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{{ $plano['itens_no_prazo'] }}</span>
+                                <span class="text-xs text-zinc-500 dark:text-zinc-400">itens cabem no prazo nesta ordem</span>
+                            </div>
+                            @if($plano['itens_perdidos'] > 0)
+                                <div class="flex items-baseline gap-1.5">
+                                    <span class="text-lg font-bold tabular-nums text-red-600 dark:text-red-400">{{ $plano['itens_perdidos'] }}</span>
+                                    <span class="text-xs text-zinc-500 dark:text-zinc-400">não cabem</span>
+                                </div>
+                            @endif
                         </div>
                     @endif
-                    <p class="ml-auto max-w-md text-[11px] text-zinc-400 dark:text-zinc-500">
-                        Estimativa de {{ number_format(\App\Models\DuracaoRota::HORAS_PADRAO, 0) }} h por atendimento.
-                    </p>
                 </div>
             @endif
 

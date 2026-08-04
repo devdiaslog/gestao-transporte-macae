@@ -1478,4 +1478,30 @@ class ItemEntregaTelaTest extends TestCase
             ->assertOk()
             ->assertSee('<option value="itens" selected>Número de itens</option>', escape: false);
     }
+
+    /**
+     * A ordem sugerida não é óbvia à primeira vista, então a tela explica o
+     * que ela persegue e sob quais premissas — inclusive a de um atendimento
+     * por vez, que faz o número ser conservador com frota em campo.
+     */
+    public function test_sugestao_explica_o_criterio_na_tela(): void
+    {
+        $this->item(['prazo_item' => now()->addDays(2)]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0, 'ordenar' => 'sugestao']))
+            ->assertOk()
+            ->assertSee('maior número de itens no prazo', escape: false)
+            ->assertSee('um atendimento por vez', escape: false);
+    }
+
+    public function test_explicacao_nao_aparece_nas_outras_ordenacoes(): void
+    {
+        $this->item(['prazo_item' => now()->addDays(2)]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->assertOk()
+            ->assertDontSee('um atendimento por vez', escape: false);
+    }
 }
