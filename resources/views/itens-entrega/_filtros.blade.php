@@ -104,6 +104,7 @@
         <div>
             <label class="{{ $rotulo }}">Prazo vence em até</label>
             <select name="dias" class="{{ $campo }}">
+                <option value="vencidos" @selected($dias === -1)>Já vencidos</option>
                 @foreach([1 => 'D+1', 3 => 'D+3', 7 => 'D+7', 15 => 'D+15', 30 => 'D+30', 0 => 'Todos'] as $valor => $texto)
                     <option value="{{ $valor }}" @selected($dias === $valor)>{{ $texto }}</option>
                 @endforeach

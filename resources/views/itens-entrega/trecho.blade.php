@@ -71,6 +71,9 @@
                 </button>
             @endif
             @if($podeEscopo)
+                <button type="button" onclick="abrirModal('modal-faltoso')" class="{{ $acaoLote }}">
+                    Marcar como faltoso
+                </button>
                 <button type="button" onclick="abrirModal('modal-escopo')" class="{{ $acaoLote }}">
                     Não é nossa responsabilidade
                 </button>
@@ -175,6 +178,27 @@
                                     <p class="mt-0.5 max-w-72 truncate text-xs text-zinc-500 dark:text-zinc-400" title="{{ $item->descricao_item }}">
                                         {{ $item->descricao_item ?? '—' }}
                                     </p>
+                                    @if($item->faltoso())
+                                        <div class="mt-1">
+                                            @if($item->esperaFaltosoVencida())
+                                                <span class="inline-flex items-center rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-950/50 dark:text-rose-400"
+                                                      title="{{ $item->faltoso_motivo }}">
+                                                    espera vencida em {{ $item->esperaFaltosoAte()->format('d/m/Y H:i') }}
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"
+                                                      title="{{ $item->faltoso_motivo }}">
+                                                    aguarda solicitante até {{ $item->esperaFaltosoAte()?->format('d/m/Y H:i') }}
+                                                </span>
+                                            @endif
+                                            @if($item->faltoso_motivo)
+                                                <p class="mt-0.5 max-w-72 truncate text-[11px] text-zinc-500 dark:text-zinc-400" title="{{ $item->faltoso_motivo }}">
+                                                    {{ $item->faltoso_motivo }}
+                                                </p>
+                                            @endif
+                                        </div>
+                                    @endif
+
                                     @if($item->tipo_item)
                                         <span class="mt-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium {{ $coresTipo[$item->tipo_item->value] }}"
                                               @if($item->tipo_item_manual) title="Tipo definido pela equipe" @endif>
@@ -445,6 +469,41 @@
     </div>
     @endif
 
+    {{-- Modal: marcar como faltoso --}}
+    @if($podeEscopo)
+    <div id="modal-faltoso" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+        <form method="POST" action="{{ route('itens-entrega.faltoso') }}" class="w-full max-w-md rounded-xl bg-white p-5 shadow-xl dark:bg-zinc-900">
+            @csrf
+            <div id="itens-faltoso"></div>
+            <h3 class="text-base font-semibold text-zinc-900 dark:text-zinc-100">Marcar como faltoso</h3>
+            <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                <span id="resumo-faltoso"></span>
+            </p>
+
+            <label class="mt-4 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Pendência do solicitante
+            </label>
+            <textarea name="motivo" rows="3" required maxlength="1000"
+                      placeholder="O que precisa ser acertado no pedido"
+                      class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"></textarea>
+
+            <label class="mt-3 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Pendência aberta em
+            </label>
+            <input type="datetime-local" name="faltoso_desde" value="{{ now()->format('Y-m-d\TH:i') }}"
+                   class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+            <p class="mt-1 text-[11px] text-zinc-400 dark:text-zinc-500">
+                A espera de {{ \App\Models\DemandaItem::HORAS_DE_ESPERA_FALTOSO }} horas conta a partir desta data.
+            </p>
+
+            <div class="mt-5 flex justify-end gap-2">
+                <button type="button" onclick="fecharModal('modal-faltoso')" class="rounded-lg px-4 py-2 text-sm text-zinc-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800">Cancelar</button>
+                <button type="submit" class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900">Marcar</button>
+            </div>
+        </form>
+    </div>
+    @endif
+
     {{-- Modal: definir tipo --}}
     @if($podePrever)
     <div id="modal-tipo" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
@@ -557,13 +616,13 @@
                 if (barra) { barra.classList.toggle('hidden', marcados.length === 0); }
 
                 var descricao = descrever(marcados);
-                ['resumo-previsao', 'resumo-escopo', 'resumo-rota', 'resumo-prazo', 'resumo-tipo'].forEach(function (id) {
+                ['resumo-previsao', 'resumo-escopo', 'resumo-rota', 'resumo-prazo', 'resumo-tipo', 'resumo-faltoso'].forEach(function (id) {
                     var el = document.getElementById(id);
                     if (el) { el.textContent = descricao; }
                 });
 
                 // Os ids seguem para o POST como campos ocultos dos formulários.
-                ['itens-previsao', 'itens-escopo', 'itens-rota', 'itens-prazo', 'itens-tipo'].forEach(function (id) {
+                ['itens-previsao', 'itens-escopo', 'itens-rota', 'itens-prazo', 'itens-tipo', 'itens-faltoso'].forEach(function (id) {
                     var alvo = document.getElementById(id);
                     if (!alvo) { return; }
                     alvo.innerHTML = marcados.map(function (c) {
@@ -606,11 +665,11 @@
             };
 
             document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') { ['modal-previsao', 'modal-escopo', 'modal-rota', 'modal-prazo', 'modal-tipo'].forEach(window.fecharModal); }
+                if (e.key === 'Escape') { ['modal-previsao', 'modal-escopo', 'modal-rota', 'modal-prazo', 'modal-tipo', 'modal-faltoso'].forEach(window.fecharModal); }
             });
 
             // Fecha ao clicar no fundo, não no conteúdo do modal.
-            ['modal-previsao', 'modal-escopo', 'modal-rota', 'modal-prazo', 'modal-tipo'].forEach(function (id) {
+            ['modal-previsao', 'modal-escopo', 'modal-rota', 'modal-prazo', 'modal-tipo', 'modal-faltoso'].forEach(function (id) {
                 var m = document.getElementById(id);
                 if (m) {
                     m.addEventListener('click', function (e) {

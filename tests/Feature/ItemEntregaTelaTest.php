@@ -50,7 +50,12 @@ class ItemEntregaTelaTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_lista_itens_em_cobranca_por_padrao(): void
+    /**
+     * O foco da tela é o item recém-liberado, que ainda não tem viagem — é
+     * onde falta dar previsão. Os demais status continuam acessíveis pelo
+     * filtro.
+     */
+    public function test_lista_apenas_os_liberados_por_padrao(): void
     {
         $liberado = $this->item();
         $programado = $this->item(['status_sap' => StatusSap::Programado]);
@@ -60,7 +65,7 @@ class ItemEntregaTelaTest extends TestCase
             ->get(route('itens-entrega.trecho'))
             ->assertOk()
             ->assertSee($liberado->numero_rt)
-            ->assertSee($programado->numero_rt)
+            ->assertDontSee($programado->numero_rt)
             ->assertDontSee($atendido->numero_rt);
     }
 
@@ -116,14 +121,14 @@ class ItemEntregaTelaTest extends TestCase
     /**
      * Sem escolha, valem os status que o cliente cobra.
      */
-    public function test_status_padrao_sao_liberado_e_programado(): void
+    public function test_programado_continua_acessivel_pelo_filtro(): void
     {
         $liberado = $this->item();
         $programado = $this->item(['status_sap' => StatusSap::Programado]);
         $cancelado = $this->item(['status_sap' => StatusSap::Cancelado]);
 
         $this->actingAs(User::factory()->create())
-            ->get(route('itens-entrega.trecho'))
+            ->get(route('itens-entrega.trecho', ['status' => ['03', '04']]))
             ->assertOk()
             ->assertSee($liberado->numero_rt)
             ->assertSee($programado->numero_rt)
@@ -1098,5 +1103,128 @@ class ItemEntregaTelaTest extends TestCase
 
         $resposta->assertSee("iniciarImportacao('form-importar')", escape: false);
         $resposta->assertDontSee("getElementById('form-importar').submit()", escape: false);
+    }
+
+    public function test_padrao_da_tela_traz_apenas_os_liberados(): void
+    {
+        $liberado = $this->item(['status_sap' => StatusSap::Liberado]);
+        $programado = $this->item(['status_sap' => StatusSap::Programado]);
+
+        $resposta = $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.trecho'))
+            ->assertOk();
+
+        $resposta->assertSee($liberado->numero_rt);
+        $resposta->assertDontSee($programado->numero_rt);
+    }
+
+    public function test_filtro_de_prazo_isola_os_ja_vencidos(): void
+    {
+        $vencido = $this->item(['prazo_item' => now()->subDays(2)]);
+        $futuro = $this->item(['prazo_item' => now()->addDay()]);
+        $semPrazo = $this->item(['prazo_item' => null]);
+
+        $resposta = $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.trecho', ['dias' => 'vencidos']))
+            ->assertOk();
+
+        $resposta->assertSee($vencido->numero_rt);
+        $resposta->assertDontSee($futuro->numero_rt);
+        // Sem prazo não há como afirmar que venceu.
+        $resposta->assertDontSee($semPrazo->numero_rt);
+    }
+
+    public function test_marca_item_como_faltoso_com_o_motivo(): void
+    {
+        $item = $this->item();
+        $usuario = User::factory()->create();
+        $abertura = now()->subHours(3);
+
+        $this->actingAs($usuario)
+            ->post(route('itens-entrega.faltoso'), [
+                'itens' => [$item->id],
+                'motivo' => 'Solicitante não informou o destino final',
+                'faltoso_desde' => $abertura->format('Y-m-d H:i:s'),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $item->refresh();
+
+        $this->assertSame(StatusSap::Faltoso, $item->status_sap);
+        $this->assertSame('Solicitante não informou o destino final', $item->faltoso_motivo);
+        $this->assertSame($usuario->id, $item->faltoso_por);
+        $this->assertTrue($item->faltoso());
+        // A espera corre a partir da abertura informada, não do registro.
+        $this->assertSame(
+            $abertura->copy()->addHours(DemandaItem::HORAS_DE_ESPERA_FALTOSO)->format('Y-m-d H:i'),
+            $item->esperaFaltosoAte()->format('Y-m-d H:i'),
+        );
+        $this->assertFalse($item->esperaFaltosoVencida());
+    }
+
+    public function test_faltoso_sem_data_usa_o_instante_do_registro(): void
+    {
+        $item = $this->item();
+
+        $this->actingAs(User::factory()->create())
+            ->post(route('itens-entrega.faltoso'), [
+                'itens' => [$item->id],
+                'motivo' => 'Falta detalhar os itens',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertNotNull($item->refresh()->faltoso_desde);
+    }
+
+    public function test_faltoso_exige_motivo(): void
+    {
+        $item = $this->item();
+
+        $this->actingAs(User::factory()->create())
+            ->post(route('itens-entrega.faltoso'), ['itens' => [$item->id], 'motivo' => ''])
+            ->assertSessionHasErrors('motivo');
+
+        $this->assertSame(StatusSap::Liberado, $item->refresh()->status_sap);
+    }
+
+    public function test_espera_vence_depois_das_48_horas(): void
+    {
+        $item = $this->item();
+        $item->marcarFaltoso('Aguardando contato', now()->subHours(49), null);
+
+        $this->assertTrue($item->esperaFaltosoVencida());
+    }
+
+    public function test_importacao_reconhece_o_codigo_10_do_sap(): void
+    {
+        $caminho = $this->planilha([
+            ['326900010', '1', '1', '10.08.2026', '14:00:00', 'A', 'B', 'C', '10'],
+        ]);
+
+        $this->actingAs(User::factory()->create())
+            ->post(route('itens-entrega.importar'), ['arquivo' => $caminho])
+            ->assertRedirect();
+
+        $item = DemandaItem::where('numero_rt', '326900010')->firstOrFail();
+
+        $this->assertSame(StatusSap::Faltoso, $item->status_sap);
+        // O SAP não transmite o motivo: fica em branco até alguém registrar.
+        $this->assertNull($item->faltoso_motivo);
+    }
+
+    public function test_filtra_os_itens_faltosos(): void
+    {
+        $faltoso = $this->item();
+        $faltoso->marcarFaltoso('Pendência do solicitante', now(), null);
+        $liberado = $this->item();
+
+        $resposta = $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.trecho', ['status' => ['10'], 'dias' => 0]))
+            ->assertOk();
+
+        $resposta->assertSee($faltoso->numero_rt);
+        $resposta->assertDontSee($liberado->numero_rt);
     }
 }

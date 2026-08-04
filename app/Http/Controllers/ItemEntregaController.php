@@ -9,6 +9,7 @@ use App\Http\Requests\AjustarRotaRequest;
 use App\Http\Requests\DefinirPrevisaoRequest;
 use App\Http\Requests\DefinirTipoItemRequest;
 use App\Http\Requests\ImportarItensLiberadosRequest;
+use App\Http\Requests\MarcarFaltosoRequest;
 use App\Http\Requests\MarcarForaEscopoRequest;
 use App\Http\Requests\RenegociarPrazoRequest;
 use App\Models\DemandaItem;
@@ -19,6 +20,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -36,6 +38,12 @@ class ItemEntregaController extends Controller
     /** Horizonte padrão do filtro: itens que vencem nos próximos 3 dias. */
     private const DIAS_PADRAO = 3;
 
+    /** Valor do select que pede só o que já passou do prazo. */
+    private const FILTRO_VENCIDOS = 'vencidos';
+
+    /** Sentinela interno do recorte "vencidos" (não é um horizonte em dias). */
+    private const DIAS_VENCIDOS = -1;
+
     /**
      * Status que a tela permite filtrar, na ordem do ciclo de vida.
      *
@@ -45,13 +53,19 @@ class ItemEntregaController extends Controller
     private const STATUS_FILTRAVEIS = [
         StatusSap::Liberado,
         StatusSap::Programado,
+        StatusSap::Faltoso,
         StatusSap::SuspensoInterno,
         StatusSap::SuspensoExterno,
         StatusSap::Cancelado,
     ];
 
-    /** Status considerados quando o usuário não escolhe nenhum. */
-    private const STATUS_PADRAO = [StatusSap::Liberado, StatusSap::Programado];
+    /**
+     * Status considerado quando o usuário não escolhe nenhum.
+     *
+     * O foco desta tela é o item recém-liberado, que ainda não tem viagem —
+     * é onde a previsão precisa ser dada.
+     */
+    private const STATUS_PADRAO = [StatusSap::Liberado];
 
     /**
      * Recortes de previsão — o que o operador busca quando vai replanejar.
@@ -210,8 +224,16 @@ class ItemEntregaController extends Controller
         return $escolhidos !== [] ? $escolhidos : self::STATUS_PADRAO;
     }
 
+    /**
+     * Horizonte do prazo. Além do D+N, aceita o recorte "vencidos", que isola
+     * o que já passou do prazo — sinalizado por {@see self::DIAS_VENCIDOS}.
+     */
     private function diasDe(Request $request): int
     {
+        if ($request->input('dias') === self::FILTRO_VENCIDOS) {
+            return self::DIAS_VENCIDOS;
+        }
+
         return $request->has('dias') && $request->input('dias') !== ''
             ? max(0, (int) $request->input('dias'))
             : self::DIAS_PADRAO;
@@ -335,6 +357,38 @@ class ItemEntregaController extends Controller
      * operação, e é aqui que ela corrige. Os campos passam a contar como
      * editados pelo operador, então a próxima importação não os desfaz.
      */
+    /**
+     * Registra a pendência que trava os itens selecionados (status 10).
+     *
+     * O transporte é nosso, mas o solicitante precisa acertar algo no pedido.
+     * A partir do início informado corre a espera; passada ela sem acerto, a
+     * tela sinaliza que o item pode virar suspensão do cliente (18) — quem
+     * decide continua sendo uma pessoa.
+     */
+    public function marcarFaltoso(MarcarFaltosoRequest $request): RedirectResponse
+    {
+        $ids = $request->validated('itens');
+        $motivo = $request->validated('motivo');
+        $desde = $request->validated('faltoso_desde');
+        $desde = $desde !== null ? Carbon::parse($desde) : null;
+        $usuarioId = $request->user()->id;
+
+        DB::transaction(function () use ($ids, $motivo, $desde, $usuarioId) {
+            foreach (DemandaItem::whereIn('id', $ids)->get() as $item) {
+                $item->marcarFaltoso($motivo, $desde, $usuarioId);
+            }
+        });
+
+        $total = count($ids);
+
+        return back()->with('success', sprintf(
+            '%d %s marcado%s como faltoso.',
+            $total,
+            $total === 1 ? 'item' : 'itens',
+            $total === 1 ? '' : 's',
+        ));
+    }
+
     /**
      * Fixa o tipo dos itens selecionados; sem tipo, devolve cada um ao que a
      * rota indica.
@@ -518,6 +572,11 @@ class ItemEntregaController extends Controller
                 ->where(fn (Builder $s) => $s
                     ->whereNull('prazo_item')
                     ->orWhere('prazo_item', '<=', now()->addDays($dias)->endOfDay())))
+            // Recorte inverso: só o que já passou do prazo. Item sem prazo fica
+            // de fora — não há como afirmar que venceu.
+            ->when($dias === self::DIAS_VENCIDOS, fn (Builder $q) => $q
+                ->whereNotNull('prazo_item')
+                ->where('prazo_item', '<', now()))
             ->when($request->filled('busca'), function (Builder $q) use ($request) {
                 $busca = trim((string) $request->input('busca'));
                 $q->where(fn (Builder $s) => $s

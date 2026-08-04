@@ -151,6 +151,7 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
     Route::get('itens-entrega/trecho', [ItemEntregaController::class, 'trecho'])->name('itens-entrega.trecho')->middleware('can:itens-entrega.ver');
     Route::post('itens-entrega/rota', [ItemEntregaController::class, 'ajustarRota'])->name('itens-entrega.rota')->middleware('can:itens-entrega.prever');
     Route::post('itens-entrega/tipo', [ItemEntregaController::class, 'definirTipo'])->name('itens-entrega.tipo')->middleware('can:itens-entrega.prever');
+    Route::post('itens-entrega/faltoso', [ItemEntregaController::class, 'marcarFaltoso'])->name('itens-entrega.faltoso')->middleware('can:itens-entrega.escopo');
     Route::post('itens-entrega/prazo', [ItemEntregaController::class, 'renegociarPrazo'])->name('itens-entrega.prazo')->middleware('can:itens-entrega.prazo');
     Route::get('itens-entrega-export', [ItemEntregaController::class, 'export'])->name('itens-entrega.export')->middleware('can:itens-entrega.ver');
     Route::post('itens-entrega/previsao', [ItemEntregaController::class, 'definirPrevisao'])->name('itens-entrega.previsao')->middleware('can:itens-entrega.prever');

@@ -18,6 +18,7 @@ enum StatusSap: string
 {
     case Liberado = '03';
     case Programado = '04';
+    case Faltoso = '10';
     case Atendido = '07';
     case Cancelado = '09';
     case SuspensoInterno = '13';
@@ -28,6 +29,7 @@ enum StatusSap: string
         return match ($this) {
             self::Liberado => 'Liberado',
             self::Programado => 'Programado',
+            self::Faltoso => 'Faltoso',
             self::Atendido => 'Atendido',
             self::Cancelado => 'Cancelado',
             self::SuspensoInterno => 'Suspenso interno',
@@ -43,6 +45,7 @@ enum StatusSap: string
         return match ($this) {
             self::Liberado => 'Liberado pelo cliente para o transporte',
             self::Programado => 'Veículo selecionado pela programação',
+            self::Faltoso => 'Aguardando o solicitante acertar uma pendência do pedido',
             self::Atendido => 'Entrega realizada no físico e registrada no SAP',
             self::Cancelado => 'Transporte do item cancelado',
             self::SuspensoInterno => 'Parado por fator interno do transporte',
@@ -55,6 +58,7 @@ enum StatusSap: string
         return match ($this) {
             self::Liberado => 'sky',
             self::Programado => 'indigo',
+            self::Faltoso => 'rose',
             self::Atendido => 'emerald',
             self::Cancelado => 'zinc',
             self::SuspensoInterno => 'amber',
@@ -68,7 +72,18 @@ enum StatusSap: string
      */
     public function emCobranca(): bool
     {
-        return in_array($this, [self::Liberado, self::Programado], true);
+        return in_array($this, [self::Liberado, self::Programado, self::Faltoso], true);
+    }
+
+    /**
+     * O pedido tem uma pendência do solicitante — falta detalhar itens,
+     * destino, pessoa de contato. O transporte é nosso e o item continua vivo;
+     * só não anda enquanto a pendência não for acertada. Passado o tempo de
+     * espera sem acerto, vira suspensão de responsabilidade do cliente (18).
+     */
+    public function faltoso(): bool
+    {
+        return $this === self::Faltoso;
     }
 
     /**

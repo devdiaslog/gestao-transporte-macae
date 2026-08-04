@@ -77,7 +77,8 @@ enum StatusItemDemanda: string
         return match (str_pad((string) $codigo, 2, '0', STR_PAD_LEFT)) {
             // 03 (liberado pelo cliente) e 04 (programado) são itens que ainda
             // aguardam entrega — do ponto de vista operacional, ambos pendentes.
-            '03', '04' => self::Pendente,
+            // 10 (faltoso) aguarda o solicitante, mas o item ainda vai andar.
+            '03', '04', '10' => self::Pendente,
             '07' => self::Entregue,
             '09' => self::Cancelado,
             '13', '18' => self::Suspenso,

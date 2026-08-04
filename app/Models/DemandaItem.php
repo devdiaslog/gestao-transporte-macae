@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 
 /**
  * Item de entrega.
@@ -42,6 +43,9 @@ class DemandaItem extends Model
         'comprimento',
         'status_item',
         'status_sap',
+        'faltoso_motivo',
+        'faltoso_desde',
+        'faltoso_por',
         'prazo_item',
         'prazo_sap',
         'prazo_motivo',
@@ -95,6 +99,7 @@ class DemandaItem extends Model
             'tipo_item' => TipoDemanda::class,
             'tipo_item_manual' => 'boolean',
             'status_sap' => StatusSap::class,
+            'faltoso_desde' => 'datetime',
             'prazo_item' => 'datetime',
             'prazo_sap' => 'datetime',
             'prazo_alterado_em' => 'datetime',
@@ -176,6 +181,63 @@ class DemandaItem extends Model
         $this->tipo_item_manual = $tipo !== null;
         $this->tipo_item = $tipo ?? $this->tipoPelaRota();
         $this->save();
+    }
+
+    /**
+     * Tempo mínimo de espera com o solicitante antes de o item poder virar
+     * suspensão de responsabilidade dele (18).
+     */
+    public const HORAS_DE_ESPERA_FALTOSO = 48;
+
+    public function faltoso(): bool
+    {
+        return $this->status_sap?->faltoso() ?? false;
+    }
+
+    /**
+     * Instante em que a espera com o solicitante se esgota.
+     */
+    public function esperaFaltosoAte(): ?Carbon
+    {
+        return $this->faltoso_desde?->copy()->addHours(self::HORAS_DE_ESPERA_FALTOSO);
+    }
+
+    /**
+     * A espera acabou e ninguém acertou a pendência: o item está liberado
+     * para virar 18. A decisão continua sendo de uma pessoa — o sistema
+     * apenas sinaliza.
+     */
+    public function esperaFaltosoVencida(): bool
+    {
+        $limite = $this->esperaFaltosoAte();
+
+        return $this->faltoso() && $limite !== null && $limite->isPast();
+    }
+
+    /**
+     * Registra a pendência que trava o item, com o instante em que ela começou
+     * a correr — o usuário informa, e o padrão é o momento do registro.
+     */
+    public function marcarFaltoso(string $motivo, ?Carbon $desde, ?int $usuarioId): void
+    {
+        $this->status_sap = StatusSap::Faltoso;
+        $this->faltoso_motivo = $motivo;
+        $this->faltoso_desde = $desde ?? now();
+        $this->faltoso_por = $usuarioId;
+
+        // O status passa a ser nosso: a importação para de sobrescrevê-lo.
+        $this->marcarCampoEditado('status_item');
+        $this->save();
+    }
+
+    private function marcarCampoEditado(string $campo): void
+    {
+        $editados = $this->campos_editados ?? [];
+
+        if (! in_array($campo, $editados, true)) {
+            $editados[] = $campo;
+            $this->campos_editados = array_values($editados);
+        }
     }
 
     public function campoEditadoPeloOperador(string $campo): bool
