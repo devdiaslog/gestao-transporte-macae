@@ -116,6 +116,10 @@ class ItemEntregaController extends Controller
         $status = $this->statusDe($request);
         $dias = $this->diasDe($request);
 
+        // Um único instante para toda a consulta: com now() dentro do SQL cada
+        // linha compararia com um relógio ligeiramente diferente.
+        $agora = now()->toDateTimeString();
+
         // Área de piso: item sem embalagem vale pelas próprias medidas; dentro
         // de uma embalagem superior vale a área dela, somada à parte para
         // contar cada uma uma vez só.
@@ -139,9 +143,11 @@ class ItemEntregaController extends Controller
                           and prazo_item is not null
                           and data_hora_previsao_entrega > prazo_item then 1 else 0 end) as fora_do_prazo,
                 sum(case when fora_escopo = 1 then 1 else 0 end) as fora_escopo,
+                sum(case when fora_escopo = 0 and prazo_item is not null and prazo_item >= ? then 1 else 0 end) as prazo_em_dia,
+                sum(case when fora_escopo = 0 and prazo_item is not null and prazo_item < ? then 1 else 0 end) as prazo_vencido,
                 min(prazo_item) as prazo_mais_proximo,
                 count(distinct doc_unitizacao_superior) as embalagens
-            ')
+            ', [$agora, $agora])
             ->groupBy('local_origem_norm', 'local_destino_norm')
             ->orderByDesc('sem_previsao')
             ->orderByDesc('total')

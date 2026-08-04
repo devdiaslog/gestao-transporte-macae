@@ -1229,43 +1229,44 @@ class ItemEntregaTelaTest extends TestCase
     }
 
     /**
-     * A aderência mede a proporção entre previsto no prazo e previsto fora
-     * dele. Item sem previsão não entra na conta: não há como classificá-lo.
+     * "Prazo em dia" compara o prazo com o relógio: quanto do que está em
+     * aberto ainda tem tempo. Não depende de previsão lançada.
      */
-    public function test_rota_mostra_a_aderencia_ao_prazo(): void
+    public function test_rota_mostra_o_percentual_de_prazo_em_dia(): void
     {
-        $prazo = now()->addDays(5);
-
-        // 3 no prazo, 1 fora  ->  75%
+        // 3 com prazo no futuro, 1 vencido  ->  75%
         foreach (range(1, 3) as $i) {
-            $this->item([
-                'prazo_item' => $prazo,
-                'data_hora_previsao_entrega' => $prazo->copy()->subDay(),
-            ]);
+            $this->item(['prazo_item' => now()->addDays(5)]);
         }
-        $this->item([
-            'prazo_item' => $prazo,
-            'data_hora_previsao_entrega' => $prazo->copy()->addDay(),
-        ]);
-        // Sem previsão: fica de fora do denominador.
-        $this->item(['prazo_item' => $prazo, 'data_hora_previsao_entrega' => null]);
+        $this->item(['prazo_item' => now()->subDay()]);
+        // Sem prazo: fica de fora do denominador.
+        $this->item(['prazo_item' => null]);
 
         $resposta = $this->actingAs(User::factory()->create())
             ->get(route('itens-entrega.index', ['dias' => 0]))
             ->assertOk();
 
         $resposta->assertSee('75%');
-        $resposta->assertSee('25% fora', escape: false);
-        $resposta->assertSee('4 de 5 com previsão', escape: false);
+        $resposta->assertSee('1 vencido de 4', escape: false);
     }
 
-    public function test_rota_sem_previsao_alguma_nao_calcula_aderencia(): void
+    public function test_percentual_nao_depende_de_previsao_lancada(): void
     {
-        $this->item(['data_hora_previsao_entrega' => null]);
+        $this->item(['prazo_item' => now()->addDays(5), 'data_hora_previsao_entrega' => null]);
 
         $this->actingAs(User::factory()->create())
             ->get(route('itens-entrega.index', ['dias' => 0]))
             ->assertOk()
-            ->assertDontSee('% fora', escape: false);
+            ->assertSee('100%');
+    }
+
+    public function test_rota_sem_prazo_algum_nao_calcula_o_percentual(): void
+    {
+        $this->item(['prazo_item' => null]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->assertOk()
+            ->assertDontSee('vencido de', escape: false);
     }
 }
