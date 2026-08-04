@@ -1227,4 +1227,45 @@ class ItemEntregaTelaTest extends TestCase
         $resposta->assertSee($faltoso->numero_rt);
         $resposta->assertDontSee($liberado->numero_rt);
     }
+
+    /**
+     * A aderência mede a proporção entre previsto no prazo e previsto fora
+     * dele. Item sem previsão não entra na conta: não há como classificá-lo.
+     */
+    public function test_rota_mostra_a_aderencia_ao_prazo(): void
+    {
+        $prazo = now()->addDays(5);
+
+        // 3 no prazo, 1 fora  ->  75%
+        foreach (range(1, 3) as $i) {
+            $this->item([
+                'prazo_item' => $prazo,
+                'data_hora_previsao_entrega' => $prazo->copy()->subDay(),
+            ]);
+        }
+        $this->item([
+            'prazo_item' => $prazo,
+            'data_hora_previsao_entrega' => $prazo->copy()->addDay(),
+        ]);
+        // Sem previsão: fica de fora do denominador.
+        $this->item(['prazo_item' => $prazo, 'data_hora_previsao_entrega' => null]);
+
+        $resposta = $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->assertOk();
+
+        $resposta->assertSee('75%');
+        $resposta->assertSee('25% fora', escape: false);
+        $resposta->assertSee('4 de 5 com previsão', escape: false);
+    }
+
+    public function test_rota_sem_previsao_alguma_nao_calcula_aderencia(): void
+    {
+        $this->item(['data_hora_previsao_entrega' => null]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->assertOk()
+            ->assertDontSee('% fora', escape: false);
+    }
 }

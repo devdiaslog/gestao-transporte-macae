@@ -64,6 +64,10 @@
                             <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Sem previsão</th>
                             <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Previsão no prazo</th>
                             <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Previsão fora do prazo</th>
+                            <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600"
+                                title="Proporção entre os itens previstos no prazo e fora dele. Itens sem previsão não entram na conta.">
+                                Aderência ao prazo
+                            </th>
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Prazo mais próximo</th>
                             <th class="w-10"></th>
                         </tr>
@@ -125,6 +129,30 @@
                                         <span class="text-xs text-zinc-300 dark:text-zinc-700">0</span>
                                     @endif
                                 </td>
+                                @php
+                                    // Só o que tem previsão pode ser classificado: sem ela não há
+                                    // como dizer se o item chega dentro ou fora do prazo.
+                                    $comPrevisao = (int) $t->no_prazo + (int) $t->fora_do_prazo;
+                                    $pctNoPrazo = $comPrevisao > 0 ? round($t->no_prazo * 100 / $comPrevisao) : null;
+                                @endphp
+                                <td class="px-4 py-3">
+                                    @if($pctNoPrazo === null)
+                                        <span class="text-xs text-zinc-400">—</span>
+                                    @else
+                                        <div class="flex items-center gap-2">
+                                            <div class="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-red-200 dark:bg-red-950/60"
+                                                 title="{{ $t->no_prazo }} no prazo · {{ $t->fora_do_prazo }} fora, de {{ $comPrevisao }} com previsão">
+                                                <div class="h-full rounded-full bg-emerald-500" style="width: {{ $pctNoPrazo }}%"></div>
+                                            </div>
+                                            <span class="text-xs font-semibold tabular-nums {{ $pctNoPrazo >= 100 ? 'text-emerald-700 dark:text-emerald-400' : ($pctNoPrazo >= 50 ? 'text-zinc-700 dark:text-zinc-300' : 'text-red-700 dark:text-red-400') }}">
+                                                {{ $pctNoPrazo }}%
+                                            </span>
+                                        </div>
+                                        <p class="mt-0.5 text-[10px] text-zinc-400 dark:text-zinc-500">
+                                            {{ 100 - $pctNoPrazo }}% fora · {{ $comPrevisao }} de {{ $t->total }} com previsão
+                                        </p>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3 whitespace-nowrap">
                                     @if($prazo)
                                         <p class="text-xs tabular-nums {{ $prazo->isPast() ? 'font-semibold text-red-600 dark:text-red-400' : 'text-zinc-700 dark:text-zinc-300' }}">
@@ -155,6 +183,24 @@
                             <td class="px-4 py-3 text-right font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $totalSemPrevisao }}</td>
                             <td class="px-4 py-3 text-right font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $trechos->sum('no_prazo') }}</td>
                             <td class="px-4 py-3 text-right font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $trechos->sum('fora_do_prazo') }}</td>
+                            @php
+                                $totalComPrevisao = (int) $trechos->sum('no_prazo') + (int) $trechos->sum('fora_do_prazo');
+                                $pctGeral = $totalComPrevisao > 0
+                                    ? round($trechos->sum('no_prazo') * 100 / $totalComPrevisao)
+                                    : null;
+                            @endphp
+                            <td class="px-4 py-3">
+                                @if($pctGeral === null)
+                                    <span class="text-xs text-zinc-400">—</span>
+                                @else
+                                    <div class="flex items-center gap-2">
+                                        <div class="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-red-200 dark:bg-red-950/60">
+                                            <div class="h-full rounded-full bg-emerald-500" style="width: {{ $pctGeral }}%"></div>
+                                        </div>
+                                        <span class="text-xs font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $pctGeral }}%</span>
+                                    </div>
+                                @endif
+                            </td>
                             <td colspan="2"></td>
                         </tr>
                     </tfoot>
