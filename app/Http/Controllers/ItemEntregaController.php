@@ -738,10 +738,19 @@ class ItemEntregaController extends Controller
                 ->whereIn('status_sap', array_map(fn (StatusSap $s) => $s->value, $status)))
             // Horizonte: o cliente pede a visão antecipada (D+3 por padrão).
             // Itens já vencidos entram sempre — são os mais urgentes.
+            // O horizonte é a visão antecipada do que ainda vai vencer, então
+            // só faz sentido para o item em cobrança. Pedir cancelado, suspenso
+            // ou faltoso é pedir tudo daquele estado: filtrar por prazo aí só
+            // esconde, e a tela parece não responder ao clique.
             ->when($dias > 0 && ! $request->filled('pendencia'), fn (Builder $q) => $q
                 ->where(fn (Builder $s) => $s
                     ->whereNull('prazo_item')
-                    ->orWhere('prazo_item', '<=', now()->addDays($dias)->endOfDay())))
+                    ->orWhere('prazo_item', '<=', now()->addDays($dias)->endOfDay())
+                    ->orWhereNotNull('faltoso_desde')
+                    ->orWhereNotIn('status_sap', array_map(
+                        fn (StatusSap $st) => $st->value,
+                        array_filter(StatusSap::cases(), fn (StatusSap $st) => $st->emCobranca()),
+                    ))))
             // Recorte inverso: só o que já passou do prazo. Item sem prazo fica
             // de fora — não há como afirmar que venceu.
             ->when($dias === self::DIAS_VENCIDOS, fn (Builder $q) => $q

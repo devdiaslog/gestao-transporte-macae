@@ -9,6 +9,7 @@
     $coresStatus = [
         '03' => 'peer-checked:border-sky-500 peer-checked:bg-sky-50 peer-checked:text-sky-800 dark:peer-checked:bg-sky-950/50 dark:peer-checked:text-sky-300',
         '04' => 'peer-checked:border-indigo-500 peer-checked:bg-indigo-50 peer-checked:text-indigo-800 dark:peer-checked:bg-indigo-950/50 dark:peer-checked:text-indigo-300',
+        '10' => 'peer-checked:border-rose-500 peer-checked:bg-rose-50 peer-checked:text-rose-800 dark:peer-checked:bg-rose-950/50 dark:peer-checked:text-rose-300',
         '13' => 'peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:text-amber-800 dark:peer-checked:bg-amber-950/50 dark:peer-checked:text-amber-300',
         '18' => 'peer-checked:border-orange-500 peer-checked:bg-orange-50 peer-checked:text-orange-800 dark:peer-checked:bg-orange-950/50 dark:peer-checked:text-orange-300',
         '09' => 'peer-checked:border-zinc-500 peer-checked:bg-zinc-100 peer-checked:text-zinc-800 dark:peer-checked:bg-zinc-800 dark:peer-checked:text-zinc-200',

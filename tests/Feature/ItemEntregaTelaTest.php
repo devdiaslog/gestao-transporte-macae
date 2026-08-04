@@ -1597,4 +1597,63 @@ class ItemEntregaTelaTest extends TestCase
             ->assertSee($item->numero_rt)
             ->assertSee('Falta detalhar os itens');
     }
+
+    /**
+     * O pill 10 sozinho precisa mostrar a pendência mesmo com o horizonte no
+     * padrão: item com pendência costuma ter prazo distante, e o D+N o
+     * escondia — a tela parecia não filtrar nada.
+     */
+    public function test_pill_faltoso_mostra_pendencia_de_prazo_distante(): void
+    {
+        $item = $this->item(['prazo_item' => now()->addDays(20)]);
+        $item->marcarFaltoso('Aguardando destino', now(), null);
+
+        $this->actingAs(User::factory()->create())
+            // dias = 3 é o padrão da tela.
+            ->get(route('itens-entrega.trecho', ['status' => ['10'], 'dias' => 3]))
+            ->assertOk()
+            ->assertSee($item->numero_rt);
+    }
+
+    /**
+     * O horizonte é a visão antecipada do que vai vencer, então vale só para o
+     * item em cobrança. Pedir cancelado ou suspenso é pedir tudo daquele
+     * estado — filtrar por prazo ali apenas esconde.
+     */
+    public function test_horizonte_nao_se_aplica_aos_status_encerrados(): void
+    {
+        $cancelado = $this->item(['status_sap' => StatusSap::Cancelado, 'prazo_item' => now()->addDays(25)]);
+        $suspenso = $this->item(['status_sap' => StatusSap::SuspensoInterno, 'prazo_item' => now()->addDays(25)]);
+        // Em cobrança, o horizonte continua valendo.
+        $liberado = $this->item(['status_sap' => StatusSap::Liberado, 'prazo_item' => now()->addDays(25)]);
+
+        $usuario = User::factory()->create();
+
+        $this->actingAs($usuario)
+            ->get(route('itens-entrega.trecho', ['status' => ['09'], 'dias' => 3]))
+            ->assertOk()
+            ->assertSee($cancelado->numero_rt);
+
+        $this->actingAs($usuario)
+            ->get(route('itens-entrega.trecho', ['status' => ['13'], 'dias' => 3]))
+            ->assertOk()
+            ->assertSee($suspenso->numero_rt);
+
+        $this->actingAs($usuario)
+            ->get(route('itens-entrega.trecho', ['status' => ['03'], 'dias' => 3]))
+            ->assertOk()
+            ->assertDontSee($liberado->numero_rt);
+    }
+
+    public function test_pill_faltoso_tem_destaque_proprio(): void
+    {
+        $this->item();
+
+        // Sem a cor, o pill não muda de aparência ao ser marcado e o clique
+        // parece não ter funcionado.
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index'))
+            ->assertOk()
+            ->assertSee('peer-checked:border-rose-500', escape: false);
+    }
 }
