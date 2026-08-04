@@ -115,8 +115,8 @@ class ItemEntregaController extends Controller
      */
     private const ORDENACOES = [
         'itens' => 'Número de itens',
-        'prazo_pct' => '% no prazo',
-        'media_prazo' => 'Média até o prazo',
+        'prazo_pct' => 'Maior % no prazo',
+        'media_prazo' => 'Maior folga até o prazo',
         'prazo_proximo' => 'Prazo mais próximo',
         'sem_previsao' => 'Sem previsão',
         'area' => 'Área',
@@ -295,8 +295,24 @@ class ItemEntregaController extends Controller
     }
 
     /**
-     * Ordena as rotas pelo critério escolhido, sempre no sentido que serve à
-     * decisão: o que exige atenção primeiro fica no topo.
+     * Chance de a rota ser entregue no prazo: proporção dos itens que ainda
+     * têm tempo. Rota sem prazo algum não tem chance a estimar e vai para o
+     * fim da lista.
+     */
+    private function chanceNoPrazo(object $trecho): float
+    {
+        $comPrazo = (int) $trecho->prazo_em_dia + (int) $trecho->prazo_vencido;
+
+        return $comPrazo > 0 ? $trecho->prazo_em_dia / $comPrazo : -1.0;
+    }
+
+    /**
+     * Ordena as rotas pelo critério escolhido.
+     *
+     * O topo é sempre o que rende mais entrega no prazo, não o que está pior:
+     * a lista serve para escolher o próximo atendimento, e uma rota já perdida
+     * no topo só ocupa a atenção de quem decide. Por isso maior aderência e
+     * mais folga vêm primeiro, e a chance no prazo desempata o critério padrão.
      *
      * @param  Collection<int, object>  $trechos
      * @return Collection<int, object>
@@ -304,20 +320,17 @@ class ItemEntregaController extends Controller
     private function ordenar(Collection $trechos, string $ordenacao): Collection
     {
         $ordenados = match ($ordenacao) {
-            // Pior aderência primeiro; rota sem prazo algum vai para o fim.
-            'prazo_pct' => $trechos->sortBy(function ($t) {
-                $comPrazo = (int) $t->prazo_em_dia + (int) $t->prazo_vencido;
-
-                return $comPrazo > 0 ? $t->prazo_em_dia / $comPrazo : PHP_INT_MAX;
-            }),
-            // Menos tempo até o prazo primeiro; sem itens em dia vai para o fim.
-            'media_prazo' => $trechos->sortBy(fn ($t) => $t->horas_ate_prazo ?? PHP_INT_MAX),
+            'prazo_pct' => $trechos->sortByDesc(fn ($t) => $this->chanceNoPrazo($t)),
+            // Mais folga primeiro: é onde ainda dá para planejar sem correr.
+            'media_prazo' => $trechos->sortByDesc(fn ($t) => $t->horas_ate_prazo ?? -1),
             'prazo_proximo' => $trechos->sortBy(fn ($t) => $t->prazo_mais_proximo ?? '9999'),
             'sem_previsao' => $trechos->sortByDesc('sem_previsao'),
             'area' => $trechos->sortByDesc('area'),
             // Fora do plano vai para o fim: não cabe no prazo de nenhum jeito.
             'sugestao' => $trechos->sortBy(fn ($t) => $t->posicao_sugerida ?? PHP_INT_MAX),
-            default => $trechos->sortByDesc('total'),
+            // Mais itens primeiro e, entre rotas do mesmo tamanho, a que tem
+            // mais chance de chegar no prazo.
+            default => $trechos->sortByDesc(fn ($t) => [(int) $t->total, $this->chanceNoPrazo($t)]),
         };
 
         return $ordenados->values();

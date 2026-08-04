@@ -1413,16 +1413,19 @@ class ItemEntregaTelaTest extends TestCase
             ->assertOk()
             ->assertSee('Ordenar por')
             ->assertSee('Número de itens')
-            ->assertSee('% no prazo')
-            ->assertSee('Média até o prazo')
+            ->assertSee('Maior % no prazo')
+            ->assertSee('Maior folga até o prazo')
             ->assertSee('Sugestão de atendimento');
     }
 
-    public function test_ordena_pela_media_ate_o_prazo(): void
+    /**
+     * A lista serve para escolher o próximo atendimento, então o topo é o que
+     * ainda dá para entregar — não o que já está perdido.
+     */
+    public function test_maior_folga_ate_o_prazo_vem_primeiro(): void
     {
-        // Aperta em 2h.
-        $this->item(['local_origem' => 'URGENTE', 'local_destino' => 'Z', 'prazo_item' => now()->addHours(2)]);
-        // Folgada, e com mais itens — não pode vir na frente neste critério.
+        // Aperta em 2h: pouca chance de dar conta.
+        $this->item(['local_origem' => 'APERTADA', 'local_destino' => 'Z', 'prazo_item' => now()->addHours(2)]);
         foreach (range(1, 5) as $i) {
             $this->item(['local_origem' => 'FOLGADA', 'local_destino' => 'Z', 'prazo_item' => now()->addDays(3)]);
         }
@@ -1432,7 +1435,38 @@ class ItemEntregaTelaTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertLessThan(mb_strpos($html, 'FOLGADA'), mb_strpos($html, 'URGENTE'));
+        $this->assertLessThan(mb_strpos($html, 'APERTADA'), mb_strpos($html, 'FOLGADA'));
+    }
+
+    public function test_maior_percentual_no_prazo_vem_primeiro(): void
+    {
+        // Todos vencidos: nada a salvar.
+        $this->item(['local_origem' => 'PERDIDA', 'local_destino' => 'Z', 'prazo_item' => now()->subDays(2)]);
+        // Todos em dia.
+        $this->item(['local_origem' => 'INTEIRA', 'local_destino' => 'Z', 'prazo_item' => now()->addDays(2)]);
+
+        $html = $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0, 'ordenar' => 'prazo_pct']))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertLessThan(mb_strpos($html, 'PERDIDA'), mb_strpos($html, 'INTEIRA'));
+    }
+
+    /**
+     * Entre rotas do mesmo tamanho, vai na frente a que ainda tem chance.
+     */
+    public function test_chance_no_prazo_desempata_o_criterio_padrao(): void
+    {
+        $this->item(['local_origem' => 'VENCIDA', 'local_destino' => 'Z', 'prazo_item' => now()->subDay()]);
+        $this->item(['local_origem' => 'EM DIA', 'local_destino' => 'Z', 'prazo_item' => now()->addDays(2)]);
+
+        $html = $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertLessThan(mb_strpos($html, 'VENCIDA'), mb_strpos($html, 'EM DIA'));
     }
 
     public function test_ordenacao_desconhecida_cai_no_padrao(): void
