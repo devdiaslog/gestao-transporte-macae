@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\CatalogoPermissoes;
+use App\Support\SincronizadorPermissoes;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -64,6 +65,7 @@ class PerfilController extends Controller
             $perfil->syncPermissions($this->permissoesValidas($request));
         } else {
             // O Administrador mantém acesso total (inclusive a módulos futuros).
+            SincronizadorPermissoes::garantir();
             $perfil->syncPermissions(CatalogoPermissoes::todas());
         }
 
@@ -109,6 +111,9 @@ class PerfilController extends Controller
      */
     private function permissoesValidas(Request $request): array
     {
+        // O modulo pode ter entrado no catalogo depois do ultimo deploy.
+        SincronizadorPermissoes::garantir();
+
         return array_values(array_intersect(
             (array) $request->input('permissions', []),
             CatalogoPermissoes::todas()

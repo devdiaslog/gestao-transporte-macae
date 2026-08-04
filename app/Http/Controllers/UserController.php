@@ -7,6 +7,7 @@ use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
 use App\Support\CatalogoPermissoes;
+use App\Support\SincronizadorPermissoes;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -99,6 +100,9 @@ class UserController extends Controller
      */
     private function sincronizarAcessos(User $user, Request $request): void
     {
+        // O modulo pode ter entrado no catalogo depois do ultimo deploy.
+        SincronizadorPermissoes::garantir();
+
         $papel = $request->input('perfil');
         $user->syncRoles($papel && Role::where('name', $papel)->exists() ? [$papel] : []);
 

@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Support\CatalogoPermissoes;
+use App\Support\SincronizadorPermissoes;
 use Illuminate\Console\Command;
-use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -22,15 +22,13 @@ class SincronizarPermissoes extends Command
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $criadas = 0;
-        foreach (CatalogoPermissoes::todas() as $nome) {
-            $permissao = Permission::firstOrCreate(['name' => $nome, 'guard_name' => 'web']);
-            if ($permissao->wasRecentlyCreated) {
-                $criadas++;
-            }
-        }
+        $criadas = SincronizadorPermissoes::garantir();
 
-        $this->info("Permissões: {$criadas} criada(s), ".count(CatalogoPermissoes::todas()).' no catálogo.');
+        $this->info('Permissões: '.count($criadas).' criada(s), '.count(CatalogoPermissoes::todas()).' no catálogo.');
+
+        foreach ($criadas as $nome) {
+            $this->line("  + {$nome}");
+        }
 
         if ($this->option('papeis')) {
             foreach (CatalogoPermissoes::papeisPadrao() as $nome => $config) {

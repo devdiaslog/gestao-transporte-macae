@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\CatalogoPermissoes;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -135,5 +136,72 @@ class PermissoesTest extends TestCase
         ])->assertSessionHasErrors('senha_atual');
 
         $this->assertTrue(Hash::check('senha-certa', $user->refresh()->password));
+    }
+
+    /**
+     * Cenario real de producao: o modulo entrou no catalogo (codigo) mas o
+     * banco ainda nao tem as permissoes dele, porque o deploy so rodou as
+     * migrations. Atribuir o modulo a um perfil estourava com
+     * PermissionDoesNotExist, e so o Administrador enxergava a tela — ele
+     * passa pelo Gate::before sem consultar permissao nenhuma.
+     */
+    public function test_atribui_modulo_publicado_depois_do_ultimo_deploy(): void
+    {
+        Permission::where('name', 'like', 'itens-entrega.%')->delete();
+        $this->recarregarPermissoes();
+
+        $admin = User::factory()->comPerfil('Administrador')->create();
+        $perfil = Role::findByName('Operador');
+
+        $this->actingAs($admin)
+            ->put(route('perfis.update', $perfil), [
+                'name' => 'Operador',
+                'permissions' => ['demandas.ver', 'itens-entrega.ver', 'itens-entrega.prever'],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->recarregarPermissoes();
+
+        $this->assertTrue($perfil->fresh()->hasPermissionTo('itens-entrega.ver'));
+    }
+
+    public function test_usuario_recebe_permissao_extra_de_modulo_recem_publicado(): void
+    {
+        Permission::where('name', 'like', 'itens-entrega.%')->delete();
+        $this->recarregarPermissoes();
+
+        $admin = User::factory()->comPerfil('Administrador')->create();
+        $usuario = User::factory()->comPerfil('Visualizador')->create();
+
+        $this->actingAs($admin)
+            ->put(route('users.update', $usuario), [
+                'name' => $usuario->name,
+                'email' => $usuario->email,
+                'status' => $usuario->status->value,
+                'perfil' => 'Visualizador',
+                'permissions' => ['itens-entrega.ver'],
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $this->recarregarPermissoes();
+
+        $this->assertTrue($usuario->fresh()->hasPermissionTo('itens-entrega.ver'));
+    }
+
+    /**
+     * O operador enxerga a tela pelo proprio perfil, sem precisar de
+     * Administrador.
+     */
+    public function test_operador_acessa_itens_de_entrega_pelo_perfil(): void
+    {
+        $operador = User::factory()->comPerfil('Operador')->create();
+
+        $this->actingAs($operador)->get(route('itens-entrega.index'))->assertOk();
+        // Renegociar prazo nao esta no perfil de Operador.
+        $this->actingAs($operador)
+            ->post(route('itens-entrega.prazo'), [])
+            ->assertForbidden();
     }
 }

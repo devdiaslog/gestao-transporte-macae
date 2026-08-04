@@ -16,6 +16,12 @@ php "$COMPOSER_PHAR" install --no-dev --optimize-autoloader --no-interaction
 echo "==> Executando migrations..."
 php artisan migrate --force
 
+echo "==> Publicando permissoes de modulos novos..."
+# O catalogo (codigo) ganha modulos a cada release, mas o banco so aprende
+# sobre eles aqui. Sem este passo, atribuir o modulo novo a um perfil falha
+# e apenas o Administrador enxerga a tela.
+php artisan permissoes:sincronizar
+
 echo "==> Limpando caches..."
 php artisan optimize:clear
 
