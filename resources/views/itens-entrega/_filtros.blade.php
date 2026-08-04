@@ -85,6 +85,20 @@
                    class="flex-1 bg-transparent px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100">
         </div>
 
+        {{-- Ordem da lista: o critério escolhido aqui é o que a coluna "Ordem"
+             numera, então o 1 é sempre a primeira rota a atender. Só existe na
+             lista de rotas; a tela do trecho lista itens. --}}
+        @isset($ordenacoes)
+            <div>
+                <label class="{{ $rotulo }}">Ordenar por</label>
+                <select name="ordenar" class="{{ $campo }}">
+                    @foreach($ordenacoes as $valor => $texto)
+                        <option value="{{ $valor }}" @selected($ordenacao === $valor)>{{ $texto }}</option>
+                    @endforeach
+                </select>
+            </div>
+        @endisset
+
         {{-- Recorte de previsão: é por aqui que o operador acha o que replanejar --}}
         <div>
             <label class="{{ $rotulo }}">Previsão</label>

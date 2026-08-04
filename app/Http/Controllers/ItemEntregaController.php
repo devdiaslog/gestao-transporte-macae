@@ -105,6 +105,26 @@ class ItemEntregaController extends Controller
         'fora_escopo' => ['label' => 'Fora do escopo', 'dot' => 'bg-zinc-700', 'chip' => 'bg-zinc-800 text-zinc-100 dark:bg-zinc-700 dark:text-zinc-200'],
     ];
 
+    /**
+     * Critérios de ordenação da lista de rotas.
+     *
+     * Cada um ordena no sentido que serve à ação: mais itens primeiro, pior
+     * percentual primeiro, menos tempo primeiro. A coluna "Ordem" numera a
+     * lista já ordenada, então o 1 é sempre a rota que o critério escolhido
+     * aponta como a primeira a atender.
+     */
+    private const ORDENACOES = [
+        'itens' => 'Número de itens',
+        'prazo_pct' => '% no prazo',
+        'media_prazo' => 'Média até o prazo',
+        'prazo_proximo' => 'Prazo mais próximo',
+        'sem_previsao' => 'Sem previsão',
+        'area' => 'Área',
+        'sugestao' => 'Sugestão de atendimento',
+    ];
+
+    private const ORDENACAO_PADRAO = 'itens';
+
     /** Situações que viram card no topo — fora do escopo não é gerido aqui. */
     private const SITUACOES_RESUMO = ['no_prazo', 'fora_do_prazo', 'sem_previsao'];
 
@@ -152,8 +172,6 @@ class ItemEntregaController extends Controller
                 count(distinct doc_unitizacao_superior) as embalagens
             ', [$agora, $agora])
             ->groupBy('local_origem_norm', 'local_destino_norm')
-            ->orderByDesc('sem_previsao')
-            ->orderByDesc('total')
             ->get();
 
         $areaPorTrecho = $this->areaDasEmbalagensPorTrecho($request, $status, $dias);
@@ -185,9 +203,12 @@ class ItemEntregaController extends Controller
 
         $trechos->each(function ($trecho) use ($posicoes) {
             $chave = $trecho->local_origem_norm.'|'.$trecho->local_destino_norm;
-            // 1 é a primeira a atender; null significa que não cabe no prazo.
-            $trecho->ordem_sugerida = isset($posicoes[$chave]) ? $posicoes[$chave] + 1 : null;
+            // Posição no plano que entrega mais itens no prazo; null não cabe.
+            $trecho->posicao_sugerida = isset($posicoes[$chave]) ? $posicoes[$chave] + 1 : null;
         });
+
+        $ordenacao = $this->ordenacaoDe($request);
+        $trechos = $this->ordenar($trechos, $ordenacao);
 
         return view('itens-entrega.index', [
             'trechos' => $trechos,
@@ -197,6 +218,8 @@ class ItemEntregaController extends Controller
             'situacoesResumo' => self::SITUACOES_RESUMO,
             'dias' => $dias,
             'plano' => $plano,
+            'ordenacao' => $ordenacao,
+            'ordenacoes' => self::ORDENACOES,
             'diasPrevisao' => $this->diasPrevisaoDe($request),
             'resumo' => $this->resumo($request, $status, $dias),
             'cores' => self::CORES_SITUACAO,
@@ -264,6 +287,42 @@ class ItemEntregaController extends Controller
      * Horizonte do prazo. Além do D+N, aceita o recorte "vencidos", que isola
      * o que já passou do prazo — sinalizado por {@see self::DIAS_VENCIDOS}.
      */
+    private function ordenacaoDe(Request $request): string
+    {
+        $escolhida = (string) $request->input('ordenar', '');
+
+        return array_key_exists($escolhida, self::ORDENACOES) ? $escolhida : self::ORDENACAO_PADRAO;
+    }
+
+    /**
+     * Ordena as rotas pelo critério escolhido, sempre no sentido que serve à
+     * decisão: o que exige atenção primeiro fica no topo.
+     *
+     * @param  Collection<int, object>  $trechos
+     * @return Collection<int, object>
+     */
+    private function ordenar(Collection $trechos, string $ordenacao): Collection
+    {
+        $ordenados = match ($ordenacao) {
+            // Pior aderência primeiro; rota sem prazo algum vai para o fim.
+            'prazo_pct' => $trechos->sortBy(function ($t) {
+                $comPrazo = (int) $t->prazo_em_dia + (int) $t->prazo_vencido;
+
+                return $comPrazo > 0 ? $t->prazo_em_dia / $comPrazo : PHP_INT_MAX;
+            }),
+            // Menos tempo até o prazo primeiro; sem itens em dia vai para o fim.
+            'media_prazo' => $trechos->sortBy(fn ($t) => $t->horas_ate_prazo ?? PHP_INT_MAX),
+            'prazo_proximo' => $trechos->sortBy(fn ($t) => $t->prazo_mais_proximo ?? '9999'),
+            'sem_previsao' => $trechos->sortByDesc('sem_previsao'),
+            'area' => $trechos->sortByDesc('area'),
+            // Fora do plano vai para o fim: não cabe no prazo de nenhum jeito.
+            'sugestao' => $trechos->sortBy(fn ($t) => $t->posicao_sugerida ?? PHP_INT_MAX),
+            default => $trechos->sortByDesc('total'),
+        };
+
+        return $ordenados->values();
+    }
+
     private function diasDe(Request $request): int
     {
         if ($request->input('dias') === self::FILTRO_VENCIDOS) {

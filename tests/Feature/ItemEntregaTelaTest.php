@@ -1313,16 +1313,16 @@ class ItemEntregaTelaTest extends TestCase
             ->assertDontSee('itens no prazo', escape: false);
     }
 
-    public function test_duracao_da_rota_comeca_no_padrao_e_pode_ser_estimada(): void
+    public function test_estimativa_da_rota_e_gravada_e_muda_a_sugestao(): void
     {
-        $this->item(['prazo_item' => now()->addDays(2)]);
+        // Prazo em 10h: com o padrão de 24h a rota não cabe.
+        $this->item(['prazo_item' => now()->addHours(10)]);
         $usuario = User::factory()->create();
 
-        // Sem estimativa, vale o padrão conservador de um dia.
         $this->actingAs($usuario)
-            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->get(route('itens-entrega.index', ['dias' => 0, 'ordenar' => 'sugestao']))
             ->assertOk()
-            ->assertSee('value="24"', escape: false);
+            ->assertSee('não cabe', escape: false);
 
         $this->actingAs($usuario)
             ->post(route('itens-entrega.duracao'), [
@@ -1335,10 +1335,11 @@ class ItemEntregaTelaTest extends TestCase
 
         $this->assertSame(6.0, DuracaoRota::firstOrFail()->horas);
 
+        // Com 6h passa a caber.
         $this->actingAs($usuario)
-            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->get(route('itens-entrega.index', ['dias' => 0, 'ordenar' => 'sugestao']))
             ->assertOk()
-            ->assertSee('value="6"', escape: false);
+            ->assertDontSee('não cabe', escape: false);
     }
 
     public function test_duracao_recusa_valor_fora_da_faixa(): void
@@ -1364,7 +1365,7 @@ class ItemEntregaTelaTest extends TestCase
         $this->item(['prazo_item' => now()->addHours(2)]);
 
         $this->actingAs(User::factory()->create())
-            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->get(route('itens-entrega.index', ['dias' => 0, 'ordenar' => 'sugestao']))
             ->assertOk()
             ->assertSee('não cabe', escape: false);
     }
@@ -1375,9 +1376,72 @@ class ItemEntregaTelaTest extends TestCase
         DuracaoRota::definir('BASE VITORIA', 'ARM MACAE', 4, null);
 
         $this->actingAs(User::factory()->create())
-            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->get(route('itens-entrega.index', ['dias' => 0, 'ordenar' => 'sugestao']))
             ->assertOk()
             ->assertSee('itens cabem no prazo nesta ordem', escape: false)
             ->assertDontSee('não cabe', escape: false);
+    }
+
+    /**
+     * O select define a ordem, e a coluna "Ordem" numera a lista já ordenada —
+     * o 1 é sempre a primeira rota pelo critério escolhido.
+     */
+    public function test_ordenacao_padrao_e_por_numero_de_itens(): void
+    {
+        // Rota com 1 item.
+        $this->item(['local_origem_norm' => 'A', 'local_origem' => 'A', 'local_destino' => 'Z']);
+        // Rota com 3 itens.
+        foreach (range(1, 3) as $i) {
+            $this->item(['local_origem' => 'B', 'local_destino' => 'Z']);
+        }
+
+        $html = $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->assertOk()
+            ->getContent();
+
+        // A rota de 3 itens aparece antes da de 1.
+        $this->assertLessThan(mb_strpos($html, '>A<'), mb_strpos($html, '>B<'));
+    }
+
+    public function test_select_oferece_os_criterios_de_ordenacao(): void
+    {
+        $this->item();
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index'))
+            ->assertOk()
+            ->assertSee('Ordenar por')
+            ->assertSee('Número de itens')
+            ->assertSee('% no prazo')
+            ->assertSee('Média até o prazo')
+            ->assertSee('Sugestão de atendimento');
+    }
+
+    public function test_ordena_pela_media_ate_o_prazo(): void
+    {
+        // Aperta em 2h.
+        $this->item(['local_origem' => 'URGENTE', 'local_destino' => 'Z', 'prazo_item' => now()->addHours(2)]);
+        // Folgada, e com mais itens — não pode vir na frente neste critério.
+        foreach (range(1, 5) as $i) {
+            $this->item(['local_origem' => 'FOLGADA', 'local_destino' => 'Z', 'prazo_item' => now()->addDays(3)]);
+        }
+
+        $html = $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0, 'ordenar' => 'media_prazo']))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertLessThan(mb_strpos($html, 'FOLGADA'), mb_strpos($html, 'URGENTE'));
+    }
+
+    public function test_ordenacao_desconhecida_cai_no_padrao(): void
+    {
+        $this->item();
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['ordenar' => 'inexistente']))
+            ->assertOk()
+            ->assertSee('<option value="itens" selected>Número de itens</option>', escape: false);
     }
 }
