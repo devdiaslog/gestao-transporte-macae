@@ -6,6 +6,7 @@ use App\Enums\OrigemPrevisao;
 use App\Enums\StatusSap;
 use App\Enums\TipoDemanda;
 use App\Http\Requests\AjustarRotaRequest;
+use App\Http\Requests\DefinirDuracaoRotaRequest;
 use App\Http\Requests\DefinirPrevisaoRequest;
 use App\Http\Requests\DefinirTipoItemRequest;
 use App\Http\Requests\ImportarItensLiberadosRequest;
@@ -13,8 +14,10 @@ use App\Http\Requests\MarcarFaltosoRequest;
 use App\Http\Requests\MarcarForaEscopoRequest;
 use App\Http\Requests\RenegociarPrazoRequest;
 use App\Models\DemandaItem;
+use App\Models\DuracaoRota;
 use App\Services\ImportadorItensLiberados;
 use App\Support\ContentorSap;
+use App\Support\SequenciadorRotas;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -155,11 +158,35 @@ class ItemEntregaController extends Controller
 
         $areaPorTrecho = $this->areaDasEmbalagensPorTrecho($request, $status, $dias);
         $horasPorTrecho = $this->horasAtePrazoPorTrecho($request, $status, $dias);
+        $duracoes = DuracaoRota::mapa();
 
-        $trechos->each(function ($trecho) use ($areaPorTrecho, $horasPorTrecho) {
+        $trechos->each(function ($trecho) use ($areaPorTrecho, $horasPorTrecho, $duracoes) {
             $chave = $trecho->local_origem_norm.'|'.$trecho->local_destino_norm;
             $trecho->area = round((float) $trecho->area_solta + ($areaPorTrecho[$chave] ?? 0), 2);
-            $trecho->horas_ate_prazo = $horasPorTrecho[$chave] ?? null;
+            $trecho->horas_ate_prazo = $horasPorTrecho[$chave]['media'] ?? null;
+            $trecho->horas_ate_primeiro = $horasPorTrecho[$chave]['minimo'] ?? null;
+            $trecho->prazos_em_dia = $horasPorTrecho[$chave]['prazos'] ?? [];
+            $trecho->duracao = $duracoes[$chave] ?? DuracaoRota::HORAS_PADRAO;
+            $trecho->duracao_estimada = isset($duracoes[$chave]);
+        });
+
+        // Ordem que entrega o maior número de itens no prazo. Rota sem nenhum
+        // item em dia fica de fora: não há o que salvar nela.
+        $plano = SequenciadorRotas::planejar(
+            $trechos->filter(fn ($t) => $t->prazo_em_dia > 0)
+                ->map(fn ($t) => [
+                    'chave' => $t->local_origem_norm.'|'.$t->local_destino_norm,
+                    'prazos' => $t->prazos_em_dia,
+                    'duracao' => (float) $t->duracao,
+                ])->values()->all()
+        );
+
+        $posicoes = array_flip($plano['sequencia']);
+
+        $trechos->each(function ($trecho) use ($posicoes) {
+            $chave = $trecho->local_origem_norm.'|'.$trecho->local_destino_norm;
+            // 1 é a primeira a atender; null significa que não cabe no prazo.
+            $trecho->ordem_sugerida = isset($posicoes[$chave]) ? $posicoes[$chave] + 1 : null;
         });
 
         return view('itens-entrega.index', [
@@ -169,6 +196,7 @@ class ItemEntregaController extends Controller
             'filtrosPrevisao' => self::FILTROS_PREVISAO,
             'situacoesResumo' => self::SITUACOES_RESUMO,
             'dias' => $dias,
+            'plano' => $plano,
             'diasPrevisao' => $this->diasPrevisaoDe($request),
             'resumo' => $this->resumo($request, $status, $dias),
             'cores' => self::CORES_SITUACAO,
@@ -365,6 +393,29 @@ class ItemEntregaController extends Controller
      * operação, e é aqui que ela corrige. Os campos passam a contar como
      * editados pelo operador, então a próxima importação não os desfaz.
      */
+    /**
+     * Grava quanto tempo a operação leva para atender uma rota.
+     *
+     * É o dado que permite dizer o que cabe no prazo. Enquanto ninguém estima,
+     * vale o padrão conservador de um dia.
+     */
+    public function definirDuracao(DefinirDuracaoRotaRequest $request): RedirectResponse
+    {
+        DuracaoRota::definir(
+            $request->validated('local_origem_norm'),
+            $request->validated('local_destino_norm'),
+            (float) $request->validated('horas'),
+            $request->user()->id,
+        );
+
+        return back()->with('success', sprintf(
+            'Rota %s → %s estimada em %s h.',
+            $request->validated('local_origem_norm'),
+            $request->validated('local_destino_norm'),
+            number_format((float) $request->validated('horas'), 1, ',', '.'),
+        ));
+    }
+
     /**
      * Registra a pendência que trava os itens selecionados (status 10).
      *
@@ -711,10 +762,20 @@ class ItemEntregaController extends Controller
             ->where('prazo_item', '>=', $agora)
             ->get(['local_origem_norm', 'local_destino_norm', 'prazo_item'])
             ->groupBy(fn (DemandaItem $i) => $i->local_origem_norm.'|'.$i->local_destino_norm)
-            ->map(fn ($doTrecho) => round(
-                $doTrecho->avg(fn (DemandaItem $i) => $agora->diffInMinutes($i->prazo_item)) / 60,
-                1,
-            ))
+            ->map(function ($doTrecho) use ($agora) {
+                $horas = $doTrecho->map(fn (DemandaItem $i) => $agora->diffInMinutes($i->prazo_item) / 60);
+
+                return [
+                    'media' => round($horas->avg(), 1),
+                    // O primeiro a vencer entre os que ainda dá para salvar.
+                    // O item já perdido não define o prazo da rota: ele não
+                    // volta a caber, e usá-lo condenaria os recuperáveis junto.
+                    'minimo' => round($horas->min(), 1),
+                    // Cada prazo isolado: o sequenciamento conta quantos itens
+                    // a conclusão alcança, não a rota inteira de uma vez.
+                    'prazos' => $horas->values()->all(),
+                ];
+            })
             ->all();
     }
 

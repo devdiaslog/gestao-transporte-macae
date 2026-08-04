@@ -52,12 +52,37 @@
                 <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Ajuste os filtros ou importe o export do SAP.</p>
             </div>
         @else
+            {{-- Resultado do sequenciamento: quantos itens o plano salva e
+                 quantos não cabem, para a decisão ser tomada com o número à
+                 vista e não pela impressão de cada rota isolada. --}}
+            @if($plano['itens_no_prazo'] > 0 || $plano['itens_perdidos'] > 0)
+                <div class="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-slate-100 px-5 py-3 dark:border-zinc-800">
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{{ $plano['itens_no_prazo'] }}</span>
+                        <span class="text-xs text-zinc-500 dark:text-zinc-400">itens cabem no prazo nesta ordem</span>
+                    </div>
+                    @if($plano['itens_perdidos'] > 0)
+                        <div class="flex items-baseline gap-1.5">
+                            <span class="text-lg font-bold tabular-nums text-red-600 dark:text-red-400">{{ $plano['itens_perdidos'] }}</span>
+                            <span class="text-xs text-zinc-500 dark:text-zinc-400">não cabem</span>
+                        </div>
+                    @endif
+                    <p class="ml-auto max-w-md text-[11px] text-zinc-400 dark:text-zinc-500">
+                        A ordem considera o tempo estimado de cada rota, editável na coluna “Leva”.
+                    </p>
+                </div>
+            @endif
+
             {{-- Scroll interno: o cabeçalho e os totais ficam à vista por mais
                  longa que seja a lista, e a página não estica sem fim. --}}
             <div class="max-h-[60vh] overflow-auto">
                 <table class="w-full text-sm">
                     <thead class="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgb(226_232_240)] dark:bg-zinc-900 dark:shadow-[0_1px_0_0_rgb(39_39_42)]">
                         <tr>
+                            <th class="px-4 py-4 text-center text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600"
+                                title="Ordem que entrega o maior número de itens dentro do prazo, considerando o tempo estimado de cada rota.">
+                                Ordem
+                            </th>
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Rota</th>
                             <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Itens</th>
                             <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Área</th>
@@ -71,6 +96,10 @@
                             <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600"
                                 title="Tempo que falta, em média, até o prazo dos itens que ainda estão em dia. Quanto menor, mais a rota aperta.">
                                 Média até o prazo
+                            </th>
+                            <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600"
+                                title="Tempo estimado para atender a rota. É o que permite calcular o que cabe no prazo.">
+                                Leva
                             </th>
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Prazo mais próximo</th>
                             <th class="w-10"></th>
@@ -87,6 +116,17 @@
                             @endphp
                             <tr class="cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/40"
                                 onclick="window.location='{{ $url }}'">
+                                <td class="px-4 py-3 text-center">
+                                    @if($t->ordem_sugerida)
+                                        <span class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold tabular-nums
+                                                     {{ $t->ordem_sugerida <= 3 ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' : 'bg-slate-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400' }}">
+                                            {{ $t->ordem_sugerida }}
+                                        </span>
+                                    @else
+                                        <span class="text-[10px] font-medium text-red-600 dark:text-red-400"
+                                              title="Não cabe no prazo, mesmo sendo atendida agora">não cabe</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center gap-2 font-semibold text-zinc-900 dark:text-zinc-100">
                                         <span>{{ $t->local_origem_norm ?? 'SEM ORIGEM' }}</span>
@@ -174,6 +214,22 @@
                                         </p>
                                     @endif
                                 </td>
+                                {{-- Estimativa da rota: editável na própria linha, sem sair da tela --}}
+                                <td class="px-4 py-3 text-right" onclick="event.stopPropagation()">
+                                    <form method="POST" action="{{ route('itens-entrega.duracao') }}" class="flex items-center justify-end gap-1">
+                                        @csrf
+                                        <input type="hidden" name="local_origem_norm" value="{{ $t->local_origem_norm }}">
+                                        <input type="hidden" name="local_destino_norm" value="{{ $t->local_destino_norm }}">
+                                        <input type="number" name="horas" value="{{ rtrim(rtrim(number_format($t->duracao, 1, '.', ''), '0'), '.') }}"
+                                               step="0.5" min="0.5" max="720" onchange="this.form.submit()"
+                                               title="{{ $t->duracao_estimada ? 'Estimado pela operação' : 'Padrão — ainda não estimado' }}"
+                                               class="w-16 rounded-lg border px-2 py-1 text-right text-xs tabular-nums
+                                                      {{ $t->duracao_estimada
+                                                         ? 'border-slate-300 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100'
+                                                         : 'border-dashed border-slate-300 text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-500' }}">
+                                        <span class="text-[10px] text-zinc-400">h</span>
+                                    </form>
+                                </td>
                                 <td class="px-4 py-3 whitespace-nowrap">
                                     @if($prazo)
                                         <p class="text-xs tabular-nums {{ $prazo->isPast() ? 'font-semibold text-red-600 dark:text-red-400' : 'text-zinc-700 dark:text-zinc-300' }}">
@@ -194,6 +250,7 @@
                     </tbody>
                     <tfoot class="sticky bottom-0 z-10">
                         <tr class="border-t-2 border-slate-200 bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800">
+                            <td></td>
                             <td class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                                 {{ $trechos->count() }} {{ $trechos->count() === 1 ? 'rota' : 'rotas' }}
                             </td>
@@ -222,7 +279,7 @@
                                     </div>
                                 @endif
                             </td>
-                            <td colspan="3"></td>
+                            <td colspan="4"></td>
                         </tr>
                     </tfoot>
                 </table>

@@ -7,6 +7,7 @@ use App\Enums\StatusSap;
 use App\Enums\TipoDemanda;
 use App\Models\Demanda;
 use App\Models\DemandaItem;
+use App\Models\DuracaoRota;
 use App\Models\User;
 use App\Support\ContentorSap;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -1310,5 +1311,73 @@ class ItemEntregaTelaTest extends TestCase
             ->get(route('itens-entrega.index', ['dias' => 0]))
             ->assertOk()
             ->assertDontSee('itens no prazo', escape: false);
+    }
+
+    public function test_duracao_da_rota_comeca_no_padrao_e_pode_ser_estimada(): void
+    {
+        $this->item(['prazo_item' => now()->addDays(2)]);
+        $usuario = User::factory()->create();
+
+        // Sem estimativa, vale o padrão conservador de um dia.
+        $this->actingAs($usuario)
+            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->assertOk()
+            ->assertSee('value="24"', escape: false);
+
+        $this->actingAs($usuario)
+            ->post(route('itens-entrega.duracao'), [
+                'local_origem_norm' => 'BASE VITORIA',
+                'local_destino_norm' => 'ARM MACAE',
+                'horas' => 6,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame(6.0, DuracaoRota::firstOrFail()->horas);
+
+        $this->actingAs($usuario)
+            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->assertOk()
+            ->assertSee('value="6"', escape: false);
+    }
+
+    public function test_duracao_recusa_valor_fora_da_faixa(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->post(route('itens-entrega.duracao'), [
+                'local_origem_norm' => 'A',
+                'local_destino_norm' => 'B',
+                'horas' => 0,
+            ])
+            ->assertSessionHasErrors('horas');
+
+        $this->assertSame(0, DuracaoRota::count());
+    }
+
+    /**
+     * A rota que não cabe no prazo nem sendo atendida agora é marcada, para o
+     * usuário saber que ali a perda já está dada.
+     */
+    public function test_rota_que_nao_cabe_no_prazo_e_sinalizada(): void
+    {
+        // Prazo em 2h, mas a rota leva 24h (padrão): impossível.
+        $this->item(['prazo_item' => now()->addHours(2)]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->assertOk()
+            ->assertSee('não cabe', escape: false);
+    }
+
+    public function test_rota_cabe_quando_a_estimativa_permite(): void
+    {
+        $this->item(['prazo_item' => now()->addHours(10)]);
+        DuracaoRota::definir('BASE VITORIA', 'ARM MACAE', 4, null);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('itens-entrega.index', ['dias' => 0]))
+            ->assertOk()
+            ->assertSee('itens cabem no prazo nesta ordem', escape: false)
+            ->assertDontSee('não cabe', escape: false);
     }
 }
