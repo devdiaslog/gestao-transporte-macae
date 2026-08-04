@@ -213,6 +213,7 @@
             @endif
 
             {{-- Mapa Geral --}}
+            @can('mapa-geral.ver')
             <a href="{{ route('mapa-geral.index') }}"
                title="Mapa Geral"
                class="nav-link flex items-center justify-center rounded-lg py-2.5 text-sm font-medium
@@ -225,6 +226,7 @@
                 </svg>
                 <span class="nav-label hidden whitespace-nowrap">Mapa Geral</span>
             </a>
+            @endcan
 
             {{-- Dashboard — visível apenas para quem tem permissão --}}
             @can('access-dashboard')

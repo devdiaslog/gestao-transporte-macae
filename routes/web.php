@@ -38,14 +38,20 @@ Route::get('/', function () {
     }
 
     // Foco do sistema: gestão de demandas. Quem tem acesso ao dashboard entra
-    // pela visão gerencial; os demais, pela listagem. Sem nenhum dos dois,
-    // resta o Mapa Geral (caso do perfil somente-consulta).
+    // pela visão gerencial; os demais, pela listagem, e depois pelo Mapa Geral
+    // (caso do perfil somente-consulta). Sem nenhuma das três, o usuário existe
+    // mas ainda não recebeu acesso — a página explica o que fazer, em vez de um
+    // 403 seco ou de um redirecionamento em círculo.
     return redirect()->route(match (true) {
         $user->can('dashboard.ver') => 'dashboard.demandas',
         $user->can('demandas.ver') => 'demandas.index',
-        default => 'mapa-geral.index',
+        $user->can('mapa-geral.ver') => 'mapa-geral.index',
+        default => 'sem-acesso',
     });
 });
+
+// Usuário autenticado sem nenhuma permissão de entrada.
+Route::get('sem-acesso', fn () => view('sem-acesso'))->middleware('auth')->name('sem-acesso');
 
 // Sincronização de posições — protegida por chave secreta
 Route::get('sync/posicoes', function (VfleetsService $vfleets) {
@@ -95,8 +101,9 @@ Route::middleware('auth')->group(function () {
     Route::put('minha-conta/senha', [SenhaController::class, 'atualizar'])->name('senha.atualizar');
 });
 
-// Mapa Geral — acessível a todos os perfis, inclusive Visualizador (acesso restrito apenas a isto)
-Route::middleware('auth')->group(function () {
+// Mapa Geral — a única tela do perfil Visualizador. As rotas da torre alimentam
+// o mapa com posição e status, então respondem à mesma permissão.
+Route::middleware(['auth', 'can:mapa-geral.ver'])->group(function () {
     Route::get('mapa-geral', [ControlTowerController::class, 'mapaGeralPagina'])->name('mapa-geral.index');
     Route::get('torre-de-controle/mapa-geral', [ControlTowerController::class, 'mapaGeral'])->name('control-tower.mapa-geral');
     Route::post('torre-de-controle/sincronizar-posicoes', [ControlTowerController::class, 'sincronizarPosicoes'])->name('control-tower.sincronizar-posicoes');

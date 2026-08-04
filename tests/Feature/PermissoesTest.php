@@ -204,4 +204,42 @@ class PermissoesTest extends TestCase
             ->post(route('itens-entrega.prazo'), [])
             ->assertForbidden();
     }
+
+    public function test_mapa_geral_exige_permissao_propria(): void
+    {
+        $semAcesso = User::factory()->create();
+        $semAcesso->syncRoles([]);
+        $this->recarregarPermissoes();
+
+        $this->actingAs($semAcesso)->get(route('mapa-geral.index'))->assertForbidden();
+        // Os endpoints que alimentam o mapa respondem à mesma permissão.
+        $this->actingAs($semAcesso)->get(route('control-tower.mapa-geral'))->assertForbidden();
+        $this->actingAs($semAcesso)->post(route('control-tower.sincronizar-posicoes'))->assertForbidden();
+
+        $visualizador = User::factory()->comPerfil('Visualizador')->create();
+        $this->actingAs($visualizador)->get(route('mapa-geral.index'))->assertOk();
+    }
+
+    /**
+     * Sem nenhuma permissão de entrada, a raiz levaria ao Mapa Geral e agora
+     * bateria em 403. A página explica o que fazer.
+     */
+    public function test_usuario_sem_permissao_alguma_cai_na_pagina_explicativa(): void
+    {
+        $semAcesso = User::factory()->create();
+        $semAcesso->syncRoles([]);
+        $this->recarregarPermissoes();
+
+        $this->actingAs($semAcesso)->get('/')->assertRedirect(route('sem-acesso'));
+        $this->actingAs($semAcesso)->get(route('sem-acesso'))
+            ->assertOk()
+            ->assertSee('ainda não tem acesso a nenhuma tela', escape: false);
+    }
+
+    public function test_visualizador_continua_entrando_pelo_mapa(): void
+    {
+        $visualizador = User::factory()->comPerfil('Visualizador')->create();
+
+        $this->actingAs($visualizador)->get('/')->assertRedirect(route('mapa-geral.index'));
+    }
 }
