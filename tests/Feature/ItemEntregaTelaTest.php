@@ -1733,7 +1733,7 @@ class ItemEntregaTelaTest extends TestCase
             'Define a ordem das rotas',
             'Pendência do solicitante registrada pela equipe',
             'Recorta pela data que a equipe prometeu',
-            'Horizonte do prazo acordado com o cliente',
+            'Horizonte do prazo vigente de cada item',
             'Código do item no SAP',
         ] as $explicacao) {
             $resposta->assertSee($explicacao, escape: false);

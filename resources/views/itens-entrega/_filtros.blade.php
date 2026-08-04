@@ -196,7 +196,8 @@
 
         <div>
             <label class="{{ $rotulo }}">Prazo vence em até{!! $info(
-                 'Horizonte do prazo acordado com o cliente, contado a partir de hoje. '
+                 'Horizonte do prazo vigente de cada item, contado a partir de hoje. '
+                 .'Vigente é o prazo do SAP enquanto ninguém o renegocia; depois disso, vale o renegociado. '
                  .'D+3 traz o que vence até três dias à frente, e sempre inclui o que já venceu. '
                  ."
 
