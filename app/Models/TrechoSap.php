@@ -67,8 +67,8 @@ class TrechoSap extends Model
     /**
      * Horas de prazo que valem para este trecho.
      *
-     * "Automático" ainda cai no normal: a regra que o diferencia depende do
-     * tipo do item e será definida pela operação.
+     * "Manual" ainda cai no normal: a regra que o diferencia depende do tipo
+     * do item e será definida pela operação.
      */
     public function horasVigentes(): ?int
     {

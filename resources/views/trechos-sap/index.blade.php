@@ -12,7 +12,7 @@
     $coresPrazo = [
         'normal' => 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
         'expresso' => 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400',
-        'automatico' => 'bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-400',
+        'manual' => 'bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-400',
     ];
 @endphp
 

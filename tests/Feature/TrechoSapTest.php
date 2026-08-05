@@ -57,7 +57,7 @@ class TrechoSapTest extends TestCase
                 'km_trecho' => 164,
                 'prazo_horas_normal' => 72,
                 'prazo_horas_expresso' => 60,
-                'prazo_padrao' => 'automatico',
+                'prazo_padrao' => 'manual',
             ])
             ->assertRedirect(route('trechos-sap.index'))
             ->assertSessionHas('success');
@@ -66,7 +66,7 @@ class TrechoSapTest extends TestCase
 
         $this->assertSame('ARM MACAE > PACU', $trecho->chave_origem_destino);
         $this->assertSame(164.0, $trecho->km_trecho);
-        $this->assertSame(PrazoPadrao::Automatico, $trecho->prazo_padrao);
+        $this->assertSame(PrazoPadrao::Manual, $trecho->prazo_padrao);
     }
 
     /**

@@ -9,14 +9,14 @@ enum PrazoPadrao: string
 {
     case Normal = 'normal';
     case Expresso = 'expresso';
-    case Automatico = 'automatico';
+    case Manual = 'manual';
 
     public function label(): string
     {
         return match ($this) {
             self::Normal => 'Normal',
             self::Expresso => 'Expresso',
-            self::Automatico => 'Automático',
+            self::Manual => 'Manual',
         };
     }
 
@@ -25,7 +25,7 @@ enum PrazoPadrao: string
         return match ($this) {
             self::Normal => 'zinc',
             self::Expresso => 'amber',
-            self::Automatico => 'sky',
+            self::Manual => 'sky',
         };
     }
 }
