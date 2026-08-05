@@ -19,13 +19,17 @@ class TrechoSapTest extends TestCase
     /**
      * @param  array<int, array<int, string>>  $linhas
      */
-    private function planilha(array $linhas): UploadedFile
+    private function planilha(array $linhas, bool $comCidades = false): UploadedFile
     {
         $caminho = tempnam(sys_get_temp_dir(), 'trechos_').'.xlsx';
 
         $writer = new Writer;
         $writer->openToFile($caminho);
-        $writer->addRow(Row::fromValues(['Origem SAP', 'Destino SAP', 'Distância (km)', 'Prazo Hora Normal', 'Prazo Hora Expresso']));
+        $writer->addRow(Row::fromValues(array_merge(
+            ['Origem SAP', 'Destino SAP'],
+            $comCidades ? ['Cidade Origem', 'Cidade Destino'] : [],
+            ['Distância (km)', 'Prazo Hora Normal', 'Prazo Hora Expresso'],
+        )));
 
         foreach ($linhas as $linha) {
             $writer->addRow(Row::fromValues($linha));
@@ -343,5 +347,80 @@ class TrechoSapTest extends TestCase
 
         $this->assertStringContainsString('VAZIO', $csv);
         $this->assertStringNotContainsString('PACU', $csv);
+    }
+
+    public function test_importa_as_cidades_do_trecho(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('trechos-sap.importar'), [
+                'arquivo' => $this->planilha([
+                    ['ARM-MACAE', 'PACU', 'Macaé', 'São João da Barra', '164', '72', '60'],
+                ], comCidades: true),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $trecho = TrechoSap::firstOrFail();
+
+        $this->assertSame('Macaé', $trecho->cidade_origem);
+        $this->assertSame('São João da Barra', $trecho->cidade_destino);
+    }
+
+    public function test_reimportar_atualiza_as_cidades(): void
+    {
+        $usuario = $this->admin();
+
+        $this->actingAs($usuario)->post(route('trechos-sap.importar'), [
+            'arquivo' => $this->planilha([
+                ['ARM-MACAE', 'PACU', 'Macae', 'Sao Joao', '164', '72', '60'],
+            ], comCidades: true),
+        ]);
+
+        $this->actingAs($usuario)->post(route('trechos-sap.importar'), [
+            'arquivo' => $this->planilha([
+                ['ARM-MACAE', 'PACU', 'Macaé', 'São João da Barra', '164', '72', '60'],
+            ], comCidades: true),
+        ]);
+
+        $trecho = TrechoSap::firstOrFail();
+
+        $this->assertSame(1, TrechoSap::count());
+        $this->assertSame('Macaé', $trecho->cidade_origem);
+        $this->assertSame('São João da Barra', $trecho->cidade_destino);
+    }
+
+    /**
+     * Cidade é descritiva: planilha sem a coluna não apaga o que a operação já
+     * preencheu na tela.
+     */
+    public function test_planilha_sem_cidades_nao_apaga_as_existentes(): void
+    {
+        $usuario = $this->admin();
+
+        $this->actingAs($usuario)->post(route('trechos-sap.importar'), [
+            'arquivo' => $this->planilha([
+                ['ARM-MACAE', 'PACU', 'Macaé', 'São João da Barra', '164', '72', '60'],
+            ], comCidades: true),
+        ]);
+
+        // Reimporta pelo layout antigo, sem as colunas de cidade.
+        $this->actingAs($usuario)->post(route('trechos-sap.importar'), [
+            'arquivo' => $this->planilha([['ARM-MACAE', 'PACU', '168', '80', '64']]),
+        ]);
+
+        $trecho = TrechoSap::firstOrFail();
+
+        $this->assertSame(168.0, $trecho->km_trecho);
+        $this->assertSame('Macaé', $trecho->cidade_origem);
+        $this->assertSame('São João da Barra', $trecho->cidade_destino);
+    }
+
+    public function test_modelo_traz_as_colunas_de_cidade(): void
+    {
+        $resultado = app(ImportadorTrechosSap::class)
+            ->importar(app(ImportadorTrechosSap::class)->gerarModelo());
+
+        $this->assertSame(2, $resultado['criados']);
+        $this->assertSame('Macaé', TrechoSap::where('destino_sap', 'PACU')->firstOrFail()->cidade_origem);
     }
 }

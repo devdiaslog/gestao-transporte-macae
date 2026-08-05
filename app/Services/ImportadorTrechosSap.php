@@ -26,6 +26,8 @@ class ImportadorTrechosSap
     private const COLUNAS = [
         'origem_sap' => ['Origem SAP', 'Origem'],
         'destino_sap' => ['Destino SAP', 'Destino'],
+        'cidade_origem' => ['Cidade Origem', 'Cidade de Origem', 'Municipio Origem', 'Município Origem'],
+        'cidade_destino' => ['Cidade Destino', 'Cidade de Destino', 'Municipio Destino', 'Município Destino'],
         'km_trecho' => ['Distância (km)', 'Distancia (km)', 'Distância', 'KM', 'Km Trecho'],
         'prazo_horas_normal' => ['Prazo Hora Normal', 'Prazo Horas Normal', 'Prazo Normal'],
         'prazo_horas_expresso' => ['Prazo Hora Expresso', 'Prazo Horas Expresso', 'Prazo Expresso'],
@@ -35,6 +37,8 @@ class ImportadorTrechosSap
     private const CABECALHO_MODELO = [
         'Origem SAP',
         'Destino SAP',
+        'Cidade Origem',
+        'Cidade Destino',
         'Distância (km)',
         'Prazo Hora Normal',
         'Prazo Hora Expresso',
@@ -82,6 +86,16 @@ class ImportadorTrechosSap
                 $trecho->origem_sap = $dados['origem_sap'];
                 $trecho->destino_sap = $dados['destino_sap'];
                 $trecho->km_trecho = $dados['km_trecho'];
+
+                // Cidade é descritiva e pode faltar em algumas linhas: só
+                // sobrescreve quando a planilha traz o dado, para não apagar o
+                // que já estava preenchido.
+                foreach (['cidade_origem', 'cidade_destino'] as $campo) {
+                    if ($dados[$campo] !== null) {
+                        $trecho->{$campo} = $dados[$campo];
+                    }
+                }
+
                 $trecho->prazo_horas_normal = $dados['prazo_horas_normal'];
                 $trecho->prazo_horas_expresso = $dados['prazo_horas_expresso'];
 
@@ -127,6 +141,8 @@ class ImportadorTrechosSap
                 'linha' => $numero,
                 'origem_sap' => $origem,
                 'destino_sap' => $destino,
+                'cidade_origem' => $this->limpar($linha['cidade_origem'] ?? null),
+                'cidade_destino' => $this->limpar($linha['cidade_destino'] ?? null),
                 'km_trecho' => $this->numero($linha['km_trecho'] ?? null),
                 'prazo_horas_normal' => $this->inteiro($linha['prazo_horas_normal'] ?? null),
                 'prazo_horas_expresso' => $this->inteiro($linha['prazo_horas_expresso'] ?? null),
@@ -191,8 +207,8 @@ class ImportadorTrechosSap
         $writer = new XlsxWriter;
         $writer->openToFile($caminho);
         $writer->addRow(Row::fromValues(self::CABECALHO_MODELO));
-        $writer->addRow(Row::fromValues(['ARM-MACAE', 'PACU', '164', '72', '60']));
-        $writer->addRow(Row::fromValues(['ARM-MACAE', 'BASE VITORIA', '381', '120', '108']));
+        $writer->addRow(Row::fromValues(['ARM-MACAE', 'PACU', 'Macaé', 'São João da Barra', '164', '72', '60']));
+        $writer->addRow(Row::fromValues(['ARM-MACAE', 'BASE VITORIA', 'Macaé', 'Vitória', '381', '120', '108']));
         $writer->close();
 
         return $caminho;
