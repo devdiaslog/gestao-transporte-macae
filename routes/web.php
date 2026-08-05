@@ -24,6 +24,7 @@ use App\Http\Controllers\SenhaController;
 use App\Http\Controllers\SubDivisaoController;
 use App\Http\Controllers\TipoEquipamentoController;
 use App\Http\Controllers\TipoOcorrenciaController;
+use App\Http\Controllers\TrechoSapController;
 use App\Http\Controllers\UserController;
 use App\Services\BigcoreService;
 use App\Services\StatusOperacionalService;
@@ -219,6 +220,12 @@ Route::middleware(['auth', 'can:access-app'])->group(function () {
     Route::patch('equipamentos/{equipamento}/operacional', [EquipamentoController::class, 'updateOperacional'])->name('equipamentos.operacional')->middleware('can:equipamentos.editar');
     $crud(Route::resource('motoristas', MotoristaController::class)->except(['show']), 'motoristas');
     $crud(Route::resource('medicoes', MedicaoController::class)->except(['show'])->parameters(['medicoes' => 'medicao']), 'medicoes');
+
+    // Trechos SAP — prazo acordado de cada origem→destino
+    Route::get('trechos-sap-export', [TrechoSapController::class, 'export'])->name('trechos-sap.export')->middleware('can:trechos-sap.ver');
+    Route::get('trechos-sap-modelo', [TrechoSapController::class, 'modeloImportacao'])->name('trechos-sap.modelo')->middleware('can:trechos-sap.criar');
+    Route::post('trechos-sap-importar', [TrechoSapController::class, 'importar'])->name('trechos-sap.importar')->middleware('can:trechos-sap.criar');
+    $crud(Route::resource('trechos-sap', TrechoSapController::class)->except(['show', 'create', 'edit']), 'trechos-sap');
 
     // Tabelas de apoio de ocorrências
     $crud(Route::resource('responsaveis', ResponsavelController::class)->except(['show'])->parameters(['responsaveis' => 'responsavel']), 'responsaveis');

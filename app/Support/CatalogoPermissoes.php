@@ -47,6 +47,7 @@ class CatalogoPermissoes
                 'modelos-equipamentos' => ['label' => 'Modelos de Equipamento', 'acoes' => self::ACOES_CRUD],
                 'cercas' => ['label' => 'Cercas', 'acoes' => self::ACOES_CRUD],
                 'medicoes' => ['label' => 'Medições', 'acoes' => self::ACOES_CRUD],
+                'trechos-sap' => ['label' => 'Trechos SAP', 'acoes' => self::ACOES_CRUD],
             ],
 
             'Tabelas de Apoio' => [
@@ -135,6 +136,7 @@ class CatalogoPermissoes
                     'modelos-equipamentos' => $crud,
                     'cercas' => $crud,
                     'medicoes' => $crud,
+                    'trechos-sap' => $crud,
                     'responsaveis' => $crud,
                     'tipos-ocorrencia' => $crud,
                     'justificativas' => $crud,

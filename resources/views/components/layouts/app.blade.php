@@ -198,6 +198,16 @@
                     </a>
                     @endcan
 
+                    {{-- Trechos SAP --}}
+                    @can('trechos-sap.ver')
+                    <a href="{{ route('trechos-sap.index') }}"
+                       class="flex items-center gap-2 rounded-lg py-2 pl-3 pr-3 text-sm font-medium
+                              transition-all duration-200
+                              {{ request()->routeIs('trechos-sap.*') ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100' }}">
+                        Trechos SAP
+                    </a>
+                    @endcan
+
                     {{-- Medições --}}
                     @can('medicoes.ver')
                     <a href="{{ route('medicoes.index') }}"
