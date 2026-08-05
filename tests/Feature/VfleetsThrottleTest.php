@@ -6,12 +6,14 @@ use App\Models\Cerca;
 use App\Models\CercaEvento;
 use App\Models\Equipamento;
 use App\Models\PosicaoVeiculo;
+use App\Models\StatusEvento;
 use App\Models\User;
 use App\Services\GeofencingService;
 use App\Services\VfleetsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -221,6 +223,43 @@ class VfleetsThrottleTest extends TestCase
         $evento->update(['saida_em' => now(), 'duracao_minutos' => $minutos]);
 
         $this->assertSame($minutos, $evento->fresh()->duracao_minutos);
+    }
+
+    /**
+     * Manutenção, reserva e operação interna não mudam por meses: o status
+     * pode ficar aberto o ano inteiro, e um ano são 525.600 minutos — dez
+     * vezes o teto da coluna antiga.
+     */
+    #[DataProvider('duracoesLongas')]
+    public function test_status_aberto_por_muito_tempo_cabe_na_coluna(int $dias, string $cenario): void
+    {
+        $equipamento = $this->equipamento('ABC1D23');
+
+        $evento = StatusEvento::create([
+            'equipamento_id' => $equipamento->id,
+            'status_operacional' => 'Manutenção',
+            'entrada_em' => now()->subDays($dias),
+        ]);
+
+        $minutos = (int) $evento->entrada_em->diffInMinutes(now());
+
+        $evento->update(['saida_em' => now(), 'duracao_minutos' => $minutos]);
+
+        $this->assertSame($minutos, $evento->fresh()->duracao_minutos, $cenario);
+    }
+
+    /**
+     * @return array<string, array{int, string}>
+     */
+    public static function duracoesLongas(): array
+    {
+        return [
+            'um mês' => [30, '30 dias'],
+            'o caso que quebrou' => [47, '47 dias — o evento 1935'],
+            'meio ano' => [183, 'meio ano parado'],
+            'um ano inteiro' => [365, 'um ano em manutenção'],
+            'cinco anos' => [1825, 'veículo esquecido em reserva'],
+        ];
     }
 
     public function test_falha_no_geofencing_nao_derruba_a_sincronizacao(): void
