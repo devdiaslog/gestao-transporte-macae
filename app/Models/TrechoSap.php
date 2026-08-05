@@ -78,6 +78,78 @@ class TrechoSap extends Model
         };
     }
 
+    /**
+     * Garante que existe um trecho para cada rota informada, criando os que
+     * faltam sem km e sem prazo.
+     *
+     * A importação de itens descobre rotas que ninguém cadastrou. Criar o
+     * esqueleto na hora transforma isso numa lista de pendências visível em
+     * Cadastros — melhor do que a equipe descobrir rota a rota, item a item,
+     * ao tentar calcular prazo.
+     *
+     * O que depende de decisão humana fica em branco de propósito: distância e
+     * prazo não podem ser inventados.
+     *
+     * @param  iterable<int, array{origem: ?string, destino: ?string}>  $rotas
+     * @return int quantos trechos foram criados
+     */
+    public static function garantirRotas(iterable $rotas): int
+    {
+        $novos = [];
+
+        foreach ($rotas as $rota) {
+            $origem = $rota['origem'] ?? null;
+            $destino = $rota['destino'] ?? null;
+
+            if (blank($origem) || blank($destino)) {
+                continue;
+            }
+
+            $novos[self::chaveDe($origem, $destino)] ??= [
+                'origem_sap' => $origem,
+                'destino_sap' => $destino,
+            ];
+        }
+
+        if ($novos === []) {
+            return 0;
+        }
+
+        // Trecho excluído continua ocupando a chave: reaparecer a rota não o
+        // ressuscita nem cria um duplicado.
+        $existentes = self::withTrashed()
+            ->whereIn('chave_origem_destino', array_keys($novos))
+            ->pluck('chave_origem_destino')
+            ->all();
+
+        $faltantes = array_diff_key($novos, array_flip($existentes));
+
+        if ($faltantes === []) {
+            return 0;
+        }
+
+        $agora = now();
+
+        self::insert(array_map(fn (array $dados, string $chave) => [
+            'origem_sap' => $dados['origem_sap'],
+            'destino_sap' => $dados['destino_sap'],
+            'chave_origem_destino' => $chave,
+            'prazo_padrao' => PrazoPadrao::Normal->value,
+            'created_at' => $agora,
+            'updated_at' => $agora,
+        ], $faltantes, array_keys($faltantes)));
+
+        return count($faltantes);
+    }
+
+    /**
+     * O trecho ainda não tem o que a operação precisa preencher.
+     */
+    public function incompleto(): bool
+    {
+        return $this->km_trecho === null || $this->horasVigentes() === null;
+    }
+
     public function autor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'atualizado_por');

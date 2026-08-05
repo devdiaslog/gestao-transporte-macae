@@ -8,6 +8,7 @@ use App\Models\TrechoSap;
 use App\Models\User;
 use App\Services\CalculadoraPrazoTrecho;
 use App\Services\DemandaCalculadora;
+use App\Services\ImportadorItensLiberados;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -232,5 +233,64 @@ class PrazoPorTrechoTest extends TestCase
             'rota não cadastrada em Trechos SAP',
             CalculadoraPrazoTrecho::rotuloDoMotivo(CalculadoraPrazoTrecho::SEM_TRECHO),
         );
+    }
+
+    /**
+     * A importação descobre rotas que ninguém cadastrou. Criar o esqueleto na
+     * hora transforma isso numa lista de pendências visível em Cadastros, em
+     * vez de a equipe descobrir rota a rota ao tentar calcular prazo.
+     */
+    public function test_importacao_cadastra_a_rota_que_faltava(): void
+    {
+        $this->assertSame(0, TrechoSap::count());
+
+        app(ImportadorItensLiberados::class)->importarLinhas([
+            ['numero_rt' => '326000111', 'numero_item' => '1', 'local_origem' => 'ARM-MACAE', 'local_destino' => 'PACU'],
+            ['numero_rt' => '326000222', 'numero_item' => '1', 'local_origem' => 'BASE VITORIA', 'local_destino' => 'ARM-MACAE'],
+            // Mesma rota da primeira, com outra grafia: não vira um segundo trecho.
+            ['numero_rt' => '326000333', 'numero_item' => '1', 'local_origem' => 'ARM MACAÉ', 'local_destino' => 'PACU'],
+        ], null, false);
+
+        $this->assertSame(2, TrechoSap::count());
+
+        $trecho = TrechoSap::where('chave_origem_destino', 'ARM MACAE > PACU')->firstOrFail();
+
+        // O que depende de decisão humana fica em branco.
+        $this->assertNull($trecho->km_trecho);
+        $this->assertNull($trecho->prazo_horas_normal);
+        $this->assertTrue($trecho->incompleto());
+    }
+
+    public function test_rota_ja_cadastrada_nao_e_recriada(): void
+    {
+        $this->trecho();
+
+        app(ImportadorItensLiberados::class)->importarLinhas([
+            ['numero_rt' => '326000444', 'numero_item' => '1', 'local_origem' => 'ARM-MACAE', 'local_destino' => 'PACU'],
+        ], null, false);
+
+        $this->assertSame(1, TrechoSap::count());
+        // O prazo que já estava lá continua intacto.
+        $this->assertSame(72, TrechoSap::firstOrFail()->prazo_horas_normal);
+    }
+
+    public function test_trecho_incompleto_e_sinalizado_no_cadastro(): void
+    {
+        TrechoSap::create(['origem_sap' => 'ARM-MACAE', 'destino_sap' => 'PACU', 'prazo_padrao' => 'normal']);
+
+        $this->actingAs(User::factory()->comPerfil('Administrador')->create())
+            ->get(route('trechos-sap.index'))
+            ->assertOk()
+            ->assertSee('a preencher');
+    }
+
+    public function test_trecho_completo_nao_e_sinalizado(): void
+    {
+        $this->trecho();
+
+        $this->actingAs(User::factory()->comPerfil('Administrador')->create())
+            ->get(route('trechos-sap.index'))
+            ->assertOk()
+            ->assertDontSee('a preencher');
     }
 }

@@ -695,6 +695,14 @@ class ItemEntregaController extends Controller
             $msg .= sprintf(' %d não constava(m) na planilha e foi(ram) marcado(s) para conferência.', $resultado['itens_ausentes']);
         }
 
+        // A rota nova entra sem distância nem prazo: quem preenche é a operação.
+        if (($resultado['trechos_criados'] ?? 0) > 0) {
+            $msg .= sprintf(
+                ' %d rota(s) nova(s) cadastrada(s) em Trechos SAP, aguardando distância e prazo.',
+                $resultado['trechos_criados'],
+            );
+        }
+
         if ($resultado['avisos'] !== []) {
             $msg .= ' '.implode(' · ', array_slice($resultado['avisos'], 0, 3));
         }

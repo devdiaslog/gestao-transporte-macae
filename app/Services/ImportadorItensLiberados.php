@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\StatusItemDemanda;
 use App\Enums\StatusSap;
 use App\Models\DemandaItem;
+use App\Models\TrechoSap;
 use App\Traits\LeituraPlanilhaSap;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -138,7 +139,7 @@ class ImportadorItensLiberados
      * @param  bool  $marcarAusentes  Quando o arquivo é o export completo dos itens
      *                                liberados, marca para conferência os que já
      *                                não constam nele.
-     * @return array{itens_criados: int, itens_atualizados: int, itens_inalterados: int, itens_ausentes: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
+     * @return array{itens_criados: int, trechos_criados: int, itens_atualizados: int, itens_inalterados: int, itens_ausentes: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
      */
     public function importar(string $caminho, ?int $usuarioId = null, bool $marcarAusentes = true): array
     {
@@ -147,6 +148,7 @@ class ImportadorItensLiberados
         if ($linhas === []) {
             return [
                 'itens_criados' => 0,
+                'trechos_criados' => 0,
                 'itens_atualizados' => 0,
                 'itens_inalterados' => 0,
                 'itens_ausentes' => 0,
@@ -163,12 +165,13 @@ class ImportadorItensLiberados
      * Processa linhas já estruturadas (da planilha ou da API).
      *
      * @param  array<int|string, array<string, string|null>>  $linhas
-     * @return array{itens_criados: int, itens_atualizados: int, itens_inalterados: int, itens_ausentes: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
+     * @return array{itens_criados: int, trechos_criados: int, itens_atualizados: int, itens_inalterados: int, itens_ausentes: int, linhas_ignoradas: int, erros: array<int, string>, avisos: array<int, string>}
      */
     public function importarLinhas(array $linhas, ?int $usuarioId = null, bool $marcarAusentes = true): array
     {
         $resultado = [
             'itens_criados' => 0,
+            'trechos_criados' => 0,
             'itens_atualizados' => 0,
             'itens_inalterados' => 0,
             'itens_ausentes' => 0,
@@ -233,6 +236,15 @@ class ImportadorItensLiberados
             if ($marcarAusentes) {
                 $resultado['itens_ausentes'] = $this->marcarAusentes($vistos);
             }
+
+            // Rota que ninguém cadastrou vira pendência visível em Cadastros,
+            // em vez de a equipe descobri-la item a item ao calcular prazo.
+            $resultado['trechos_criados'] = TrechoSap::garantirRotas(
+                collect($linhas)->map(fn (array $l) => [
+                    'origem' => $this->limpar($l['local_origem'] ?? null),
+                    'destino' => $this->limpar($l['local_destino'] ?? null),
+                ])
+            );
         });
 
         return $resultado;

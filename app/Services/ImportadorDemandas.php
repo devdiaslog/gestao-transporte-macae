@@ -10,6 +10,7 @@ use App\Enums\TipoDemanda;
 use App\Models\Demanda;
 use App\Models\DemandaItem;
 use App\Models\Equipamento;
+use App\Models\TrechoSap;
 use App\Traits\LeituraPlanilhaSap;
 use Illuminate\Support\Facades\DB;
 use OpenSpout\Common\Entity\Row;
@@ -165,6 +166,7 @@ class ImportadorDemandas
             return [
                 'demandas_criadas' => 0,
                 'itens_criados' => 0,
+                'trechos_criados' => 0,
                 'itens_atualizados' => 0,
                 'itens_adotados' => 0,
                 'itens_remanejados' => 0,
@@ -190,6 +192,7 @@ class ImportadorDemandas
         $resultado = [
             'demandas_criadas' => 0,
             'itens_criados' => 0,
+            'trechos_criados' => 0,
             'itens_atualizados' => 0,
             'itens_adotados' => 0,
             'itens_remanejados' => 0,
@@ -361,6 +364,14 @@ class ImportadorDemandas
             // Recalcula os derivados só depois que todos os itens entraram.
             Demanda::with('itens')->whereIn('id', array_keys($demandasTocadas))->get()
                 ->each(fn (Demanda $d) => $this->calculadora->recalcular($d, 'sap'));
+
+            // Rota que ninguém cadastrou vira pendência visível em Cadastros.
+            $resultado['trechos_criados'] = TrechoSap::garantirRotas(
+                collect($linhas)->map(fn (array $l) => [
+                    'origem' => $this->limpar($l['local_origem'] ?? null),
+                    'destino' => $this->limpar($l['local_destino'] ?? null),
+                ])
+            );
         });
 
         return $resultado;

@@ -136,7 +136,15 @@
                 <tbody class="divide-y divide-slate-100 dark:divide-zinc-800/70">
                     @foreach($trechos as $t)
                         <tr class="transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/40">
-                            <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ $t->origem_sap }}</td>
+                            <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">
+                                @if($t->incompleto())
+                                    <span class="mr-1 inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"
+                                          title="Rota descoberta na importação de itens — falta informar distância e prazo">
+                                        a preencher
+                                    </span>
+                                @endif
+                                {{ $t->origem_sap }}
+                            </td>
                             <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ $t->destino_sap }}</td>
                             <td class="px-4 py-3 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
                                 {{ $t->km_trecho !== null ? number_format($t->km_trecho, 1, ',', '.').' km' : '—' }}
