@@ -23,6 +23,18 @@ class ControlTowerController extends Controller
 {
     public function sincronizarPosicoes(VfleetsService $vfleets): JsonResponse
     {
+        // A tela sincroniza ao abrir: sem esse limite, cada usuário que entra
+        // gera uma chamada, a API responde 429 e a sincronização inteira falha
+        // — deixando todos os veículos com posição velha.
+        if ($vfleets->sincronizadoRecentemente()) {
+            return response()->json([
+                'ok' => true,
+                'total' => 0,
+                'reaproveitado' => true,
+                'segundos' => $vfleets->segundosDesdeUltimaSincronizacao(),
+            ]);
+        }
+
         try {
             $total = $vfleets->sincronizar();
         } catch (Throwable $e) {

@@ -50,6 +50,17 @@ return [
         'client_secret' => env('VFLEETS_CLIENT_SECRET'),
         'grant_type' => 'client_credentials',
         'sync_key' => env('VFLEETS_SYNC_KEY'),
+
+        /*
+         * Intervalo mínimo entre duas chamadas à API, em segundos.
+         *
+         * A tela do Mapa Geral sincroniza ao abrir, e sem esse limite cada
+         * usuário que abre a tela gera uma chamada. A API responde 429 e a
+         * sincronização inteira falha — nenhum veículo é atualizado, e em três
+         * horas todos aparecem como "sem sinal". Dentro do intervalo, a tela
+         * usa o que já está no banco.
+         */
+        'intervalo_sincronizacao' => (int) env('VFLEETS_INTERVALO_SYNC', 120),
     ],
 
 ];

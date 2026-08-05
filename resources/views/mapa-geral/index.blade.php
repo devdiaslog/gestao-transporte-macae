@@ -868,6 +868,10 @@
                         info.textContent = 'Limite da API atingido — exibindo última sincronização salva.';
                         return _fetchEPlotarMarcadores();
                     }
+                    if (data.reaproveitado) {
+                        info.textContent = 'Posições atualizadas há ' + data.segundos + 's. Exibindo a última sincronização.';
+                        return _fetchEPlotarMarcadores();
+                    }
                     info.textContent = 'Sincronizados ' + data.total + ' veículo(s). Atualizando mapa…';
                     return _fetchEPlotarMarcadores();
                 });

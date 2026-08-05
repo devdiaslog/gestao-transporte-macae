@@ -166,6 +166,27 @@ class VfleetsService
     }
 
     /**
+     * Segundos desde a última sincronização bem-sucedida, ou null se nunca
+     * houve nenhuma.
+     */
+    public function segundosDesdeUltimaSincronizacao(): ?int
+    {
+        $ultima = PosicaoVeiculo::max('synced_at');
+
+        return $ultima ? (int) Carbon::parse($ultima)->diffInSeconds(now()) : null;
+    }
+
+    /**
+     * A última sincronização é recente o bastante para a tela reaproveitá-la.
+     */
+    public function sincronizadoRecentemente(): bool
+    {
+        $idade = $this->segundosDesdeUltimaSincronizacao();
+
+        return $idade !== null && $idade < (int) config('services.vfleets.intervalo_sincronizacao');
+    }
+
+    /**
      * Busca as últimas posições na API e salva no banco via upsert.
      * Retorna o total de registros sincronizados.
      *
