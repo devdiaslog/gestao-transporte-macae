@@ -51,6 +51,8 @@ class DemandaItem extends Model
         'prazo_motivo',
         'prazo_alterado_por',
         'prazo_alterado_em',
+        'prazo_trecho_id',
+        'prazo_calculado_em',
         'data_hora_entrega',
         'observacao',
         'campos_editados',
@@ -103,6 +105,7 @@ class DemandaItem extends Model
             'prazo_item' => 'datetime',
             'prazo_sap' => 'datetime',
             'prazo_alterado_em' => 'datetime',
+            'prazo_calculado_em' => 'datetime',
             'data_hora_entrega' => 'datetime',
             'campos_editados' => 'array',
             'data_hora_criacao_rt' => 'datetime',
@@ -254,6 +257,22 @@ class DemandaItem extends Model
             $editados[] = $campo;
             $this->campos_editados = array_values($editados);
         }
+    }
+
+    /**
+     * Trecho cuja tabela de prazos gerou o prazo em vigor.
+     */
+    public function trechoDoPrazo(): BelongsTo
+    {
+        return $this->belongsTo(TrechoSap::class, 'prazo_trecho_id');
+    }
+
+    /**
+     * O prazo veio da tabela de trechos, não do SAP.
+     */
+    public function prazoVeioDoTrecho(): bool
+    {
+        return $this->prazo_calculado_em !== null;
     }
 
     public function campoEditadoPeloOperador(string $campo): bool

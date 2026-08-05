@@ -488,6 +488,14 @@
                 </div>
             @endif
 
+            {{-- Aviso: a ação foi feita, mas parte dela não pôde ser aplicada --}}
+            @if(session('warning'))
+                <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800
+                            dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-300">
+                    {{ session('warning') }}
+                </div>
+            @endif
+
             @if(session('success'))
                 <div id="flash-success"
                      class="mb-6 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm

@@ -66,6 +66,14 @@
                 </button>
             @endif
             @if($podePrazo)
+                <form method="POST" action="{{ route('itens-entrega.recalcular-prazo') }}" class="inline">
+                    @csrf
+                    <div id="itens-recalculo"></div>
+                    <button type="submit" class="{{ $acaoLote }}"
+                            title="Aplica o prazo da rota cadastrada em Trechos SAP, contado da liberação da RT">
+                        Recalcular prazo pela rota
+                    </button>
+                </form>
                 <button type="button" onclick="abrirModal('modal-prazo')" class="{{ $acaoLote }}">
                     Renegociar prazo
                 </button>
@@ -197,6 +205,13 @@
                                                 </p>
                                             @endif
                                         </div>
+                                    @endif
+
+                                    @if($item->prazoVeioDoTrecho())
+                                        <span class="mt-1 inline-flex items-center rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-700 dark:bg-sky-950/50 dark:text-sky-400"
+                                              title="Prazo da rota cadastrada, contado da liberação da RT em {{ $item->data_hora_liberacao_rt?->format('d/m/Y H:i') }}">
+                                            prazo pela rota
+                                        </span>
                                     @endif
 
                                     @if($item->tipo_item)
@@ -622,7 +637,7 @@
                 });
 
                 // Os ids seguem para o POST como campos ocultos dos formulários.
-                ['itens-previsao', 'itens-escopo', 'itens-rota', 'itens-prazo', 'itens-tipo', 'itens-faltoso'].forEach(function (id) {
+                ['itens-previsao', 'itens-escopo', 'itens-rota', 'itens-prazo', 'itens-tipo', 'itens-faltoso', 'itens-recalculo'].forEach(function (id) {
                     var alvo = document.getElementById(id);
                     if (!alvo) { return; }
                     alvo.innerHTML = marcados.map(function (c) {

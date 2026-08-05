@@ -130,6 +130,12 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3">
+                                    @unless($t->trecho_cadastrado)
+                                        <span class="mb-1 inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"
+                                              title="Cadastre esta rota em Trechos SAP para o prazo ser calculado">
+                                            sem prazo cadastrado
+                                        </span>
+                                    @endunless
                                     <div class="flex items-center gap-2 font-semibold text-zinc-900 dark:text-zinc-100">
                                         <span>{{ $t->local_origem_norm ?? 'SEM ORIGEM' }}</span>
                                         <svg class="h-3.5 w-3.5 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

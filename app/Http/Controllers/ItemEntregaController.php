@@ -12,9 +12,12 @@ use App\Http\Requests\DefinirTipoItemRequest;
 use App\Http\Requests\ImportarItensLiberadosRequest;
 use App\Http\Requests\MarcarFaltosoRequest;
 use App\Http\Requests\MarcarForaEscopoRequest;
+use App\Http\Requests\RecalcularPrazoRequest;
 use App\Http\Requests\RenegociarPrazoRequest;
 use App\Models\DemandaItem;
 use App\Models\DuracaoRota;
+use App\Models\TrechoSap;
+use App\Services\CalculadoraPrazoTrecho;
 use App\Services\ImportadorItensLiberados;
 use App\Support\ContentorSap;
 use App\Support\SequenciadorRotas;
@@ -218,6 +221,16 @@ class ItemEntregaController extends Controller
             $chave = $trecho->local_origem_norm.'|'.$trecho->local_destino_norm;
             // Posição no plano que entrega mais itens no prazo; null não cabe.
             $trecho->posicao_sugerida = isset($posicoes[$chave]) ? $posicoes[$chave] + 1 : null;
+        });
+
+        // Rota sem prazo cadastrado não recebe cálculo: a tela avisa em vez de
+        // deixar o item sem prazo por motivo desconhecido.
+        $cadastrados = TrechoSap::pluck('chave_origem_destino')->flip();
+
+        $trechos->each(function ($trecho) use ($cadastrados) {
+            $trecho->trecho_cadastrado = $cadastrados->has(
+                $trecho->local_origem_norm.' > '.$trecho->local_destino_norm
+            );
         });
 
         $ordenacao = $this->ordenacaoDe($request);
@@ -521,6 +534,38 @@ class ItemEntregaController extends Controller
             $request->validated('local_destino_norm'),
             number_format((float) $request->validated('horas'), 1, ',', '.'),
         ));
+    }
+
+    /**
+     * Recalcula o prazo dos itens pela tabela de trechos.
+     *
+     * É ação da equipe, e não da importação: a tabela de trechos é mantida em
+     * lote e muda depois de os itens já existirem — recalcular sozinho trocaria
+     * prazos sem ninguém pedir.
+     */
+    public function recalcularPrazo(RecalcularPrazoRequest $request, CalculadoraPrazoTrecho $calculadora): RedirectResponse
+    {
+        $itens = DemandaItem::whereIn('id', $request->validated('itens'))->get();
+
+        $resultado = $calculadora->recalcular($itens, $request->user()->id);
+
+        $mensagem = sprintf(
+            '%d %s com prazo recalculado.',
+            $resultado['aplicados'],
+            $resultado['aplicados'] === 1 ? 'item' : 'itens',
+        );
+
+        if ($resultado['pulados'] !== []) {
+            $detalhes = collect($resultado['pulados'])
+                ->map(fn (int $total, string $motivo) => $total.' '.CalculadoraPrazoTrecho::rotuloDoMotivo($motivo))
+                ->implode('; ');
+
+            return back()
+                ->with($resultado['aplicados'] > 0 ? 'success' : 'error', $mensagem)
+                ->with('warning', 'Sem cálculo: '.$detalhes.'.');
+        }
+
+        return back()->with('success', $mensagem);
     }
 
     /**
