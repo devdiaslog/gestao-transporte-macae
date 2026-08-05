@@ -302,7 +302,7 @@
         ['origem', 'destino', 'km', 'normal', 'expresso'].forEach(function (campo) {
             document.getElementById('trecho-' + campo).value = '';
         });
-        document.getElementById('trecho-padrao').value = 'automatico';
+        document.getElementById('trecho-padrao').value = 'normal';
         window.abrirModal('modal-trecho');
     };
 
@@ -315,7 +315,7 @@
         document.getElementById('trecho-km').value = t.km_trecho !== null ? t.km_trecho : '';
         document.getElementById('trecho-normal').value = t.prazo_horas_normal !== null ? t.prazo_horas_normal : '';
         document.getElementById('trecho-expresso').value = t.prazo_horas_expresso !== null ? t.prazo_horas_expresso : '';
-        document.getElementById('trecho-padrao').value = t.prazo_padrao || 'automatico';
+        document.getElementById('trecho-padrao').value = t.prazo_padrao || 'normal';
         window.abrirModal('modal-trecho');
     };
 

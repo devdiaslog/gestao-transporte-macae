@@ -28,7 +28,7 @@ return new class extends Migration
             $table->decimal('km_trecho', 8, 1)->nullable();
             $table->unsignedSmallInteger('prazo_horas_normal')->nullable();
             $table->unsignedSmallInteger('prazo_horas_expresso')->nullable();
-            $table->string('prazo_padrao', 20)->default('automatico');
+            $table->string('prazo_padrao', 20)->default('normal');
 
             $table->foreignId('atualizado_por')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();

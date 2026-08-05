@@ -247,4 +247,17 @@ class TrechoSapTest extends TestCase
         $this->assertSame([], $resultado['conflitos']);
         $this->assertSame(2, $resultado['criados']);
     }
+
+    /**
+     * Sem escolha explícita, o trecho nasce no prazo normal — o expresso é
+     * exceção, e o automático depende de uma regra que ainda não existe.
+     */
+    public function test_prazo_padrao_nasce_normal(): void
+    {
+        app(ImportadorTrechosSap::class)->importar($this->planilha([
+            ['ARM-MACAE', 'PACU', '164', '72', '60'],
+        ])->getRealPath());
+
+        $this->assertSame(PrazoPadrao::Normal, TrechoSap::firstOrFail()->prazo_padrao);
+    }
 }
