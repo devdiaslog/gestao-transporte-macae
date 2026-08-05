@@ -242,11 +242,25 @@ class VfleetsService
                 $this->buildAttributes($pos, $syncedAt, $stateFields),
             );
 
-            // Geofencing: detecta entrada/saída em cercas
+            // Geofencing: detecta entrada/saída em cercas.
+            //
+            // Isolado de propósito: é um efeito colateral da sincronização, não
+            // o objetivo dela. Uma falha aqui num único veículo derrubava a
+            // sincronização inteira e deixava a frota toda sem posição nova —
+            // foi o que aconteceu em 04/08/2026, quando um evento aberto há 47
+            // dias estourou o limite da coluna de duração.
             $equipamento = $equipamentos->get($plate);
             if ($equipamento) {
-                $equipamento->setRelation('posicao', $posicaoAtualizada);
-                $geofencing->processarVeiculo($equipamento, $syncedAt);
+                try {
+                    $equipamento->setRelation('posicao', $posicaoAtualizada);
+                    $geofencing->processarVeiculo($equipamento, $syncedAt);
+                } catch (\Throwable $e) {
+                    Log::error('Vfleets: falha no geofencing de um veículo', [
+                        'placa' => $plate,
+                        'equipamento_id' => $equipamento->id,
+                        'erro' => $e->getMessage(),
+                    ]);
+                }
             }
 
             $total++;

@@ -2,11 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Models\Cerca;
+use App\Models\CercaEvento;
+use App\Models\Equipamento;
 use App\Models\PosicaoVeiculo;
 use App\Models\User;
+use App\Services\GeofencingService;
 use App\Services\VfleetsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -18,6 +24,25 @@ use Tests\TestCase;
 class VfleetsThrottleTest extends TestCase
 {
     use RefreshDatabase;
+
+    /** Equipamento mínimo: não há factory para o model. */
+    private function equipamento(string $placa): Equipamento
+    {
+        $tipo = DB::table('tipos_equipamentos')->insertGetId([
+            'nome' => 'Teste '.$placa,
+            'status' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return Equipamento::create([
+            'tipo_id' => $tipo,
+            'placa' => $placa,
+            'id_rastreador' => $placa,
+            'prefixo' => 'P-'.substr($placa, 0, 3),
+            'status' => true,
+        ]);
+    }
 
     private function posicao(string $placa, string $sincronizadaEm): PosicaoVeiculo
     {
@@ -166,5 +191,66 @@ class VfleetsThrottleTest extends TestCase
         $this->actingAs($usuario)
             ->postJson(route('control-tower.sincronizar-posicoes'))
             ->assertStatus(429);
+    }
+
+    /**
+     * Incidente de 04/08/2026: um evento de cerca aberto há 47 dias fez o
+     * UPDATE da duração estourar o limite da coluna. O geofencing roda dentro
+     * da sincronização, então a exceção derrubava tudo — e nenhum veículo era
+     * atualizado. A duração agora cabe, e a falha de um veículo não contamina
+     * os demais.
+     */
+    public function test_duracao_de_evento_longo_cabe_na_coluna(): void
+    {
+        $cerca = Cerca::create([
+            'nome' => 'Pátio',
+            'poligono' => [[-22.0, -41.0], [-22.0, -41.1], [-22.1, -41.1]],
+            'status' => true,
+        ]);
+
+        $evento = CercaEvento::create([
+            'cerca_id' => $cerca->id,
+            'equipamento_id' => $this->equipamento('ABC1D23')->id,
+            'entrada_em' => now()->subDays(47),
+        ]);
+
+        // 47 dias = 67.680 minutos, acima dos 65.535 do smallint antigo.
+        $minutos = (int) $evento->entrada_em->diffInMinutes(now());
+        $this->assertGreaterThan(65535, $minutos);
+
+        $evento->update(['saida_em' => now(), 'duracao_minutos' => $minutos]);
+
+        $this->assertSame($minutos, $evento->fresh()->duracao_minutos);
+    }
+
+    public function test_falha_no_geofencing_nao_derruba_a_sincronizacao(): void
+    {
+        config(['services.vfleets.intervalo_sincronizacao' => 0]);
+
+        $this->equipamento('ABC1D23');
+
+        Http::fake([
+            '*token*' => Http::response(['access_token' => 'x'], 200),
+            '*positions*' => Http::response([
+                ['licensePlate' => 'ABC1D23', 'speed' => 10, 'dateTime' => now()->toIso8601String()],
+                ['licensePlate' => 'XYZ9W88', 'speed' => 0, 'dateTime' => now()->toIso8601String()],
+            ], 200),
+        ]);
+
+        // Geofencing quebrado: o serviço real é trocado por um que sempre falha.
+        $this->app->bind(GeofencingService::class, fn () => new class extends GeofencingService
+        {
+            public function processarVeiculo(Equipamento $equipamento, $momento): void
+            {
+                throw new RuntimeException('cerca com dado inconsistente');
+            }
+        });
+
+        $total = app(VfleetsService::class)->sincronizar();
+
+        // As duas posições entram, apesar de o geofencing falhar.
+        $this->assertSame(2, $total);
+        $this->assertSame(2, PosicaoVeiculo::count());
+        $this->assertNotNull(PosicaoVeiculo::where('license_plate', 'ABC1D23')->first());
     }
 }
