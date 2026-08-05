@@ -59,8 +59,12 @@ return [
          * sincronização inteira falha — nenhum veículo é atualizado, e em três
          * horas todos aparecem como "sem sinal". Dentro do intervalo, a tela
          * usa o que já está no banco.
+         *
+         * O padrão acompanha o cron de posições, que roda a cada 5 minutos:
+         * assim a sincronização fica a cargo dele, e a tela só chama a API se
+         * o cron tiver falhado.
          */
-        'intervalo_sincronizacao' => (int) env('VFLEETS_INTERVALO_SYNC', 120),
+        'intervalo_sincronizacao' => (int) env('VFLEETS_INTERVALO_SYNC', 300),
     ],
 
 ];
