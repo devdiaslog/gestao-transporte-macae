@@ -83,11 +83,31 @@
     </div>
 @endif
 
+@if($aPreencher > 0 && ($filtros['preenchimento'] ?? '') !== 'incompletos')
+    <a href="{{ route('trechos-sap.index', array_merge(request()->except('page'), ['preenchimento' => 'incompletos'])) }}"
+       class="mt-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 transition-colors hover:bg-amber-100
+              dark:border-amber-900/40 dark:bg-amber-950/20 dark:hover:bg-amber-950/40">
+        <span class="text-lg font-bold tabular-nums text-amber-700 dark:text-amber-400">{{ $aPreencher }}</span>
+        <span class="text-sm text-amber-800 dark:text-amber-300">
+            de {{ $total }} {{ $total === 1 ? 'rota espera' : 'rotas esperam' }} distância e prazo — clique para ver
+        </span>
+    </a>
+@endif
+
 <form method="GET" action="{{ route('trechos-sap.index') }}" class="mt-6 flex flex-wrap items-end gap-3">
     <div class="min-w-64 flex-1">
         <label class="{{ $rotulo }}">Buscar</label>
         <input type="text" name="busca" value="{{ $filtros['busca'] ?? '' }}" autocomplete="off"
                placeholder="Origem, destino ou trecho…" class="{{ $campo }}">
+    </div>
+
+    <div>
+        <label class="{{ $rotulo }}">Preenchimento</label>
+        <select name="preenchimento" class="{{ $campo }} w-44">
+            <option value="">Todos</option>
+            <option value="incompletos" @selected(($filtros['preenchimento'] ?? '') === 'incompletos')>A preencher</option>
+            <option value="completos" @selected(($filtros['preenchimento'] ?? '') === 'completos')>Preenchidos</option>
+        </select>
     </div>
 
     <div>

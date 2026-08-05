@@ -156,6 +156,35 @@ class TrechoSap extends Model
     }
 
     /**
+     * Recorta pelo preenchimento: o que a operação ainda precisa completar.
+     *
+     * Incompleto é o trecho sem distância ou sem o prazo que o padrão dele
+     * aponta — é o estado em que a rota nasce quando a importação de itens a
+     * descobre.
+     */
+    public function scopePreenchimento(Builder $query, ?string $filtro): Builder
+    {
+        $semPrazo = fn (Builder $q) => $q
+            ->where(fn (Builder $s) => $s
+                ->where('prazo_padrao', PrazoPadrao::Expresso->value)
+                ->whereNull('prazo_horas_expresso')
+                ->whereNull('prazo_horas_normal'))
+            ->orWhere(fn (Builder $s) => $s
+                ->where('prazo_padrao', '!=', PrazoPadrao::Expresso->value)
+                ->whereNull('prazo_horas_normal'));
+
+        return match ($filtro) {
+            'incompletos' => $query->where(fn (Builder $q) => $q
+                ->whereNull('km_trecho')
+                ->orWhere($semPrazo)),
+            'completos' => $query
+                ->whereNotNull('km_trecho')
+                ->whereNot($semPrazo),
+            default => $query,
+        };
+    }
+
+    /**
      * Busca por qualquer ponta do trecho ou pela chave.
      */
     public function scopeBusca(Builder $query, ?string $termo): Builder

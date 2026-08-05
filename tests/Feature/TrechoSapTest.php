@@ -260,4 +260,88 @@ class TrechoSapTest extends TestCase
 
         $this->assertSame(PrazoPadrao::Normal, TrechoSap::firstOrFail()->prazo_padrao);
     }
+
+    /**
+     * A rota nasce vazia quando a importação de itens a descobre. O filtro
+     * separa o que ainda depende da operação do que já está pronto para
+     * calcular prazo.
+     */
+    public function test_filtra_o_que_falta_preencher(): void
+    {
+        // Completo.
+        TrechoSap::create([
+            'origem_sap' => 'ARM-MACAE', 'destino_sap' => 'PACU',
+            'km_trecho' => 164, 'prazo_horas_normal' => 72, 'prazo_padrao' => 'normal',
+        ]);
+        // Sem distância.
+        TrechoSap::create([
+            'origem_sap' => 'ARM-MACAE', 'destino_sap' => 'SEM KM',
+            'prazo_horas_normal' => 48, 'prazo_padrao' => 'normal',
+        ]);
+        // Sem prazo.
+        TrechoSap::create([
+            'origem_sap' => 'ARM-MACAE', 'destino_sap' => 'SEM PRAZO',
+            'km_trecho' => 10, 'prazo_padrao' => 'normal',
+        ]);
+
+        $usuario = $this->admin();
+
+        $this->actingAs($usuario)
+            ->get(route('trechos-sap.index', ['preenchimento' => 'incompletos']))
+            ->assertOk()
+            ->assertSee('SEM KM')
+            ->assertSee('SEM PRAZO')
+            ->assertDontSee('PACU');
+
+        $this->actingAs($usuario)
+            ->get(route('trechos-sap.index', ['preenchimento' => 'completos']))
+            ->assertOk()
+            ->assertSee('PACU')
+            ->assertDontSee('SEM KM');
+    }
+
+    /**
+     * Trecho no padrão expresso depende das horas de expresso; sem elas, e sem
+     * o normal para cair, ainda falta preencher.
+     */
+    public function test_expresso_sem_horas_conta_como_a_preencher(): void
+    {
+        TrechoSap::create([
+            'origem_sap' => 'ARM-MACAE', 'destino_sap' => 'SO EXPRESSO',
+            'km_trecho' => 10, 'prazo_padrao' => 'expresso',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->get(route('trechos-sap.index', ['preenchimento' => 'incompletos']))
+            ->assertOk()
+            ->assertSee('SO EXPRESSO');
+    }
+
+    public function test_atalho_mostra_quantas_rotas_esperam_preenchimento(): void
+    {
+        TrechoSap::create(['origem_sap' => 'A', 'destino_sap' => 'B', 'prazo_padrao' => 'normal']);
+        TrechoSap::create(['origem_sap' => 'C', 'destino_sap' => 'D', 'prazo_padrao' => 'normal']);
+
+        $this->actingAs($this->admin())
+            ->get(route('trechos-sap.index'))
+            ->assertOk()
+            ->assertSee('rotas esperam distância e prazo', escape: false);
+    }
+
+    public function test_export_respeita_o_filtro_de_preenchimento(): void
+    {
+        TrechoSap::create([
+            'origem_sap' => 'ARM-MACAE', 'destino_sap' => 'PACU',
+            'km_trecho' => 164, 'prazo_horas_normal' => 72, 'prazo_padrao' => 'normal',
+        ]);
+        TrechoSap::create(['origem_sap' => 'ARM-MACAE', 'destino_sap' => 'VAZIO', 'prazo_padrao' => 'normal']);
+
+        $csv = $this->actingAs($this->admin())
+            ->get(route('trechos-sap.export', ['preenchimento' => 'incompletos']))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('VAZIO', $csv);
+        $this->assertStringNotContainsString('PACU', $csv);
+    }
 }

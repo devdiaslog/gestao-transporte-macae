@@ -26,6 +26,7 @@ class TrechoSapController extends Controller
     {
         $trechos = TrechoSap::query()
             ->busca($request->input('busca'))
+            ->preenchimento($request->input('preenchimento'))
             ->when($request->filled('prazo_padrao'), fn ($q) => $q->where('prazo_padrao', $request->input('prazo_padrao')))
             ->orderBy('origem_sap')
             ->orderBy('destino_sap')
@@ -35,7 +36,9 @@ class TrechoSapController extends Controller
         return view('trechos-sap.index', [
             'trechos' => $trechos,
             'prazosPadrao' => PrazoPadrao::cases(),
-            'filtros' => $request->only(['busca', 'prazo_padrao']),
+            'aPreencher' => TrechoSap::query()->preenchimento('incompletos')->count(),
+            'total' => TrechoSap::count(),
+            'filtros' => $request->only(['busca', 'prazo_padrao', 'preenchimento']),
         ]);
     }
 
@@ -115,6 +118,7 @@ class TrechoSapController extends Controller
     {
         $trechos = TrechoSap::query()
             ->busca($request->input('busca'))
+            ->preenchimento($request->input('preenchimento'))
             ->when($request->filled('prazo_padrao'), fn ($q) => $q->where('prazo_padrao', $request->input('prazo_padrao')))
             ->orderBy('origem_sap')
             ->orderBy('destino_sap')
