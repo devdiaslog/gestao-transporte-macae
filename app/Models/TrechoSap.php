@@ -25,6 +25,8 @@ class TrechoSap extends Model
     protected $fillable = [
         'origem_sap',
         'destino_sap',
+        'cidade_origem',
+        'cidade_destino',
         'chave_origem_destino',
         'km_trecho',
         'prazo_horas_normal',

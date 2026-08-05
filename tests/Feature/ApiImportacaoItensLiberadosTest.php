@@ -79,12 +79,12 @@ class ApiImportacaoItensLiberadosTest extends TestCase
         $primeiro = DemandaItem::where('numero_rt', '326213060')->firstOrFail();
         $this->assertSame(StatusSap::Liberado, $primeiro->status_sap);
         $this->assertSame('4803478', $primeiro->doc_unitizacao_superior);
-        $this->assertSame('10/07/2026 14:00:00', $primeiro->prazo_item->format('d/m/Y H:i:s'));
+        $this->assertSame('10/07/2026 14:00:00', $primeiro->prazo_sap->format('d/m/Y H:i:s'));
         $this->assertSame('03/07/2026 13:56:46', $primeiro->data_hora_liberacao_rt->format('d/m/Y H:i:s'));
 
         // Hora zerada: o limite real é o fim do dia anterior.
         $segundo = DemandaItem::where('numero_rt', '326340468')->firstOrFail();
-        $this->assertSame('21/07/2026 23:59:59', $segundo->prazo_item->format('d/m/Y H:i:s'));
+        $this->assertSame('21/07/2026 23:59:59', $segundo->prazo_sap->format('d/m/Y H:i:s'));
         // Sem status na carga, o envio é sabidamente de itens liberados.
         $this->assertSame(StatusSap::Liberado, $segundo->status_sap);
     }

@@ -124,12 +124,14 @@ class TrechoSapController extends Controller
             ->orderBy('destino_sap')
             ->get();
 
-        $linhas = [['Origem SAP', 'Destino SAP', 'Chave', 'Distância (km)', 'Prazo Hora Normal', 'Prazo Hora Expresso', 'Prazo padrão']];
+        $linhas = [['Origem SAP', 'Destino SAP', 'Cidade Origem', 'Cidade Destino', 'Chave', 'Distância (km)', 'Prazo Hora Normal', 'Prazo Hora Expresso', 'Prazo padrão']];
 
         foreach ($trechos as $t) {
             $linhas[] = [
                 $t->origem_sap,
                 $t->destino_sap,
+                $t->cidade_origem,
+                $t->cidade_destino,
                 $t->chave_origem_destino,
                 $t->km_trecho !== null ? number_format($t->km_trecho, 1, ',', '') : '',
                 $t->prazo_horas_normal,

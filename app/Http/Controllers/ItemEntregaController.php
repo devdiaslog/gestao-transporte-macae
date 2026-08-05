@@ -41,8 +41,14 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  */
 class ItemEntregaController extends Controller
 {
-    /** Horizonte padrão do filtro: itens que vencem nos próximos 3 dias. */
-    private const DIAS_PADRAO = 3;
+    /**
+     * Horizonte padrão do filtro: sem recorte.
+     *
+     * O prazo agora vem da rota, e item cujo trecho ainda não foi preenchido
+     * fica sem prazo. Um horizonte estreito esconderia justamente o que a
+     * equipe precisa ver para completar o cadastro.
+     */
+    private const DIAS_PADRAO = 0;
 
     /** Valor do select que pede só o que já passou do prazo. */
     private const FILTRO_VENCIDOS = 'vencidos';
@@ -135,7 +141,6 @@ class ItemEntregaController extends Controller
         'media_prazo' => 'Maior folga até o prazo',
         'prazo_proximo' => 'Prazo mais próximo',
         'sem_previsao' => 'Sem previsão',
-        'area' => 'Área',
         'sugestao' => 'Sugestão de atendimento',
     ];
 
@@ -182,6 +187,7 @@ class ItemEntregaController extends Controller
                           and prazo_item is not null
                           and data_hora_previsao_entrega > prazo_item then 1 else 0 end) as fora_do_prazo,
                 sum(case when fora_escopo = 1 then 1 else 0 end) as fora_escopo,
+                sum(case when fora_escopo = 0 and prazo_calculado_em is null then 1 else 0 end) as a_recalcular,
                 sum(case when fora_escopo = 0 and prazo_item is not null and prazo_item >= ? then 1 else 0 end) as prazo_em_dia,
                 sum(case when fora_escopo = 0 and prazo_item is not null and prazo_item < ? then 1 else 0 end) as prazo_vencido,
                 min(prazo_item) as prazo_mais_proximo,
@@ -245,6 +251,7 @@ class ItemEntregaController extends Controller
             'situacoesResumo' => self::SITUACOES_RESUMO,
             'dias' => $dias,
             'plano' => $plano,
+            'totalARecalcular' => CalculadoraPrazoTrecho::pendentes()->count(),
             'ordenacao' => $ordenacao,
             'ordenacoes' => self::ORDENACOES,
             'diasPrevisao' => $this->diasPrevisaoDe($request),
@@ -373,7 +380,6 @@ class ItemEntregaController extends Controller
             'media_prazo' => $trechos->sortByDesc(fn ($t) => [$t->horas_ate_prazo ?? -1, (int) $t->total]),
             'prazo_proximo' => $trechos->sortBy(fn ($t) => [$t->prazo_mais_proximo ?? '9999', -(int) $t->total]),
             'sem_previsao' => $trechos->sortByDesc(fn ($t) => [(int) $t->sem_previsao, (int) $t->total]),
-            'area' => $trechos->sortByDesc(fn ($t) => [(float) $t->area, (int) $t->total]),
             // Fora do plano vai para o fim: não cabe no prazo de nenhum jeito.
             'sugestao' => $trechos->sortBy(fn ($t) => [$t->posicao_sugerida ?? PHP_INT_MAX, -(int) $t->total]),
             // Mais itens primeiro e, entre rotas do mesmo tamanho, a que tem
@@ -566,6 +572,42 @@ class ItemEntregaController extends Controller
         }
 
         return back()->with('success', $mensagem);
+    }
+
+    /**
+     * Recalcula de uma vez todos os itens que esperam prazo da rota.
+     *
+     * Evita que a equipe tenha de varrer rota por rota depois de preencher a
+     * tabela de trechos — que é justamente quando a maior parte dos itens fica
+     * pendente de uma só vez.
+     */
+    public function recalcularPendentes(Request $request, CalculadoraPrazoTrecho $calculadora): RedirectResponse
+    {
+        $itens = CalculadoraPrazoTrecho::pendentes()->get();
+
+        $resultado = $calculadora->recalcular($itens, $request->user()->id);
+
+        if ($resultado['aplicados'] === 0 && $resultado['pulados'] === []) {
+            return back()->with('success', 'Nenhum item aguardando cálculo.');
+        }
+
+        $mensagem = sprintf(
+            '%d %s com prazo recalculado.',
+            $resultado['aplicados'],
+            $resultado['aplicados'] === 1 ? 'item' : 'itens',
+        );
+
+        if ($resultado['pulados'] === []) {
+            return back()->with('success', $mensagem);
+        }
+
+        $detalhes = collect($resultado['pulados'])
+            ->map(fn (int $total, string $motivo) => $total.' '.CalculadoraPrazoTrecho::rotuloDoMotivo($motivo))
+            ->implode('; ');
+
+        return back()
+            ->with($resultado['aplicados'] > 0 ? 'success' : 'error', $mensagem)
+            ->with('warning', 'Sem cálculo: '.$detalhes.'.');
     }
 
     /**

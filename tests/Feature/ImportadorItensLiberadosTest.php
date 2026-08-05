@@ -117,7 +117,7 @@ class ImportadorItensLiberadosTest extends TestCase
             $this->linha(['Data Prazo' => '10.07.2026', 'Hora Prazo' => '14:00:00']),
         ]));
 
-        $this->assertSame('10/07/2026 14:00:00', DemandaItem::firstOrFail()->prazo_item->format('d/m/Y H:i:s'));
+        $this->assertSame('10/07/2026 14:00:00', DemandaItem::firstOrFail()->prazo_sap->format('d/m/Y H:i:s'));
     }
 
     /**
@@ -130,7 +130,7 @@ class ImportadorItensLiberadosTest extends TestCase
             $this->linha(['Data Prazo' => '10.07.2026', 'Hora Prazo' => '00:00:00']),
         ]));
 
-        $this->assertSame('09/07/2026 23:59:59', DemandaItem::firstOrFail()->prazo_item->format('d/m/Y H:i:s'));
+        $this->assertSame('09/07/2026 23:59:59', DemandaItem::firstOrFail()->prazo_sap->format('d/m/Y H:i:s'));
     }
 
     public function test_reimportacao_atualiza_em_vez_de_duplicar(): void

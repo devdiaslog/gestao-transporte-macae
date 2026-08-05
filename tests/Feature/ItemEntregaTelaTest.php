@@ -79,8 +79,9 @@ class ItemEntregaTelaTest extends TestCase
         $vence_em_10_dias = $this->item(['prazo_item' => now()->addDays(10)]);
         $vencido = $this->item(['prazo_item' => now()->subDays(2)]);
 
+        // O horizonte agora é explícito: sem ele, a tela mostra tudo.
         $this->actingAs(User::factory()->create())
-            ->get(route('itens-entrega.trecho'))
+            ->get(route('itens-entrega.trecho', ['dias' => 3]))
             ->assertOk()
             ->assertSee($vence_amanha->numero_rt)
             ->assertSee($vencido->numero_rt)
@@ -847,7 +848,7 @@ class ItemEntregaTelaTest extends TestCase
         // Hora zerada: o limite é o fim do dia anterior.
         $this->assertSame(
             '10/08/2026 23:59:59',
-            DemandaItem::where('numero_rt', '326900002')->firstOrFail()->prazo_item->format('d/m/Y H:i:s')
+            DemandaItem::where('numero_rt', '326900002')->firstOrFail()->prazo_sap->format('d/m/Y H:i:s')
         );
     }
 

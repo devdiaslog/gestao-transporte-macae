@@ -52,6 +52,23 @@
                 <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Ajuste os filtros ou importe o export do SAP.</p>
             </div>
         @else
+            @if($totalARecalcular > 0)
+                <form method="POST" action="{{ route('itens-entrega.recalcular-pendentes') }}"
+                      class="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-amber-50 px-5 py-3 dark:border-zinc-800 dark:bg-amber-950/20">
+                    @csrf
+                    <span class="text-lg font-bold tabular-nums text-amber-700 dark:text-amber-400">{{ $totalARecalcular }}</span>
+                    <span class="text-xs text-amber-800 dark:text-amber-300">
+                        {{ $totalARecalcular === 1 ? 'item está' : 'itens estão' }} sem prazo da rota.
+                        Cadastre a rota em Trechos SAP e recalcule.
+                    </span>
+                    <button type="submit"
+                            class="ml-auto rounded-lg bg-zinc-900 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-zinc-700
+                                   dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
+                        Recalcular rotas pendentes
+                    </button>
+                </form>
+            @endif
+
             {{-- Resultado do sequenciamento: quantos itens o plano salva e
                  quantos não cabem, para a decisão ser tomada com o número à
                  vista e não pela impressão de cada rota isolada. --}}
@@ -92,7 +109,10 @@
                             </th>
                             <th class="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Rota</th>
                             <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Itens</th>
-                            <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Área</th>
+                            <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600"
+                                title="Itens desta rota que ainda não receberam o prazo do trecho cadastrado.">
+                                A recalcular
+                            </th>
                             <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Sem previsão</th>
                             <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Previsão no prazo</th>
                             <th class="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Previsão fora do prazo</th>
@@ -149,15 +169,10 @@
                                 </td>
                                 <td class="px-4 py-3 text-right font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $t->total }}</td>
                                 <td class="px-4 py-3 text-right">
-                                    <p class="tabular-nums text-zinc-600 dark:text-zinc-400"
-                                       title="Área de piso somada, contando cada embalagem uma vez">
-                                        {{ $t->area > 0 ? number_format((float) $t->area, 2, ',', '.').' m²' : '—' }}
-                                    </p>
-                                    @if($t->medidas_suspeitas > 0)
-                                        <p class="text-[10px] text-amber-600 dark:text-amber-500"
-                                           title="Medidas fora de escala para transporte rodoviário, provavelmente enviadas pelo SAP em centímetros ou milímetros. Ficam de fora do total.">
-                                            {{ $t->medidas_suspeitas }} fora de escala
-                                        </p>
+                                    @if($t->a_recalcular > 0)
+                                        <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">{{ $t->a_recalcular }}</span>
+                                    @else
+                                        <span class="text-xs text-zinc-300 dark:text-zinc-700">0</span>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-right">
@@ -247,9 +262,7 @@
                                 {{ $trechos->count() }} {{ $trechos->count() === 1 ? 'rota' : 'rotas' }}
                             </td>
                             <td class="px-4 py-3 text-right font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $totalItens }}</td>
-                            <td class="px-4 py-3 text-right font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
-                                {{ $trechos->sum('area') > 0 ? number_format((float) $trechos->sum('area'), 2, ',', '.').' m²' : '—' }}
-                            </td>
+                            <td class="px-4 py-3 text-right font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $trechos->sum('a_recalcular') }}</td>
                             <td class="px-4 py-3 text-right font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $totalSemPrevisao }}</td>
                             <td class="px-4 py-3 text-right font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $trechos->sum('no_prazo') }}</td>
                             <td class="px-4 py-3 text-right font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{{ $trechos->sum('fora_do_prazo') }}</td>

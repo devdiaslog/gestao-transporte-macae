@@ -23,6 +23,8 @@ class StoreTrechoSapRequest extends FormRequest
         return [
             'origem_sap' => ['required', 'string', 'max:255'],
             'destino_sap' => ['required', 'string', 'max:255'],
+            'cidade_origem' => ['nullable', 'string', 'max:255'],
+            'cidade_destino' => ['nullable', 'string', 'max:255'],
             'km_trecho' => ['nullable', 'numeric', 'min:0', 'max:99999'],
             'prazo_horas_normal' => ['nullable', 'integer', 'min:1', 'max:8760'],
             'prazo_horas_expresso' => ['nullable', 'integer', 'min:1', 'max:8760'],

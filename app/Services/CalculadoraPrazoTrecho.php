@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\DemandaItem;
 use App\Models\TrechoSap;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
@@ -68,6 +69,24 @@ class CalculadoraPrazoTrecho
         }
 
         return $resultado;
+    }
+
+    /**
+     * Itens que ainda esperam o prazo da rota.
+     *
+     * São os que nunca foram calculados ou cujo trecho mudou depois do último
+     * cálculo — o prazo cadastrado é corrigido com frequência, e o item não
+     * pode ficar preso a um valor que a operação já revisou.
+     *
+     * @return Builder<DemandaItem>
+     */
+    public static function pendentes(): Builder
+    {
+        return DemandaItem::query()
+            ->where('fora_escopo', false)
+            ->where(fn ($q) => $q
+                ->whereNull('prazo_calculado_em')
+                ->orWhereHas('trechoDoPrazo', fn ($t) => $t->whereColumn('trechos_sap.updated_at', '>', 'demanda_itens.prazo_calculado_em')));
     }
 
     /**

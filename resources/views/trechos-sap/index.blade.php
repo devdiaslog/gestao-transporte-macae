@@ -146,6 +146,7 @@
                     <tr>
                         <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Origem</th>
                         <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Destino</th>
+                        <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Cidades</th>
                         <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Distância</th>
                         <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Normal</th>
                         <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Expresso</th>
@@ -166,6 +167,13 @@
                                 {{ $t->origem_sap }}
                             </td>
                             <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ $t->destino_sap }}</td>
+                            <td class="px-4 py-3 text-xs text-zinc-500 dark:text-zinc-400">
+                                @if($t->cidade_origem || $t->cidade_destino)
+                                    {{ $t->cidade_origem ?: '—' }} → {{ $t->cidade_destino ?: '—' }}
+                                @else
+                                    <span class="text-zinc-300 dark:text-zinc-700">—</span>
+                                @endif
+                            </td>
                             <td class="px-4 py-3 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
                                 {{ $t->km_trecho !== null ? number_format($t->km_trecho, 1, ',', '.').' km' : '—' }}
                             </td>
@@ -186,6 +194,8 @@
                                         'id' => $t->id,
                                         'origem_sap' => $t->origem_sap,
                                         'destino_sap' => $t->destino_sap,
+                                        'cidade_origem' => $t->cidade_origem,
+                                        'cidade_destino' => $t->cidade_destino,
                                         'km_trecho' => $t->km_trecho,
                                         'prazo_horas_normal' => $t->prazo_horas_normal,
                                         'prazo_horas_expresso' => $t->prazo_horas_expresso,
@@ -239,6 +249,14 @@
             <div>
                 <label class="{{ $rotulo }}">Destino SAP</label>
                 <input type="text" name="destino_sap" id="trecho-destino" required maxlength="255" class="{{ $campo }}">
+            </div>
+            <div>
+                <label class="{{ $rotulo }}">Cidade origem</label>
+                <input type="text" name="cidade_origem" id="trecho-cidade-origem" maxlength="255" class="{{ $campo }}">
+            </div>
+            <div>
+                <label class="{{ $rotulo }}">Cidade destino</label>
+                <input type="text" name="cidade_destino" id="trecho-cidade-destino" maxlength="255" class="{{ $campo }}">
             </div>
             <div>
                 <label class="{{ $rotulo }}">Distância (km)</label>
@@ -327,7 +345,7 @@
         document.getElementById('trecho-titulo').textContent = 'Novo trecho';
         document.getElementById('form-trecho').action = '{{ route('trechos-sap.store') }}';
         document.getElementById('trecho-method').value = 'POST';
-        ['origem', 'destino', 'km', 'normal', 'expresso'].forEach(function (campo) {
+        ['origem', 'destino', 'cidade-origem', 'cidade-destino', 'km', 'normal', 'expresso'].forEach(function (campo) {
             document.getElementById('trecho-' + campo).value = '';
         });
         document.getElementById('trecho-padrao').value = 'normal';
@@ -340,6 +358,8 @@
         document.getElementById('trecho-method').value = 'PUT';
         document.getElementById('trecho-origem').value = t.origem_sap || '';
         document.getElementById('trecho-destino').value = t.destino_sap || '';
+        document.getElementById('trecho-cidade-origem').value = t.cidade_origem || '';
+        document.getElementById('trecho-cidade-destino').value = t.cidade_destino || '';
         document.getElementById('trecho-km').value = t.km_trecho !== null ? t.km_trecho : '';
         document.getElementById('trecho-normal').value = t.prazo_horas_normal !== null ? t.prazo_horas_normal : '';
         document.getElementById('trecho-expresso').value = t.prazo_horas_expresso !== null ? t.prazo_horas_expresso : '';

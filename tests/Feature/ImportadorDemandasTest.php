@@ -67,7 +67,8 @@ class ImportadorDemandasTest extends TestCase
         $this->assertSame('PACU-CAIS 2', $item->descricao_local_retirada);
         $this->assertSame('Carga A', $item->descricao_item);
         $this->assertSame(StatusItemDemanda::Pendente, $item->status_item);
-        $this->assertSame('24/07/2026 10:00', $item->prazo_item->format('d/m/Y H:i'));
+        // O SAP alimenta o prazo de conferência; o vigente vem da rota.
+        $this->assertSame('24/07/2026 10:00', $item->prazo_sap->format('d/m/Y H:i'));
     }
 
     public function test_deriva_fonte_tipo_e_status_da_demanda_importada(): void
@@ -276,7 +277,7 @@ class ImportadorDemandasTest extends TestCase
         $this->assertSame('PACU', $item->local_origem);
         $this->assertSame('ARM-MACAE', $item->local_destino);
         $this->assertSame('Carga X', $item->descricao_item);
-        $this->assertSame('25/07/2026 10:00', $item->prazo_item->format('d/m/Y H:i'));
+        $this->assertSame('25/07/2026 10:00', $item->prazo_sap->format('d/m/Y H:i'));
     }
 
     public function test_reimportacao_nao_sobrescreve_campo_mestre_editado_pelo_operador(): void
@@ -640,15 +641,27 @@ class ImportadorDemandasTest extends TestCase
         return $caminho;
     }
 
+    /**
+     * O prazo do item passou a vir da rota, não do SAP — mas a demanda segue
+     * herdando o menor prazo ainda alcançável entre os itens dela.
+     */
     public function test_prazo_da_demanda_usa_o_menor_item_ainda_exequivel(): void
     {
         $this->travelTo(now()->setDate(2026, 7, 21)->setTime(8, 0));
 
         $this->importar();
 
-        // Itens em 24/07 e 25/07: o menor alcançável é 24/07.
         $demanda = Demanda::where('numero_demanda', 509111111)->firstOrFail();
 
-        $this->assertSame('24/07/2026 10:00', $demanda->prazo_demanda->format('d/m/Y H:i'));
+        // Prazos como o cálculo por trecho os deixaria.
+        $demanda->itens->sortBy('numero_item')->values()->each(
+            fn ($item, $i) => $item->forceFill([
+                'prazo_item' => now()->setDate(2026, 7, 24 + $i)->setTime(10, 0),
+            ])->save()
+        );
+
+        app(DemandaCalculadora::class)->recalcular($demanda->load('itens'));
+
+        $this->assertSame('24/07/2026 10:00', $demanda->refresh()->prazo_demanda->format('d/m/Y H:i'));
     }
 }

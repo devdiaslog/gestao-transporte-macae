@@ -6,7 +6,7 @@
     // Mesmo "i" dos indicadores do dashboard: o texto explica o que a opção
     // recorta e como o número por trás dela é obtido.
     $info = fn (string $texto): string => '<span class="ml-1.5 inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-zinc-300 text-[10px] font-bold leading-none text-zinc-400 dark:border-zinc-600 dark:text-zinc-500" title="'.e($texto).'">i</span>';
-    $temFiltro = array_filter($filtros) || request('situacao') || request('status') || $dias !== 3;
+    $temFiltro = array_filter($filtros) || request('situacao') || request('status') || $dias !== 0;
 
     // Cada status ganha a própria cor quando ligado: o operador reconhece o
     // recorte pela cor antes de ler o texto.
@@ -130,8 +130,6 @@
 ".'Prazo mais próximo: o primeiro item a vencer na rota. '
                      ."
 ".'Sem previsão: rotas com mais itens sem data prevista. '
-                     ."
-".'Área: maior área de piso ocupada. '
                      ."
 ".'Sugestão de atendimento: ordem que entrega o maior número de itens no prazo. '
                      ."

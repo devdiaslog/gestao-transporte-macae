@@ -373,13 +373,15 @@ class ImportadorItensLiberados
             return;
         }
 
-        // O prazo do SAP é registrado sempre, mesmo quando o vigente foi
-        // renegociado: é o que torna a renegociação visível na tela.
+        // O prazo do SAP é registrado sempre, para conferência e para tornar a
+        // renegociação visível na tela.
         $item->prazo_sap = $prazo;
 
-        if (! $item->campoEditadoPeloOperador('prazo_item')) {
-            $item->prazo_item = $prazo;
-        }
+        // Mas não vira o prazo vigente: o que vale é a regra por trecho, e o
+        // SAP não a segue — na rota BASE RIO DE JANEIRO 2 → ARM MACAE os dois
+        // divergiam em até 152 horas. Item sem trecho calculado fica sem prazo,
+        // porque prazo errado é pior do que prazo nenhum: ele fabrica atraso
+        // onde não há, ou dá folga que a operação não tem.
     }
 
     public function prazoDe(?string $data, ?string $hora): ?Carbon

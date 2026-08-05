@@ -300,14 +300,11 @@ class ImportadorDemandas
                 if (array_key_exists('prazo_data', $linha) || array_key_exists('prazo_hora', $linha)) {
                     $prazo = $this->montarDataHora($linha['prazo_data'] ?? null, $linha['prazo_hora'] ?? null);
 
-                    // O prazo do SAP fica registrado mesmo quando o vigente foi
-                    // renegociado com o cliente: é o que torna a renegociação
-                    // visível em vez de o dado original sumir.
+                    // O prazo do SAP fica registrado para conferência e para
+                    // tornar a renegociação visível. Mas não vira o prazo
+                    // vigente: quem manda é a regra por trecho, e o SAP não a
+                    // segue — prazo errado fabrica atraso onde não há.
                     $item->prazo_sap = $prazo;
-
-                    if (! $item->campoEditadoPeloOperador('prazo_item')) {
-                        $item->prazo_item = $prazo;
-                    }
                 }
 
                 // Peso e dimensões da carga: dados do SAP, re-sincronizam quando a
